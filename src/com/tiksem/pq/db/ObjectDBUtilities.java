@@ -92,4 +92,9 @@ public class ObjectDBUtilities {
 
         return collection.iterator().next();
     }
+
+    public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass) {
+        Query query = manager.newQuery(patternClass);
+        return (Collection<T>) query.execute();
+    }
 }

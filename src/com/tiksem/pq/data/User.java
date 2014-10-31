@@ -1,18 +1,19 @@
 package com.tiksem.pq.data;
 
+import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.Persistent;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 
 /**
  * Created by CM on 10/30/2014.
  */
+
 @Entity
 public class User {
-    @Id
-    @GeneratedValue
+    @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
+
     @Index
     private String login;
     @Index
