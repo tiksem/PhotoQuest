@@ -10,7 +10,8 @@ import javax.persistence.Id;
  */
 @Entity
 public class User {
-    @Id @GeneratedValue
+    @Id
+    @GeneratedValue
     private Long id;
     @Index
     private String login;
@@ -20,6 +21,9 @@ public class User {
     public User(String login, String password) {
         this.login = login;
         this.password = password;
+    }
+
+    public User() {
     }
 
     public String getLogin() {

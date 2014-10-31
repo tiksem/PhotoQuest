@@ -28,14 +28,18 @@ public class DatabaseManager {
         factory  = ObjectDBUtilities.createLocalConnectionFactory("PhotoQuest");
     }
 
+    public User getUserByLogin(String login) {
+        User user = new User();
+        user.setLogin(login);
+        return ObjectDBUtilities.getObjectByPattern(factory.getPersistenceManager(), user);
+    }
+
     public User addUser(String login, String password) {
         PersistenceManager persistenceManager = factory.getPersistenceManager();
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
 
-        Query query = persistenceManager.newQuery(User.class);
-        query.setFilter("this.login==\"" + login +"\"");
-        User user = ObjectDBUtilities.executeQueryForOneInstance(query);
+        User user = getUserByLogin(login);
         if(user != null){
             throw new UserExistsRegisterException(login);
         }

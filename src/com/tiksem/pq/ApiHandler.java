@@ -28,4 +28,11 @@ public class ApiHandler {
             @RequestParam(value="password", required=true) String password) {
         return DatabaseManager.getInstance().addUser(login, password);
     }
+
+    @RequestMapping("/getUser")
+    public @ResponseBody
+    Object getUser(
+            @RequestParam(value="login", required=true) String login) {
+        return DatabaseManager.getInstance().getUserByLogin(login);
+    }
 }
