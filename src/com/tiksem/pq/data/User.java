@@ -18,6 +18,8 @@ public class User {
     private String login;
     @Index
     private String password;
+    @Index
+    private Long avatarId;
 
     public User(String login, String password) {
         this.login = login;

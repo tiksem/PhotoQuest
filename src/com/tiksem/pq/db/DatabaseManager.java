@@ -1,5 +1,7 @@
 package com.tiksem.pq.db;
 
+import com.tiksem.pq.PhotosByPhotoQuest;
+import com.tiksem.pq.data.Photo;
 import com.tiksem.pq.data.Photoquest;
 import com.tiksem.pq.data.User;
 import com.tiksem.pq.db.exceptions.*;
@@ -169,5 +171,26 @@ public class DatabaseManager {
         transaction.begin();
         persistenceManager.deletePersistentAll(getAllUsers());
         transaction.commit();
+    }
+
+    public Photo addPhoto(Photo photo) {
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        photo = persistenceManager.makePersistent(photo);
+        transaction.commit();
+        return photo;
+    }
+
+    public PhotosByPhotoQuest addPhotoToPhotoquest(long photoId, long photoquestId) {
+        PhotosByPhotoQuest photosByPhotoQuest = new PhotosByPhotoQuest();
+        photosByPhotoQuest.setPhotoId(photoId);
+        photosByPhotoQuest.setPhotoQuestId(photoquestId);
+
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        photosByPhotoQuest = persistenceManager.makePersistent(photosByPhotoQuest);
+        transaction.commit();
+
+        return photosByPhotoQuest;
     }
 }

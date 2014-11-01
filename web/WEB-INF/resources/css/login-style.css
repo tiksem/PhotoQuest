@@ -1,0 +1,23 @@
+body {
+    background-color: aliceblue;
+}
+
+#add_photoquest_button {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+}
+
+body{
+    font: 80.5% "Trebuchet MS", sans-serif;
+    margin: 50px;
+}
+
+.list_item {
+    cursor: pointer; cursor: hand;
+    background-color: #ffffff;
+}
+
+.list_item_hover {
+    background-color: #efecff;
+}

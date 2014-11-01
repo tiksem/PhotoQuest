@@ -3,6 +3,7 @@ package com.tiksem.pq.data;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Persistent;
+import javax.jdo.annotations.Unique;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -16,7 +17,8 @@ public class Photoquest {
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 
-    @Index
+    @Unique
+    @Persistent
     private String name;
     @Index
     private Long likesCount;
