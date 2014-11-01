@@ -1,0 +1,28 @@
+<div>
+    <form id="login_form" action="//login">
+        <label>
+            Enter your login
+            <input name="login" type="text">
+        </label>
+        <label>
+            Enter your password
+            <input name="password" type="password">
+        </label>
+        <button>Sign In</button>
+    </form>
+</div>
+
+<script>
+    Utilities.applyStylesToHtml();
+
+    var loginForm = $("#login_form");
+    loginForm.find("button").click(function(){
+        Utilities.ajax({
+            url: "//login",
+            data: loginForm.serialize(),
+            success: function(){
+                loginForm.hide();
+            }
+        })
+    })
+</script>

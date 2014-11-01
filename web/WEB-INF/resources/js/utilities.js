@@ -35,12 +35,22 @@ Utilities = {
         var data = params.data;
         var method = params.method;
         var onSuccess = params.success;
+        var onError = params.error || function(message) {
+            alert(message);
+        }
 
         $.ajax({
             url: url,
             data: data,
             method: method,
-            success: onSuccess
+            success: function(data){
+                if(data.error){
+                    onError(data.error);
+                }
+            },
+            error: function(xhr, ajaxOptions, thrownError) {
+                onError(thrownError)
+            }
         });
     }
 }

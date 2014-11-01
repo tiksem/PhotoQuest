@@ -11,6 +11,7 @@ body {
 body{
     font: 80.5% "Trebuchet MS", sans-serif;
     margin: 50px;
+    position: relative;
 }
 
 .list_item {
@@ -20,4 +21,28 @@ body{
 
 .list_item_hover {
     background-color: #efecff;
+}
+
+#login_form_container {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 20px;
+}
+
+label {
+    display: block;
+}
+
+input {
+    display: block;
+}
+
+#login_form input {
+    margin-bottom: 10px;
+}
+
+label {
+    font-weight: bold;
+    color: #84091e;
 }
