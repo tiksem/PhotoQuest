@@ -20,11 +20,14 @@
 
 </div>
 
+<div id="create_photoquest_dialog_container" align="center">
+
+</div>
+
 <script type="application/javascript">
-    $("form").attr("action", function(i, origin) {
-        return location.origin + origin;
-    })
+    Utilities.applyStylesToHtml();
     $("#photoquests_container").load("HTML/photoquests.html");
+    $("#create_photoquest_dialog_container").load("HTML/create_photo_quest_dialog.html");
 </script>
 </body>
 </html>

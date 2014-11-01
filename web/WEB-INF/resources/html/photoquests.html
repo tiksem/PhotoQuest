@@ -1,4 +1,4 @@
-<div style="width: 600px; align-self: center">
+<div style="width: 600px; align-self: center;">
     <div style="text-align: center; position: relative">
         <h1>Photoquests</h1>
         <button id="add_photoquest_button">Create PhotoQuest</button>
@@ -19,4 +19,7 @@
 
 <script>
     Utilities.applyStylesToHtml();
+    $("#add_photoquest_button").click(function(){
+        $("#create_photo_quest_dialog").dialog("open");
+    });
 </script>

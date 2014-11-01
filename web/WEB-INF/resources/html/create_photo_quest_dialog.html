@@ -1,0 +1,35 @@
+<div id="create_photo_quest_dialog" style="display: none" title="Create new photoquest">
+    <h2>Enter photoquest name</h2>
+
+    <form action="//createPhotoquest">
+        <input name="name" type="text"/>
+    </form>
+</div>
+
+<script>
+    Utilities.applyStylesToHtml();
+    var dialog = $("#create_photo_quest_dialog").dialog({
+        autoOpen: false,
+        height: 220,
+        width: 350,
+        modal: true,
+        buttons: {
+            "Create": function(){
+                var form = dialog.find("form");
+////                Utilities.ajax({
+////                    url: "//createPhotoquest",
+////                    data: form.serialize(),
+////                })
+//                form.serialize();
+                form.submit();
+            },
+            Cancel: function () {
+                dialog.dialog("close");
+            }
+        }
+    });
+
+    $("#create-user").button().on("click", function () {
+        dialog.dialog("open");
+    });
+</script>

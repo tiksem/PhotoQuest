@@ -3,11 +3,11 @@
  */
 
 Utilities = {
+    ajax_request_base_url: location.origin,
     applyStylesToHtml: function() {
         $( "input[type=submit], a, button" )
-            .button()
-            .click(function( event ) {
-                event.preventDefault();
+            .button().click(function(){
+                $(this).removeClass("ui-state-focus").removeClass("ui-state-hover").button("refresh");
             });
         $(".list_item").hover(function(){
             $(this).addClass("list_item_hover");
@@ -24,6 +24,23 @@ Utilities = {
             return origin;
         }).error(function() {
             $(this).attr("href", emptyAvatar);
+        });
+
+        $("form").attr("action", function(i, origin) {
+            return location.origin + origin;
         })
+    },
+    ajax: function(params){
+        var url = this.ajax_request_base_url + params.url;
+        var data = params.data;
+        var method = params.method;
+        var onSuccess = params.success;
+
+        $.ajax({
+            url: url,
+            data: data,
+            method: method,
+            success: onSuccess
+        });
     }
 }
