@@ -1,28 +1,13 @@
 <div>
-    <form id="login_form" action="//login">
+    <form id="login_form" ng-controller="LoginController" ng-show="!isSignin">
         <label>
             Enter your login
-            <input name="login" type="text">
+            <input name="login" ng-model="login" type="text">
         </label>
         <label>
             Enter your password
-            <input name="password" type="password">
+            <input name="password" ng-model="password" type="password">
         </label>
-        <button>Sign In</button>
+        <button ng-click="signin();">Sign In</button>
     </form>
 </div>
-
-<script>
-    Utilities.applyStylesToHtml();
-
-    var loginForm = $("#login_form");
-    loginForm.find("button").click(function(){
-        Utilities.ajax({
-            url: "//login",
-            data: loginForm.serialize(),
-            success: function(){
-                loginForm.hide();
-            }
-        })
-    })
-</script>

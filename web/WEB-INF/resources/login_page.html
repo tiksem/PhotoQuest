@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang='en' ng-app>
+<html lang='en' ng-app="main">
 <head>
     <meta charset="UTF-8" />
     <title>
@@ -13,14 +13,41 @@
 
     </script>
     <script type="application/javascript" src="js/utilities.js"> </script>
+
+    <script>
+        var main = angular.module("main", []);
+        main.controller("Eblo", function($scope){
+            $scope.eblo = "Gnil eblivya";
+        })
+
+//        main.controller("LoginController", ['$scope', function($scope){
+//            $scope.isSignin = false;
+//            $scope.signin = function(){
+//                $http.get(window.location.origin + "//login", {
+//                    login: $scope.login,
+//                    password: $scope.password
+//                }).success(function(){
+//                    $scope.isSignin = true;
+//                    alert("Success!");
+//                })
+//            }
+//        }])
+    </script>
 </head>
 <body>
 
-<div id="login_form_container">
+<div ng-controller="Eblo">
+    <p>
+        Otsosi {{eblo}}
+    </p>
+</div>
+
+<script type="application/javascript" src="js/login.js"> </script>
+<div id="login_form_container" ng-include="'HTML/login.html'">
 
 </div>
 
-<div id="photoquests_container" align="center">
+<div id="photoquests_container" ng-include="HTML/photoquests.html" align="center">
 
 </div>
 
@@ -30,9 +57,6 @@
 
 <script type="application/javascript">
     Utilities.applyStylesToHtml();
-    $("#photoquests_container").load("HTML/photoquests.html");
-    $("#create_photoquest_dialog_container").load("HTML/create_photo_quest_dialog.html");
-    $("#login_form_container").load("HTML/login.html");
 </script>
 </body>
 </html>

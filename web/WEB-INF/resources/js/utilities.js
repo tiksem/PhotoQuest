@@ -4,19 +4,20 @@
 
 Utilities = {
     ajax_request_base_url: location.origin,
-    applyStylesToHtml: function() {
-        $( "input[type=submit], a, button" )
+    applyStylesToHtml: function(element) {
+        element = element || document;
+        $(element).find( "input[type=submit], a, button" )
             .button().click(function(){
                 $(this).removeClass("ui-state-focus").removeClass("ui-state-hover").button("refresh");
             });
-        $(".list_item").hover(function(){
+        $(element).find(".list_item").hover(function(){
             $(this).addClass("list_item_hover");
         }, function() {
             $(this).removeClass("list_item_hover");
         })
 
         var emptyAvatar = location.origin + "/images/empty_avatar.png";
-        $("img.avatar").attr("src", function(i, origin) {
+        $("element").find("img.avatar").attr("src", function(i, origin) {
             if(!origin){
                 return emptyAvatar;
             }
@@ -26,7 +27,7 @@ Utilities = {
             $(this).attr("href", emptyAvatar);
         });
 
-        $("form").attr("action", function(i, origin) {
+        $("element").find("form").attr("action", function(i, origin) {
             return location.origin + origin;
         })
     },
