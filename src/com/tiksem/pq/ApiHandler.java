@@ -4,15 +4,18 @@ import com.tiksem.pq.data.Photo;
 import com.tiksem.pq.data.Photoquest;
 import com.tiksem.pq.data.Success;
 import com.tiksem.pq.data.User;
+import com.tiksem.pq.data.response.PhotoquestsList;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.db.exceptions.PhotoquestNotFoundException;
+import com.tiksem.pq.db.exceptions.ResourceNotFoundException;
+import com.tiksem.pq.utils.MimeTypeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.Cookie;
@@ -21,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 
 /**
@@ -100,5 +104,32 @@ public class ApiHandler {
         }
 
         return new Success();
+    }
+
+    @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
+            produces = MediaType.IMAGE_JPEG_VALUE)
+    public @ResponseBody HttpEntity<byte[]> getImageById(@PathVariable Long id)
+            throws IOException {
+        Photo photo = DatabaseManager.getInstance().getPhotoById(id);
+        if(photo == null){
+            throw new ResourceNotFoundException();
+        }
+
+        byte[] image = photo.getImage();
+        if(image == null){
+            throw new ResourceNotFoundException();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
+        headers.setContentType(mediaType);
+        headers.setContentLength(image.length);
+        return new HttpEntity<byte[]>(image, headers);
+    }
+
+    @RequestMapping("/getPhotoquests")
+    public @ResponseBody Object getPhotoquests(){
+        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().getPhotoQuests(request);
+        return new PhotoquestsList(photoquests);
     }
 }

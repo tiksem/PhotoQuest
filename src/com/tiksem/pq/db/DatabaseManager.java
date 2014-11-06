@@ -22,6 +22,7 @@ import java.util.List;
  */
 public class DatabaseManager {
     private static DatabaseManager instance;
+    private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
 
     private final PersistenceManager persistenceManager;
 
@@ -192,5 +193,32 @@ public class DatabaseManager {
         transaction.commit();
 
         return photosByPhotoQuest;
+    }
+
+    public Photo getPhotoById(long id) {
+        return ObjectDBUtilities.getObjectById(persistenceManager, Photo.class, id);
+    }
+
+    public String getDefaultAvatar(HttpServletRequest request) {
+        return HttpUtilities.getBaseUrl(request) + "/" + DEFAULT_AVATAR_URL;
+    }
+
+    private void setDefaultAvatarIfNeed(HttpServletRequest request, Photoquest photoquest) {
+        if(photoquest.getAvatar() == null){
+            photoquest.setAvatar(getDefaultAvatar(request));
+        }
+    }
+
+    private void setDefaultAvatarIfNeed(HttpServletRequest request, Iterable<Photoquest> photoquests) {
+        for(Photoquest photoquest : photoquests){
+            setDefaultAvatarIfNeed(request, photoquest);
+        }
+    }
+
+    public Collection<Photoquest> getPhotoQuests(HttpServletRequest request) {
+        Collection<Photoquest> result =
+                ObjectDBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class);
+        setDefaultAvatarIfNeed(request, result);
+        return result;
     }
 }

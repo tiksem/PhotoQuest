@@ -10,6 +10,8 @@ import javax.persistence.Entity;;
  */
 @Entity
 public class Photo {
+    public static final String IMAGE_URL_PATH = "/image/";
+
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 

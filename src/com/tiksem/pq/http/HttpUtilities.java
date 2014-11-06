@@ -1,6 +1,7 @@
 package com.tiksem.pq.http;
 
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * User: Tikhonenko.S
@@ -20,5 +21,15 @@ public class HttpUtilities {
         }
 
         return null;
+    }
+
+    public static String getBaseUrl( HttpServletRequest request ) {
+        if ((request.getServerPort() == 80) ||
+                (request.getServerPort() == 443))
+            return request.getScheme() + "://" +
+                    request.getServerName();
+        else
+            return request.getScheme() + "://" +
+                    request.getServerName() + ":" + request.getServerPort();
     }
 }

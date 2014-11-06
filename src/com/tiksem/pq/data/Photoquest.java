@@ -1,9 +1,9 @@
 package com.tiksem.pq.data;
 
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.Unique;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import javax.jdo.InstanceCallbacks;
+import javax.jdo.annotations.*;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -13,7 +13,7 @@ import javax.persistence.Id;
  */
 
 @Entity
-public class Photoquest {
+public class Photoquest implements InstanceCallbacks {
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 
@@ -26,6 +26,12 @@ public class Photoquest {
     private Long viewsCount;
     @Index
     private Long userId;
+    @Index
+    @JsonIgnore
+    private Long avatarId;
+
+    @NotPersistent
+    private String avatar;
 
     public static Photoquest withZeroViewsAndLikes(String name) {
         Photoquest photoquest = new Photoquest();
@@ -73,5 +79,43 @@ public class Photoquest {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getAvatarId() {
+        return avatarId;
+    }
+
+    public void setAvatarId(Long avatarId) {
+        this.avatarId = avatarId;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    @Override
+    public void jdoPreClear() {
+
+    }
+
+    @Override
+    public void jdoPreDelete() {
+
+    }
+
+    @Override
+    public void jdoPostLoad() {
+        if(avatarId != null){
+            avatar = Photo.IMAGE_URL_PATH + avatarId;
+        }
+    }
+
+    @Override
+    public void jdoPreStore() {
+
     }
 }

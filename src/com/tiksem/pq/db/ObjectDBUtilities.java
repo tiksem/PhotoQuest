@@ -8,6 +8,7 @@ import javax.jdo.PersistenceManager;
 import javax.jdo.PersistenceManagerFactory;
 import javax.jdo.Query;
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.Unique;
 import javax.persistence.Id;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -47,7 +48,7 @@ public class ObjectDBUtilities {
     public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern) {
         Class<?> patternClass = pattern.getClass();
         List<Field> fields =
-                Reflection.getFieldsWithAnnotations(patternClass, Id.class, Index.class);
+                Reflection.getFieldsWithAnnotations(patternClass, Id.class, Index.class, Unique.class);
 
         List<String> parameters = new ArrayList<String>(fields.size());
         List<String> filters = new ArrayList<String>();

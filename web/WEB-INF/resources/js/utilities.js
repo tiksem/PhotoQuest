@@ -53,5 +53,17 @@ Utilities = {
                 onError(thrownError)
             }
         });
+    },
+    addProperties: function(object, properties) {
+        for(var i in properties){
+            object[i] = properties[i];
+        }
+    },
+    loadDataToScope: function(url, params, $scope, $http) {
+        $http.get(url, {
+            params: params
+        }).success(function(data){
+            Utilities.addProperties($scope, data);
+        })
     }
 }

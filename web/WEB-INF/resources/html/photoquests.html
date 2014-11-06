@@ -1,25 +1,23 @@
-<div style="width: 600px; align-self: center;">
+<style>
+    .quest_container {
+        align-self: center;
+        margin: 30px;
+    }
+
+</style>
+<div ng-controller="PhotoQuests" style="width: 600px; align-self: center;">
     <div style="text-align: center; position: relative">
         <h1>Photoquests</h1>
-        <button id="add_photoquest_button">Create PhotoQuest</button>
+        <button ng-click="openCreatePhotoquestDialog()">Create PhotoQuest</button>
     </div>
-    <div style="align-self: center">
-        <table width="600px" align="center">
-            <tr class="photoquest_item list_item">
-                <td>
-                    <image class="avatar" height="100px" width="100px"></image>
-                </td>
-                <td width="100%" class=".button">
-                    <h2 class="list_item_h2">Photoquest name</h2>
-                </td>
-            </tr>
-        </table>
+    <div class="quest_container">
+        <div ng-repeat="quest in quests">
+            <div>
+                <img width="200px" height="200px" ng-src="{{quest.avatar}}"/>
+            </div>
+            <div>
+                <h1>{{quest.name}}</h1>
+            </div>
+        </div>
     </div>
 </div>
-
-<script>
-    Utilities.applyStylesToHtml();
-    $("#add_photoquest_button").click(function(){
-        $("#create_photo_quest_dialog").dialog("open");
-    });
-</script>

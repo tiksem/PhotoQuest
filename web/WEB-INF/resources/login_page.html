@@ -7,47 +7,28 @@
     </title>
     <link rel="stylesheet" type="text/css" href="css/login-style.css">
     <link rel="stylesheet" type="text/css" href="jquery-ui-1.11.2.custom/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" href="css/ngDialog.css">
+    <link rel="stylesheet" href="css/ngDialog-theme-default.css">
+    <link rel="stylesheet" href="css/ngDialog-theme-plain.css">
     <script type="application/javascript" src="js/angular.js"> </script>
     <script type="application/javascript" src="js/jquery-2.1.0.min.js"> </script>
-    <script type="application/javascript" src="jquery-ui-1.11.2.custom/jquery-ui.js">
-
-    </script>
-    <script type="application/javascript" src="js/utilities.js"> </script>
+    <script type="application/javascript" src="jquery-ui-1.11.2.custom/jquery-ui.js"></script>
+    <script type="application/javascript" src="js/utilities.js"></script>
+    <script type="application/javascript" src="js/ngDialog.js"></script>
 
     <script>
-        var main = angular.module("main", []);
-        main.controller("Eblo", function($scope){
-            $scope.eblo = "Gnil eblivya";
-        })
-
-//        main.controller("LoginController", ['$scope', function($scope){
-//            $scope.isSignin = false;
-//            $scope.signin = function(){
-//                $http.get(window.location.origin + "//login", {
-//                    login: $scope.login,
-//                    password: $scope.password
-//                }).success(function(){
-//                    $scope.isSignin = true;
-//                    alert("Success!");
-//                })
-//            }
-//        }])
+        var main = angular.module("main", ['ngDialog']);
     </script>
 </head>
 <body>
-
-<div ng-controller="Eblo">
-    <p>
-        Otsosi {{eblo}}
-    </p>
-</div>
 
 <script type="application/javascript" src="js/login.js"> </script>
 <div id="login_form_container" ng-include="'HTML/login.html'">
 
 </div>
 
-<div id="photoquests_container" ng-include="HTML/photoquests.html" align="center">
+<script type="application/javascript" src="js/photoquests.js"> </script>
+<div id="photoquests_container" ng-include="'HTML/photoquests.html'" align="center">
 
 </div>
 
