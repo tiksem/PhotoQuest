@@ -1,5 +1,5 @@
 var main = angular.module("main");
-main.controller("PhotoQuests", function($scope, $element, ngDialog, $http){
+main.controller("PhotoQuests", function($scope, $location, $element, ngDialog, $http){
     $scope.openCreatePhotoquestDialog = function() {
         ngDialog.open({
             template: 'HTML/create_photo_quest_dialog.html',
@@ -19,6 +19,10 @@ main.controller("PhotoQuests", function($scope, $element, ngDialog, $http){
             $scope.closeThisDialog(null);
         });
     };
+
+    $scope.openQuest = function(id) {
+        $location.hash("quest_" + id);
+    }
 
     Utilities.loadDataToScope(window.location.origin + "//getPhotoquests", {}, $scope, $http)
 

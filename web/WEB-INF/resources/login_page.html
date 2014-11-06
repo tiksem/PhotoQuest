@@ -15,12 +15,32 @@
     <script type="application/javascript" src="jquery-ui-1.11.2.custom/jquery-ui.js"></script>
     <script type="application/javascript" src="js/utilities.js"></script>
     <script type="application/javascript" src="js/ngDialog.js"></script>
+    <script type="application/javascript" src="js/string.js"></script>
 
     <script>
         var main = angular.module("main", ['ngDialog']);
+        main.controller("Main", function($scope, $location){
+            $scope.getCenterPageContent = function(){
+                var defaultContent = 'HTML/photoquests.html'
+                var hash = $location.hash();
+                if(!hash){
+                    return defaultContent;
+                }
+
+                var path = Utilities.parseHashPath(hash);
+                if(path[0] == "quest"){
+                    var questId = path[1];
+                    if(questId){
+                        return 'HTML/photoquest.html';
+                    }
+                }
+
+                return defaultContent;
+            }
+        })
     </script>
 </head>
-<body>
+<body ng-controller="Main">
 
 <script type="application/javascript" src="js/login.js"> </script>
 <div id="login_form_container" ng-include="'HTML/login.html'">
@@ -28,11 +48,7 @@
 </div>
 
 <script type="application/javascript" src="js/photoquests.js"> </script>
-<div id="photoquests_container" ng-include="'HTML/photoquests.html'" align="center">
-
-</div>
-
-<div id="create_photoquest_dialog_container" align="center">
+<div id="center_page_container" ng-include="getCenterPageContent()" align="center">
 
 </div>
 

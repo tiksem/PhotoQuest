@@ -65,5 +65,8 @@ Utilities = {
         }).success(function(data){
             Utilities.addProperties($scope, data);
         })
+    },
+    parseHashPath: function(hash) {
+        return hash.split("_");
     }
 }
