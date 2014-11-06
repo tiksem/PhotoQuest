@@ -14,6 +14,7 @@ import javax.persistence.Id;
 
 @Entity
 public class Photoquest implements InstanceCallbacks {
+    @Id
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 

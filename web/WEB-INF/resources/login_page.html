@@ -30,7 +30,7 @@
                 var path = Utilities.parseHashPath(hash);
                 if(path[0] == "quest"){
                     var questId = path[1];
-                    if(questId){
+                    if(questId && questId.isNumber()){
                         return 'HTML/photoquest.html';
                     }
                 }
@@ -48,6 +48,7 @@
 </div>
 
 <script type="application/javascript" src="js/photoquests.js"> </script>
+<script type="application/javascript" src="js/photoquest.js"> </script>
 <div id="center_page_container" ng-include="getCenterPageContent()" align="center">
 
 </div>

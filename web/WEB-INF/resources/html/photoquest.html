@@ -4,5 +4,9 @@
     }
 </style>
 <div id="photoquest_content" ng-controller="PhotoQuest" >
-    eblo ne v teme
+    <h1 ng-show="!contentLoaded">Loading...</h1>
+    <div ng-show="contentLoaded">
+        <h1>{{quest.name}}</h1>
+        <img ng-repeat="photo in photos" ng-src="{{photo.image}}" />
+    </div>
 </div>

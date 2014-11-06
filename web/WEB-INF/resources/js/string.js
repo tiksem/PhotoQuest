@@ -4,3 +4,7 @@
 String.prototype.startsWith = function (str){
     return this.indexOf(str) == 0;
 };
+
+String.prototype.isNumber = function isNumber() {
+    return !isNaN(parseFloat(this)) && isFinite(this);
+}

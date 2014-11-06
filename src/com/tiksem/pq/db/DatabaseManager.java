@@ -114,6 +114,21 @@ public class DatabaseManager {
         return ObjectDBUtilities.getObjectByPattern(persistenceManager, photoquest);
     }
 
+    public Photoquest getPhotoQuestById(long id) {
+        Photoquest photoquest = new Photoquest();
+        photoquest.setId(id);
+        return ObjectDBUtilities.getObjectByPattern(persistenceManager, photoquest);
+    }
+
+    public Photoquest getPhotoQuestByIdOrThrow(long id) {
+        Photoquest photoquest = getPhotoQuestById(id);
+        if(photoquest == null){
+            throw new PhotoquestNotFoundException(String.valueOf(id));
+        }
+
+        return photoquest;
+    }
+
     public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName) {
         User user = getSignedInUserOrThrow(request);
         Photoquest photoquest = getPhotoQuestByName(photoquestName);

@@ -11,7 +11,7 @@
         <button ng-click="openCreatePhotoquestDialog()">Create PhotoQuest</button>
     </div>
     <div class="quest_container">
-        <div ng-repeat="quest in quests" ng-click="openQuest(quest.id)">
+        <div ng-repeat="quest in quests" ng-click="openQuest(quest)">
             <div>
                 <img width="200px" height="200px" ng-src="{{quest.avatar}}"/>
             </div>

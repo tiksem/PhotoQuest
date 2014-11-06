@@ -132,4 +132,9 @@ public class ApiHandler {
         final Collection<Photoquest> photoquests = DatabaseManager.getInstance().getPhotoQuests(request);
         return new PhotoquestsList(photoquests);
     }
+
+    @RequestMapping("/getPhotoquestById")
+    public @ResponseBody Object getPhotoquestById(@RequestParam("id") Long id){
+        return DatabaseManager.getInstance().getPhotoQuestByIdOrThrow(id);
+    }
 }

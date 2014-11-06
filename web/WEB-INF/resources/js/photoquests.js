@@ -20,8 +20,8 @@ main.controller("PhotoQuests", function($scope, $location, $element, ngDialog, $
         });
     };
 
-    $scope.openQuest = function(id) {
-        $location.hash("quest_" + id);
+    $scope.openQuest = function(quest) {
+        $location.hash("quest_" + quest.id);
     }
 
     Utilities.loadDataToScope(window.location.origin + "//getPhotoquests", {}, $scope, $http)

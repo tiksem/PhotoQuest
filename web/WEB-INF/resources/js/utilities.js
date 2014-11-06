@@ -59,11 +59,14 @@ Utilities = {
             object[i] = properties[i];
         }
     },
-    loadDataToScope: function(url, params, $scope, $http) {
+    loadDataToScope: function(url, params, $scope, $http, onSuccess) {
         $http.get(url, {
             params: params
         }).success(function(data){
             Utilities.addProperties($scope, data);
+            if(onSuccess){
+                onSuccess();
+            }
         })
     },
     parseHashPath: function(hash) {
