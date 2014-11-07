@@ -13,6 +13,12 @@ main.controller("PhotoQuest", function($scope, ngDialog, $element, $http, $locat
         $scope.contentLoaded = true;
     });
 
+    url = window.location.origin + "//getPhotosOfPhotoquest";
+
+    Utilities.loadDataToScope(url, params, $scope, $http, function(data){
+        console.log(data);
+    });
+
     $scope.openAddPhotoDialog = function() {
         ngDialog.open({
             template: 'html/add_photo_dialog.html',

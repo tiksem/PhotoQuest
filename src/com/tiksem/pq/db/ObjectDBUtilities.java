@@ -3,10 +3,7 @@ package com.tiksem.pq.db;
 import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
 
-import javax.jdo.JDOHelper;
-import javax.jdo.PersistenceManager;
-import javax.jdo.PersistenceManagerFactory;
-import javax.jdo.Query;
+import javax.jdo.*;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Unique;
 import javax.persistence.Id;
@@ -33,7 +30,12 @@ public class ObjectDBUtilities {
     public static <T> T getObjectById(PersistenceManager manager, Class<T> aClass, long id) {
         Query query = manager.newQuery(aClass);
         query.setFilter("this.id==" + id);
-        return (T)query.execute();
+        Collection<T> collection = (Collection<T>)query.execute();
+        if(collection.size() <= 0){
+            return null;
+        }
+
+        return collection.iterator().next();
     }
 
     public static <T> T executeQueryForOneInstance(Query query) {
@@ -97,5 +99,12 @@ public class ObjectDBUtilities {
     public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass) {
         Query query = manager.newQuery(patternClass);
         return (Collection<T>) query.execute();
+    }
+
+    public static  <T> void deleteAllObjectsOfClass(PersistenceManager manager, Class<T> aClass) {
+        Transaction transaction = manager.currentTransaction();
+        transaction.begin();
+        manager.deletePersistentAll(getAllObjectsOfClass(manager, aClass));
+        transaction.commit();
     }
 }

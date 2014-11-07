@@ -2,6 +2,7 @@ package com.tiksem.pq;
 
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.PhotoquestsList;
+import com.tiksem.pq.data.response.PhotosList;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.db.exceptions.PhotoquestNotFoundException;
@@ -71,6 +72,12 @@ public class ApiHandler {
         return new Success();
     }
 
+    @RequestMapping("/deleteAllPhotos")
+    public @ResponseBody Object deleteAllPhotos() {
+        DatabaseManager.getInstance().deleteAllPhotos();
+        return new Success();
+    }
+
     @RequestMapping("/createPhotoquest")
     public @ResponseBody Object createPhotoquest(
             @RequestParam(value = "name", required = true) String name) {
@@ -89,7 +96,7 @@ public class ApiHandler {
             Photo photo = new Photo();
             photo.setPhotoquestId(id);
             byte[] bytes = file.getBytes();
-            databaseManager.addPhoto(photo, bytes);
+            databaseManager.addPhoto(request, photo, bytes);
         } else {
             throw new FileIsEmptyException();
         }
@@ -124,5 +131,11 @@ public class ApiHandler {
     @ExceptionHandler(Throwable.class)
     public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
         return new ExceptionResponse(e);
+    }
+
+    @RequestMapping("/getPhotosOfPhotoquest")
+    public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId){
+        Collection<Photo> photos = DatabaseManager.getInstance().getPhotosOfPhotoquest(request, photoquestId);
+        return new PhotosList(photos);
     }
 }

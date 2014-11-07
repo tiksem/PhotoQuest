@@ -13,6 +13,14 @@
             <bean id="jacksonMessageConverter" class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
 
             </bean>
+            <bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter">
+                <property name="supportedMediaTypes">
+                    <list>
+                        <value>image/jpeg</value>
+                        <value>image/png</value>
+                    </list>
+                </property>
+            </bean>
         </mvc:message-converters>
     </mvc:annotation-driven>
 

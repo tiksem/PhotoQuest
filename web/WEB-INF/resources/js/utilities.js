@@ -65,7 +65,7 @@ Utilities = {
         }).success(function(data){
             Utilities.addProperties($scope, data);
             if(onSuccess){
-                onSuccess();
+                onSuccess(data);
             }
         })
     },

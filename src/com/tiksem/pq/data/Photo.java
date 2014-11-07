@@ -1,7 +1,11 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.db.DatabaseManager;
+
+import javax.jdo.InstanceCallbacks;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.NotPersistent;
 import javax.jdo.annotations.Persistent;
 import javax.persistence.Entity;
 import javax.persistence.Id;;
@@ -22,6 +26,12 @@ public class Photo {
 
     @Index
     private Long photoquestId;
+
+    @Index
+    private Long userId;
+
+    @NotPersistent
+    private String url;
 
     public Long getLikesCount() {
         return likesCount;
@@ -45,5 +55,21 @@ public class Photo {
 
     public void setPhotoquestId(Long photoquestId) {
         this.photoquestId = photoquestId;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

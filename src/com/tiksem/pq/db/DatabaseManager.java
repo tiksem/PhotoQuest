@@ -189,12 +189,24 @@ public class DatabaseManager {
         transaction.commit();
     }
 
-    public Photo addPhoto(Photo photo, byte[] bitmapData) {
+    public void deleteAllPhotos() {
+        ObjectDBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
+        ObjectDBUtilities.deleteAllObjectsOfClass(persistenceManager, BitmapData.class);
+    }
+
+    public Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
+        User user = getSignedInUserOrThrow(request);
+
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
         photo.setLikesCount(0l);
+        photo.setUserId(user.getId());
         photo = persistenceManager.makePersistent(photo);
+        transaction.commit();
+        transaction = persistenceManager.currentTransaction();
+        transaction.begin();
         BitmapData data = new BitmapData();
+        data.setId(photo.getId());
         data.setImage(bitmapData);
         persistenceManager.makePersistent(data);
         transaction.commit();
@@ -224,10 +236,27 @@ public class DatabaseManager {
         return result;
     }
 
-    public Collection<Photo> getPhotosOfPhotoquest(long photoQuestId) {
+    private void initPhotoUrl(Photo photo, HttpServletRequest request) {
+        Long photoId = photo.getId();
+        if(photoId == null){
+            return;
+        }
+
+        photo.setUrl(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + photoId);
+    }
+
+    private void initPhotosUrl(Iterable<Photo> photos, HttpServletRequest request) {
+        for(Photo photo : photos){
+            initPhotoUrl(photo, request);
+        }
+    }
+
+    public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId) {
         Photo photo = new Photo();
         photo.setPhotoquestId(photoQuestId);
-        return ObjectDBUtilities.queryByPattern(persistenceManager, photo);
+        Collection<Photo> photos = ObjectDBUtilities.queryByPattern(persistenceManager, photo);
+        initPhotosUrl(photos, request);
+        return photos;
     }
 
     public String getDefaultAvatar(HttpServletRequest request) {
