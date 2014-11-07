@@ -10,18 +10,22 @@
     <link rel="stylesheet" type="text/css" href="css/ngDialog.css">
     <link rel="stylesheet" href="css/ngDialog-theme-default.css">
     <link rel="stylesheet" href="css/ngDialog-theme-plain.css">
+
+    <script type="application/javascript" src="js/angular-file-upload-shim.js"></script>
     <script type="application/javascript" src="js/angular.js"> </script>
     <script type="application/javascript" src="js/jquery-2.1.0.min.js"> </script>
     <script type="application/javascript" src="jquery-ui-1.11.2.custom/jquery-ui.js"></script>
     <script type="application/javascript" src="js/utilities.js"></script>
     <script type="application/javascript" src="js/ngDialog.js"></script>
     <script type="application/javascript" src="js/string.js"></script>
+    <script type="application/javascript" src="js/angular-file-upload.js"> </script>
+
 
     <script>
-        var main = angular.module("main", ['ngDialog']);
+        var main = angular.module("main", ['ngDialog', 'angularFileUpload']);
         main.controller("Main", function($scope, $location){
             $scope.getCenterPageContent = function(){
-                var defaultContent = 'HTML/photoquests.html'
+                var defaultContent = 'html/photoquests.html'
                 var hash = $location.hash();
                 if(!hash){
                     return defaultContent;
@@ -31,7 +35,7 @@
                 if(path[0] == "quest"){
                     var questId = path[1];
                     if(questId && questId.isNumber()){
-                        return 'HTML/photoquest.html';
+                        return 'html/photoquest.html';
                     }
                 }
 
@@ -43,7 +47,7 @@
 <body ng-controller="Main">
 
 <script type="application/javascript" src="js/login.js"> </script>
-<div id="login_form_container" ng-include="'HTML/login.html'">
+<div id="login_form_container" ng-include="'html/login.html'">
 
 </div>
 

@@ -7,6 +7,11 @@
     <h1 ng-show="!contentLoaded">Loading...</h1>
     <div ng-show="contentLoaded">
         <h1>{{quest.name}}</h1>
-        <img ng-repeat="photo in photos" ng-src="{{photo.image}}" />
+        <div>
+            <button ng-click="openAddPhotoDialog()">Add Photo</button>
+        </div>
+        <div ng-repeat="photo in photos">
+            <img ng-src="{{photo.image}}" />
+        </div>
     </div>
 </div>

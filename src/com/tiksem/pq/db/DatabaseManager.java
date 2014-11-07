@@ -1,6 +1,6 @@
 package com.tiksem.pq.db;
 
-import com.tiksem.pq.PhotosByPhotoQuest;
+import com.tiksem.pq.data.BitmapData;
 import com.tiksem.pq.data.Photo;
 import com.tiksem.pq.data.Photoquest;
 import com.tiksem.pq.data.User;
@@ -189,29 +189,45 @@ public class DatabaseManager {
         transaction.commit();
     }
 
-    public Photo addPhoto(Photo photo) {
+    public Photo addPhoto(Photo photo, byte[] bitmapData) {
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
+        photo.setLikesCount(0l);
         photo = persistenceManager.makePersistent(photo);
+        BitmapData data = new BitmapData();
+        data.setImage(bitmapData);
+        persistenceManager.makePersistent(data);
         transaction.commit();
         return photo;
     }
 
-    public PhotosByPhotoQuest addPhotoToPhotoquest(long photoId, long photoquestId) {
-        PhotosByPhotoQuest photosByPhotoQuest = new PhotosByPhotoQuest();
-        photosByPhotoQuest.setPhotoId(photoId);
-        photosByPhotoQuest.setPhotoQuestId(photoquestId);
-
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        photosByPhotoQuest = persistenceManager.makePersistent(photosByPhotoQuest);
-        transaction.commit();
-
-        return photosByPhotoQuest;
-    }
-
     public Photo getPhotoById(long id) {
         return ObjectDBUtilities.getObjectById(persistenceManager, Photo.class, id);
+    }
+
+    public byte[] getBitmapDataByPhotoId(long id) {
+        BitmapData bitmapData =
+                ObjectDBUtilities.getObjectById(persistenceManager, BitmapData.class, id);
+        if(bitmapData == null){
+            return null;
+        }
+
+        return bitmapData.getImage();
+    }
+
+    public byte[] getBitmapDataByPhotoIdOrThrow(long id) {
+        byte[] result = getBitmapDataByPhotoId(id);
+        if(result == null){
+            throw new ResourceNotFoundException();
+        }
+
+        return result;
+    }
+
+    public Collection<Photo> getPhotosOfPhotoquest(long photoQuestId) {
+        Photo photo = new Photo();
+        photo.setPhotoquestId(photoQuestId);
+        return ObjectDBUtilities.queryByPattern(persistenceManager, photo);
     }
 
     public String getDefaultAvatar(HttpServletRequest request) {

@@ -3,7 +3,8 @@ package com.tiksem.pq.data;
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.Persistent;
-import javax.persistence.Entity;;
+import javax.persistence.Entity;
+import javax.persistence.Id;;
 
 /**
  * Created by CM on 10/31/2014.
@@ -12,20 +13,15 @@ import javax.persistence.Entity;;
 public class Photo {
     public static final String IMAGE_URL_PATH = "/image/";
 
+    @Id
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 
     @Index
     private Long likesCount;
-    private byte[] image;
 
-    public byte[] getImage() {
-        return image;
-    }
-
-    public void setImage(byte[] image) {
-        this.image = image;
-    }
+    @Index
+    private Long photoquestId;
 
     public Long getLikesCount() {
         return likesCount;
@@ -41,5 +37,13 @@ public class Photo {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getPhotoquestId() {
+        return photoquestId;
+    }
+
+    public void setPhotoquestId(Long photoquestId) {
+        this.photoquestId = photoquestId;
     }
 }

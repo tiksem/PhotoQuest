@@ -1,9 +1,6 @@
 package com.tiksem.pq;
 
-import com.tiksem.pq.data.Photo;
-import com.tiksem.pq.data.Photoquest;
-import com.tiksem.pq.data.Success;
-import com.tiksem.pq.data.User;
+import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.PhotoquestsList;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
@@ -81,24 +78,18 @@ public class ApiHandler {
     }
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
-    public @ResponseBody Object addPhotoToPhotoQuest(@RequestParam("photoquest") String photoquestName,
+    public @ResponseBody Object addPhotoToPhotoQuest(@RequestParam("photoquest") Long id,
                                                  @RequestParam("file") MultipartFile file)
             throws IOException {
         DatabaseManager databaseManager = DatabaseManager.getInstance();
 
-        Photoquest photoquest = databaseManager.getPhotoQuestByName(photoquestName);
-        if(photoquest == null){
-            throw new PhotoquestNotFoundException(photoquestName);
-        }
+        Photoquest photoquest = databaseManager.getPhotoQuestByIdOrThrow(id);
 
         if (!file.isEmpty()) {
             Photo photo = new Photo();
+            photo.setPhotoquestId(id);
             byte[] bytes = file.getBytes();
-            photo.setImage(bytes);
-            photo = databaseManager.addPhoto(photo);
-            long photoquestId = photoquest.getId();
-            long photoId = photo.getId();
-            databaseManager.addPhotoToPhotoquest(photoId, photoquestId);
+            databaseManager.addPhoto(photo, bytes);
         } else {
             throw new FileIsEmptyException();
         }
@@ -110,15 +101,7 @@ public class ApiHandler {
             produces = MediaType.IMAGE_JPEG_VALUE)
     public @ResponseBody HttpEntity<byte[]> getImageById(@PathVariable Long id)
             throws IOException {
-        Photo photo = DatabaseManager.getInstance().getPhotoById(id);
-        if(photo == null){
-            throw new ResourceNotFoundException();
-        }
-
-        byte[] image = photo.getImage();
-        if(image == null){
-            throw new ResourceNotFoundException();
-        }
+        byte[] image = DatabaseManager.getInstance().getBitmapDataByPhotoIdOrThrow(id);
 
         HttpHeaders headers = new HttpHeaders();
         MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
@@ -136,5 +119,10 @@ public class ApiHandler {
     @RequestMapping("/getPhotoquestById")
     public @ResponseBody Object getPhotoquestById(@RequestParam("id") Long id){
         return DatabaseManager.getInstance().getPhotoQuestByIdOrThrow(id);
+    }
+
+    @ExceptionHandler(Throwable.class)
+    public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
+        return new ExceptionResponse(e);
     }
 }

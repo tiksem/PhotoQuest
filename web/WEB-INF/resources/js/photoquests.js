@@ -2,7 +2,7 @@ var main = angular.module("main");
 main.controller("PhotoQuests", function($scope, $location, $element, ngDialog, $http){
     $scope.openCreatePhotoquestDialog = function() {
         ngDialog.open({
-            template: 'HTML/create_photo_quest_dialog.html',
+            template: 'html/create_photo_quest_dialog.html',
             className: 'ngdialog-theme-default',
             controller: 'PhotoQuests'
         });
