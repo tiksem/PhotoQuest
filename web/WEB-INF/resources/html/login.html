@@ -1,5 +1,5 @@
-<div>
-    <form id="login_form" ng-controller="LoginController" ng-show="!isSignin">
+<div ng-controller="LoginController">
+    <form id="login_form" ng-show="!isSignin">
         <label>
             Enter your login
             <input name="login" ng-model="login" type="text">
@@ -11,4 +11,8 @@
         <button ng-click="signin();">Sign In</button>
         <button ng-click="register()">Register</button>
     </form>
+
+    <div ng-show="isSignin">
+        <img width="100px" height="100px" ng-src="{{avatar}}" />
+    </div>
 </div>

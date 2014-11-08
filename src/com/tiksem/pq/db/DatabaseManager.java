@@ -72,17 +72,18 @@ public class DatabaseManager {
         return null;
     }
 
-    public User login(String login, String password) {
+    public User login(HttpServletRequest request, String login, String password) {
         User user = getUserByLogin(login);
         if(user != null && user.getPassword().equals(password)){
+            setAvatar(request, user);
             return user;
         }
 
         return null;
     }
 
-    public User loginOrThrow(String login, String password) {
-        User user = login(login, password);
+    public User loginOrThrow(HttpServletRequest request, String login, String password) {
+        User user = login(request, login, password);
         if(user == null){
             throw new LoginFailedException();
         }

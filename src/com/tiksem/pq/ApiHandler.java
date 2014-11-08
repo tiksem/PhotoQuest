@@ -43,7 +43,7 @@ public class ApiHandler {
     public @ResponseBody Object login(@RequestParam(value="login", required=true) String login,
                                       @RequestParam(value="password", required=true) String password,
                                       HttpServletResponse response){
-        User user = DatabaseManager.getInstance().loginOrThrow(login, password);
+        User user = DatabaseManager.getInstance().loginOrThrow(request, login, password);
 
         response.addCookie(new Cookie("login", login));
         response.addCookie(new Cookie("password", password));

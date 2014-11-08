@@ -1,7 +1,9 @@
 var main = angular.module("main");
 main.controller("LoginController", function($scope, ngDialog, $element, $http){
     $scope.isSignin = false;
+
     $scope.signin = function(){
+        $scope.avatar = "//:0";
         var login = $scope.login;
         var password = $scope.password;
         if(login == ""){
@@ -20,9 +22,16 @@ main.controller("LoginController", function($scope, ngDialog, $element, $http){
                 password: password
             }
         }
-        $http.get(window.location.origin + "//login",config).success(function(){
-            $scope.isSignin = true;
-            alert("Success!");
+        $http.get(window.location.origin + "//login",config).success(function(data){
+            if (!data.error) {
+                $scope.isSignin = true;
+                $scope.avatar = data.avatar;
+                alert("Success!");
+            } else {
+                var message = data.error + " " + data.message;
+                alert(message);
+                console.error(message);
+            }
         })
     }
 
