@@ -1,9 +1,6 @@
 package com.tiksem.pq.db;
 
-import com.tiksem.pq.data.BitmapData;
-import com.tiksem.pq.data.Photo;
-import com.tiksem.pq.data.Photoquest;
-import com.tiksem.pq.data.User;
+import com.tiksem.pq.data.*;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 
@@ -13,9 +10,7 @@ import javax.jdo.Query;
 import javax.jdo.Transaction;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by CM on 10/30/2014.
@@ -23,11 +18,12 @@ import java.util.List;
 public class DatabaseManager {
     private static DatabaseManager instance;
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
+    public static final String AVATAR_QUEST_NAME = "Avatar";
 
     private final PersistenceManager persistenceManager;
 
     public static DatabaseManager getInstance() {
-        if(instance == null){
+        if(instance == null ){
             instance = new DatabaseManager();
         }
 
@@ -37,6 +33,19 @@ public class DatabaseManager {
     private DatabaseManager()     {
         PersistenceManagerFactory factory  = ObjectDBUtilities.createLocalConnectionFactory("PhotoQuest");
         persistenceManager = factory.getPersistenceManager();
+    }
+
+    public User getUserById(long id) {
+        return ObjectDBUtilities.getObjectById(persistenceManager, User.class, id);
+    }
+
+    public User getUserByIdOrThrow(long id) {
+        User user = getUserById(id);
+        if(user == null){
+            throw new UnknownUserException(String.valueOf(id));
+        }
+
+        return user;
     }
 
     public User getUserByLogin(String login) {
@@ -129,6 +138,17 @@ public class DatabaseManager {
         return photoquest;
     }
 
+    public Photoquest createSystemPhotoquest(String photoquestName) {
+        Photoquest photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
+
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        photoquest = persistenceManager.makePersistent(photoquest);
+        transaction.commit();
+
+        return photoquest;
+    }
+
     public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName) {
         User user = getSignedInUserOrThrow(request);
         Photoquest photoquest = getPhotoQuestByName(photoquestName);
@@ -159,6 +179,18 @@ public class DatabaseManager {
         return getPhotoquestsCreatedByUser(user.getId());
     }
 
+    public void update(HttpServletRequest request, Object object) {
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        persistenceManager.makePersistent(object);
+        transaction.commit();
+
+        if(object instanceof WithAvatar){
+            WithAvatar withAvatar = (WithAvatar) object;
+            setAvatar(request, withAvatar);
+        }
+    }
+
     public User registerUser(User user) {
         String login = user.getLogin();
         String password = user.getPassword();
@@ -178,14 +210,16 @@ public class DatabaseManager {
         return user;
     }
 
-    public Collection<User> getAllUsers() {
-        return ObjectDBUtilities.getAllObjectsOfClass(persistenceManager, User.class);
+    public Collection<User> getAllUsers(HttpServletRequest request) {
+        Collection<User> users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager, User.class);
+        setAvatar(request, users);
+        return users;
     }
 
-    public void deleteAllUsers() {
+    public void deleteAllUsers(HttpServletRequest request) {
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
-        persistenceManager.deletePersistentAll(getAllUsers());
+        persistenceManager.deletePersistentAll(getAllUsers(request));
         transaction.commit();
     }
 
@@ -263,22 +297,137 @@ public class DatabaseManager {
         return HttpUtilities.getBaseUrl(request) + "/" + DEFAULT_AVATAR_URL;
     }
 
-    private void setDefaultAvatarIfNeed(HttpServletRequest request, Photoquest photoquest) {
-        if(photoquest.getAvatar() == null){
-            photoquest.setAvatar(getDefaultAvatar(request));
+    private void setAvatar(HttpServletRequest request, WithAvatar withAvatar) {
+        Long avatarId = withAvatar.getAvatarId();
+        if(avatarId == null){
+            withAvatar.setAvatar(getDefaultAvatar(request));
+        } else {
+            withAvatar.setAvatar(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + avatarId);
         }
     }
 
-    private void setDefaultAvatarIfNeed(HttpServletRequest request, Iterable<Photoquest> photoquests) {
-        for(Photoquest photoquest : photoquests){
-            setDefaultAvatarIfNeed(request, photoquest);
+    private void setAvatar(HttpServletRequest request, Iterable<? extends WithAvatar> withAvatars) {
+        for(WithAvatar withAvatar : withAvatars){
+            setAvatar(request, withAvatar);
         }
     }
 
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request) {
         Collection<Photoquest> result =
                 ObjectDBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class);
-        setDefaultAvatarIfNeed(request, result);
+        setAvatar(request, result);
         return result;
+    }
+
+    public boolean hasFriendship(long user1Id, long user2Id) {
+        Query query = persistenceManager.newQuery(Friendship.class);
+        query.declareParameters("long user1Id, long user2Id");
+
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("user1", user1Id);
+        args.put("user2", user2Id);
+
+        String filter = "(this.user1 == user1 && this.user2 == user2) || " +
+                "(this.user1 == user2 && this.user2 == user1)";
+        query.setFilter(filter);
+
+        Collection<Friendship> result = (Collection<Friendship>) query.executeWithMap(args);
+        return !result.isEmpty();
+    }
+
+    public void addFriend(HttpServletRequest request, long userId) {
+        User user = getSignedInUserOrThrow(request);
+        getUserByIdOrThrow(userId);
+        long signedInUserId = user.getId();
+
+        if(hasFriendship(userId, signedInUserId)){
+            throw new FriendshipExistsException(userId, signedInUserId);
+        }
+
+        Friendship friendship = new Friendship(userId, signedInUserId);
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        persistenceManager.makePersistent(friendship);
+        transaction.commit();
+    }
+
+    public void removeFriend(HttpServletRequest request, long userId) {
+        User user = getSignedInUserOrThrow(request);
+        getUserByIdOrThrow(userId);
+        long signedInUserId = user.getId();
+
+        Friendship friendship = new Friendship(userId, signedInUserId);
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        persistenceManager.deletePersistent(friendship);
+        transaction.commit();
+    }
+
+    public List<Long> getFriendsIdesOf(long userId) {
+        Query query = persistenceManager.newQuery(Friendship.class);
+        query.declareParameters("long userId");
+
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("userId", userId);
+
+        String filter = "this.user1 == userId || this.user2 == userId";
+        query.setFilter(filter);
+
+        Collection<Friendship> friendships = (Collection<Friendship>) query.executeWithMap(args);
+        ArrayList<Long> result = new ArrayList<Long>(friendships.size());
+
+        for(Friendship friendship : friendships){
+            Long user1 = friendship.getUser1();
+            Long user2 = friendship.getUser2();
+
+            if(user1 == userId){
+                result.add(user1);
+            } else if(user2 == userId) {
+                result.add(user2);
+            } else {
+                throw new RuntimeException("WTF? It's impossible!");
+            }
+        }
+
+        return result;
+    }
+
+    public List<User> getUsersByIdes(Iterable<Long> ides) {
+        List<User> result = new ArrayList<User>();
+        for(Long id : ides){
+            User user = getUserByIdOrThrow(id);
+            result.add(user);
+        }
+
+        return result;
+    }
+
+    public List<User> getFriendsOf(long userId) {
+        return getUsersByIdes(getFriendsIdesOf(userId));
+    }
+
+    public List<User> getFriends(HttpServletRequest request) {
+        return getFriendsOf(getSignedInUserOrThrow(request).getId());
+    }
+
+    public List<Long> getFriendsIdes(HttpServletRequest request) {
+        return getFriendsIdesOf(getSignedInUserOrThrow(request).getId());
+    }
+
+    public Photoquest getOrCreateSystemPhotoQuest(String photoquestName) {
+        Photoquest photoquest = getPhotoQuestByName(photoquestName);
+        if(photoquest == null){
+            return createSystemPhotoquest(photoquestName);
+        }
+
+        return photoquest;
+    }
+
+    public void beginTransaction() {
+        persistenceManager.currentTransaction().begin();
+    }
+
+    public void endTransaction() {
+        persistenceManager.currentTransaction().commit();
     }
 }

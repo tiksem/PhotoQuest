@@ -50,25 +50,50 @@ public class ApiHandler {
         return user;
     }
 
-    @RequestMapping("/register")
+    @RequestMapping(value = "/register", method = RequestMethod.POST)
     public @ResponseBody Object register(@RequestParam(value="login", required=true) String login,
                                       @RequestParam(value="password", required=true) String password,
+                                      @RequestParam(value="name", required=true) String name,
+                                      @RequestParam(value="lastName", required=true) String lastName,
+                                      @RequestParam("file") MultipartFile avatar,
                                       HttpServletResponse response) {
         User user = new User();
         user.setLogin(login);
         user.setPassword(password);
+        user.setName(name);
+        user.setLastName(lastName);
 
-        return DatabaseManager.getInstance().registerUser(user);
+        DatabaseManager databaseManager = DatabaseManager.getInstance();
+        user = databaseManager.registerUser(user);
+
+        if (!avatar.isEmpty()) {
+            Photo photo = new Photo();
+            Photoquest avatarPhotoQuest = databaseManager.
+                    getOrCreateSystemPhotoQuest(DatabaseManager.AVATAR_QUEST_NAME);
+            photo.setPhotoquestId(avatarPhotoQuest.getId());
+            photo.setUserId(user.getId());
+            try {
+                byte[] bytes = avatar.getBytes();
+                photo = databaseManager.addPhoto(request, photo, bytes);
+                user.setAvatarId(photo.getId());
+
+                DatabaseManager.getInstance().update(request, user);
+            } catch (IOException e) {
+
+            }
+        }
+
+        return user;
     }
 
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers() {
-        return DatabaseManager.getInstance().getAllUsers();
+        return DatabaseManager.getInstance().getAllUsers(request);
     }
 
     @RequestMapping("/deleteAllUsers")
     public @ResponseBody Object deleteAllUsers() {
-        DatabaseManager.getInstance().deleteAllUsers();
+        DatabaseManager.getInstance().deleteAllUsers(request);
         return new Success();
     }
 

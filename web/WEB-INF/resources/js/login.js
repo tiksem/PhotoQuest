@@ -1,5 +1,5 @@
 var main = angular.module("main");
-main.controller("LoginController", function($scope, $element, $http){
+main.controller("LoginController", function($scope, ngDialog, $element, $http){
     $scope.isSignin = false;
     $scope.signin = function(){
         var login = $scope.login;
@@ -25,5 +25,13 @@ main.controller("LoginController", function($scope, $element, $http){
             alert("Success!");
         })
     }
+
+    $scope.register = function(){
+        ngDialog.open({
+            template: 'html/register_dialog.html',
+            className: 'ngdialog-theme-default'
+        });
+    };
+
     Utilities.applyStylesToHtml($element);
 })

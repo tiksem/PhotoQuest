@@ -13,7 +13,7 @@ import javax.persistence.Id;
  */
 
 @Entity
-public class Photoquest implements InstanceCallbacks {
+public class Photoquest implements WithAvatar {
     @Id
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
@@ -82,41 +82,23 @@ public class Photoquest implements InstanceCallbacks {
         this.id = id;
     }
 
+    @Override
     public Long getAvatarId() {
         return avatarId;
     }
 
+    @Override
     public void setAvatarId(Long avatarId) {
         this.avatarId = avatarId;
     }
 
+    @Override
     public String getAvatar() {
         return avatar;
     }
 
+    @Override
     public void setAvatar(String avatar) {
         this.avatar = avatar;
-    }
-
-    @Override
-    public void jdoPreClear() {
-
-    }
-
-    @Override
-    public void jdoPreDelete() {
-
-    }
-
-    @Override
-    public void jdoPostLoad() {
-        if(avatarId != null){
-            avatar = Photo.IMAGE_URL_PATH + avatarId;
-        }
-    }
-
-    @Override
-    public void jdoPreStore() {
-
     }
 }

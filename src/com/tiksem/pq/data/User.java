@@ -1,7 +1,10 @@
 package com.tiksem.pq.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.NotPersistent;
 import javax.jdo.annotations.Persistent;
 import javax.persistence.Entity;
 
@@ -10,7 +13,7 @@ import javax.persistence.Entity;
  */
 
 @Entity
-public class User {
+public class User implements WithAvatar {
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 
@@ -18,8 +21,17 @@ public class User {
     private String login;
     @Index
     private String password;
+    @JsonIgnore
     @Index
     private Long avatarId;
+
+    @Index
+    private String name;
+    @Index
+    private String lastName;
+
+    @NotPersistent
+    private String avatar;
 
     public User(String login, String password) {
         this.login = login;
@@ -51,5 +63,41 @@ public class User {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    @Override
+    public String getAvatar() {
+        return avatar;
+    }
+
+    @Override
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    @Override
+    public Long getAvatarId() {
+        return avatarId;
+    }
+
+    @Override
+    public void setAvatarId(Long avatarId) {
+        this.avatarId = avatarId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 }
