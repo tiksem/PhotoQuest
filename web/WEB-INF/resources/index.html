@@ -19,11 +19,20 @@
     <script type="application/javascript" src="js/ngDialog.js"></script>
     <script type="application/javascript" src="js/string.js"></script>
     <script type="application/javascript" src="js/angular-file-upload.js"> </script>
+    <script type="application/javascript" src="js/angular-cookies.js"> </script>
 
 
     <script>
-        var main = angular.module("main", ['ngDialog', 'angularFileUpload']);
-        main.controller("Main", function($scope, $location){
+        var main = angular.module("main", ['ngDialog', 'angularFileUpload', 'ngCookies']);
+        main.controller("Main", function($scope, $location, $cookies){
+            var signedInUser = null;
+            $scope.getSignedInUser = function() {
+                return signedInUser;
+            };
+            $scope.setSignedInUser = function(user) {
+                signedInUser = user;
+            };
+
             $scope.getCenterPageContent = function(){
                 var defaultContent = 'html/photoquests.html'
                 var hash = $location.hash();
@@ -37,29 +46,42 @@
                     if(questId && questId.isNumber()){
                         return 'html/photoquest.html';
                     }
+                } else if(path[0] == "people") {
+                    return 'html/people.html';
                 }
 
                 return defaultContent;
             }
+
+
         })
     </script>
 </head>
 <body ng-controller="Main">
 
-<script type="application/javascript" src="js/login.js"> </script>
-<script type="application/javascript" src="js/register.js"> </script>
-<div id="login_form_container" ng-include="'html/login.html'">
+<script type="application/javascript" src="js/header.js"> </script>
+<div ng-include="'html/header.html'">
 
 </div>
 
-<script type="application/javascript" src="js/photoquests.js"> </script>
-<script type="application/javascript" src="js/photoquest.js"> </script>
-<div id="center_page_container" ng-include="getCenterPageContent()" align="center">
+<div style="position: relative">
+    <script type="application/javascript" src="js/login.js"> </script>
+    <script type="application/javascript" src="js/register.js"> </script>
+    <div id="login_form_container" ng-include="'html/login.html'">
 
+    </div>
+
+    <script type="application/javascript" src="js/photoquests.js"> </script>
+    <script type="application/javascript" src="js/photoquest.js"> </script>
+    <script type="application/javascript" src="js/people.js"> </script>
+    <div id="center_page_container" ng-include="getCenterPageContent()" align="center">
+
+    </div>
+
+    <script type="application/javascript">
+        Utilities.applyStylesToHtml();
+    </script>
 </div>
 
-<script type="application/javascript">
-    Utilities.applyStylesToHtml();
-</script>
 </body>
 </html>

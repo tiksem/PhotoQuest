@@ -1,17 +1,15 @@
 body {
+    font: 80.5% "Trebuchet MS", sans-serif;
+    margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px;
+    padding: 0;
     background-color: aliceblue;
+    position: relative;
 }
 
 #add_photoquest_button {
     position: absolute;
     right: 0px;
     top: 0px;
-}
-
-body{
-    font: 80.5% "Trebuchet MS", sans-serif;
-    margin: 50px;
-    position: relative;
 }
 
 .list_item {

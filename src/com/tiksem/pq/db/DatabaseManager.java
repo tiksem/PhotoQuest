@@ -212,7 +212,26 @@ public class DatabaseManager {
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request) {
-        Collection<User> users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager, User.class);
+        return getAllUsers(request, true);
+    }
+
+    public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser) {
+        Collection<User> users = null;
+        if (includeSignedInUser) {
+            users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager,
+                    User.class);
+        } else {
+            User signedInUser = getSignedInUser(request);
+            if(signedInUser == null){
+                users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager,
+                        User.class);
+            } else {
+                User user = new User();
+                user.setId(signedInUser.getId());
+                users = ObjectDBUtilities.queryByExcludePattern(persistenceManager, user);
+            }
+        }
+
         setAvatar(request, users);
         return users;
     }
@@ -224,18 +243,29 @@ public class DatabaseManager {
         transaction.commit();
     }
 
+    public void deleteAllPhotoquests(HttpServletRequest request) {
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        persistenceManager.deletePersistentAll(getPhotoQuests(request));
+        transaction.commit();
+    }
+
     public void deleteAllPhotos() {
         ObjectDBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
         ObjectDBUtilities.deleteAllObjectsOfClass(persistenceManager, BitmapData.class);
     }
 
     public Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
-        User user = getSignedInUserOrThrow(request);
+        Long userId = photo.getUserId();
+        if(userId == null){
+            User user = getSignedInUserOrThrow(request);
+            userId = user.getId();
+        }
 
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
         photo.setLikesCount(0l);
-        photo.setUserId(user.getId());
+        photo.setUserId(userId);
         photo = persistenceManager.makePersistent(photo);
         transaction.commit();
         transaction = persistenceManager.currentTransaction();

@@ -7,6 +7,7 @@ import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.db.exceptions.PhotoquestNotFoundException;
 import com.tiksem.pq.db.exceptions.ResourceNotFoundException;
+import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -36,7 +37,7 @@ public class ApiHandler {
 
     @RequestMapping("/")
     public String index() {
-        return "redirect:/login_page.html";
+        return "redirect:/index.html";
     }
 
     @RequestMapping("/login")
@@ -48,6 +49,13 @@ public class ApiHandler {
         response.addCookie(new Cookie("login", login));
         response.addCookie(new Cookie("password", password));
         return user;
+    }
+
+    @RequestMapping("/logout")
+    @ResponseBody public Object logout(HttpServletResponse response) {
+        HttpUtilities.removeCookie(response, "login");
+        HttpUtilities.removeCookie(response, "password");
+        return new Success();
     }
 
     @RequestMapping(value = "/register", method = RequestMethod.POST)
@@ -88,7 +96,8 @@ public class ApiHandler {
 
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers() {
-        return DatabaseManager.getInstance().getAllUsers(request);
+        Collection<User> users = DatabaseManager.getInstance().getAllUsers(request, false);
+        return new UsersList(users);
     }
 
     @RequestMapping("/deleteAllUsers")

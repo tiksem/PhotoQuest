@@ -48,6 +48,14 @@ public class ObjectDBUtilities {
     }
 
     public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern) {
+        return queryByPattern(manager, pattern, false);
+    }
+
+    public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern) {
+        return queryByPattern(manager, pattern, true);
+    }
+
+    private static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern, boolean asExcludePattern) {
         Class<?> patternClass = pattern.getClass();
         List<Field> fields =
                 Reflection.getFieldsWithAnnotations(patternClass, Id.class, Index.class, Unique.class);
@@ -79,6 +87,9 @@ public class ObjectDBUtilities {
 
         String parametersString = Strings.join(",", parameters).toString();
         String filtersString = Strings.join(" && ", filters).toString();
+        if(asExcludePattern){
+            filtersString = "!(" + filtersString +")";
+        }
 
         Query query = manager.newQuery(patternClass);
         query.declareParameters(parametersString);

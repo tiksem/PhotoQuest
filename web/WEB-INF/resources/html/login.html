@@ -1,5 +1,5 @@
 <div ng-controller="LoginController">
-    <form id="login_form" ng-show="!isSignin">
+    <form id="login_form" ng-show="!getSignedInUser()">
         <label>
             Enter your login
             <input name="login" ng-model="login" type="text">
@@ -12,7 +12,12 @@
         <button ng-click="register()">Register</button>
     </form>
 
-    <div ng-show="isSignin">
-        <img width="100px" height="100px" ng-src="{{avatar}}" />
+    <div ng-show="getSignedInUser()">
+        <div>
+            <img width="100px" height="100px" ng-src="{{avatar}}" />
+        </div>
+        <div>
+            <button ng-click="signout()">Sign out</button>
+        </div>
     </div>
 </div>

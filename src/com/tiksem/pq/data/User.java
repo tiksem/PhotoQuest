@@ -7,6 +7,7 @@ import javax.jdo.annotations.Index;
 import javax.jdo.annotations.NotPersistent;
 import javax.jdo.annotations.Persistent;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 
 /**
  * Created by CM on 10/30/2014.
@@ -14,6 +15,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class User implements WithAvatar {
+    @Id
     @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
     private Long id;
 

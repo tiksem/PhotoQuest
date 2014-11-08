@@ -1,0 +1,27 @@
+<style>
+    .people_container {
+        align-self: center;
+        margin: 30px;
+    }
+
+</style>
+<div ng-controller="PeopleController" style="width: 600px; align-self: center;">
+    <div style="text-align: center; position: relative">
+        <h1>People</h1>
+    </div>
+    <div class="people_container">
+        <div ng-repeat="user in users" ng-click="openProfile(user)">
+            <div style="display: inline">
+                <img width="200px" height="200px" ng-src="{{user.avatar}}"/>
+            </div>
+            <div>
+                <h1>{{user.name}}</h1>
+                <div>
+                    <button ng-show="isSignIn()" ng-click="addOrRemoveFriend()">
+                        {{!user.isFriend ? "Add Friend" : "Remove Friend"}}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

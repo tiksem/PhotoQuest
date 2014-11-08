@@ -1,11 +1,9 @@
 var main = angular.module("main");
-main.controller("LoginController", function($scope, ngDialog, $element, $http){
+main.controller("LoginController", function($rootScope, $scope, ngDialog, $element, $http, $cookies){
     $scope.isSignin = false;
 
-    $scope.signin = function(){
+    var signin = function(login, password){
         $scope.avatar = "//:0";
-        var login = $scope.login;
-        var password = $scope.password;
         if(login == ""){
             alert("Enter login!");
             return;
@@ -21,10 +19,10 @@ main.controller("LoginController", function($scope, ngDialog, $element, $http){
                 login: login,
                 password: password
             }
-        }
+        };
         $http.get(window.location.origin + "//login",config).success(function(data){
             if (!data.error) {
-                $scope.isSignin = true;
+                $scope.setSignedInUser(data);
                 $scope.avatar = data.avatar;
                 alert("Success!");
             } else {
@@ -33,6 +31,31 @@ main.controller("LoginController", function($scope, ngDialog, $element, $http){
                 console.error(message);
             }
         })
+    };
+
+    $scope.signin = function() {
+        var login = $scope.login;
+        var password = $scope.password;
+        signin(login, password);
+    };
+
+    $scope.signout = function() {
+        $http.get(window.location.origin + "//logout").success(function(data){
+            if (!data.error) {
+                $scope.setSignedInUser(null);
+                alert("Success!");
+            } else {
+                var message = data.error + " " + data.message;
+                alert(message);
+                console.error(message);
+            }
+        })
+    };
+
+    var login = $cookies.login;
+    var password = $cookies.password;
+    if(login && password){
+        signin(login, password);
     }
 
     $scope.register = function(){

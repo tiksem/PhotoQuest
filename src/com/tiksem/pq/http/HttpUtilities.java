@@ -2,6 +2,7 @@ package com.tiksem.pq.http;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * User: Tikhonenko.S
@@ -31,5 +32,11 @@ public class HttpUtilities {
         else
             return request.getScheme() + "://" +
                     request.getServerName() + ":" + request.getServerPort();
+    }
+
+    public static void removeCookie(HttpServletResponse response, String name) {
+        Cookie cookie = new Cookie(name, "");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
     }
 }
