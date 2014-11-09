@@ -212,16 +212,23 @@ public class DatabaseManager {
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request) {
-        return getAllUsers(request, true);
+        return getAllUsers(request, true, false);
     }
 
-    public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser) {
+    public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request) {
+        return getAllUsers(request, false, true);
+    }
+
+    public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser,
+                                        boolean fillRelationshipData) {
         Collection<User> users = null;
+        User signedInUser = null;
+
         if (includeSignedInUser) {
             users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager,
                     User.class);
         } else {
-            User signedInUser = getSignedInUser(request);
+            signedInUser = getSignedInUser(request);
             if(signedInUser == null){
                 users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager,
                         User.class);
@@ -233,6 +240,14 @@ public class DatabaseManager {
         }
 
         setAvatar(request, users);
+
+        if(fillRelationshipData && signedInUser != null){
+            for(User user : users){
+                boolean areFriends = hasFriendship(signedInUser.getId(), user.getId());
+                user.setIsFriend(areFriends);
+            }
+        }
+
         return users;
     }
 
@@ -351,8 +366,12 @@ public class DatabaseManager {
     }
 
     public boolean hasFriendship(long user1Id, long user2Id) {
+        return getFriendship(user1Id, user2Id) != null;
+    }
+
+    public Friendship getFriendship(long user1Id, long user2Id) {
         Query query = persistenceManager.newQuery(Friendship.class);
-        query.declareParameters("long user1Id, long user2Id");
+        query.declareParameters("long user1, long user2");
 
         Map<String, Object> args = new HashMap<String, Object>();
         args.put("user1", user1Id);
@@ -363,7 +382,20 @@ public class DatabaseManager {
         query.setFilter(filter);
 
         Collection<Friendship> result = (Collection<Friendship>) query.executeWithMap(args);
-        return !result.isEmpty();
+        if(result.isEmpty()){
+            return null;
+        }
+
+        return result.iterator().next();
+    }
+
+    public Friendship getFriendshipOrThrow(long user1Id, long user2Id) {
+        Friendship friendship = getFriendship(user1Id, user2Id);
+        if(friendship == null){
+            throw new FriendshipNotExistsException(user1Id, user2Id);
+        }
+
+        return friendship;
     }
 
     public void addFriend(HttpServletRequest request, long userId) {
@@ -387,7 +419,7 @@ public class DatabaseManager {
         getUserByIdOrThrow(userId);
         long signedInUserId = user.getId();
 
-        Friendship friendship = new Friendship(userId, signedInUserId);
+        Friendship friendship = getFriendshipOrThrow(userId, signedInUserId);
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
         persistenceManager.deletePersistent(friendship);

@@ -22,7 +22,7 @@ main.controller("RegisterController", function($scope, $element, $http, $upload)
             console.log('percent: ' + parseInt(100.0 * evt.loaded / evt.total));
         }).success(function (data, status, headers, config) {
             if (!data.error) {
-                alert("Success");
+                $scope.closeThisDialog(null);
             } else {
                 alert(data.error + " " + data.message)
         }

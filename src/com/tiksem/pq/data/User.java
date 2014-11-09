@@ -35,6 +35,9 @@ public class User implements WithAvatar {
     @NotPersistent
     private String avatar;
 
+    @NotPersistent
+    private Boolean isFriend;
+
     public User(String login, String password) {
         this.login = login;
         this.password = password;
@@ -101,5 +104,13 @@ public class User implements WithAvatar {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public Boolean getIsFriend() {
+        return isFriend;
+    }
+
+    public void setIsFriend(Boolean isFriend) {
+        this.isFriend = isFriend;
     }
 }

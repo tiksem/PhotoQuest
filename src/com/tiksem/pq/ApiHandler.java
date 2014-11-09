@@ -96,7 +96,7 @@ public class ApiHandler {
 
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers() {
-        Collection<User> users = DatabaseManager.getInstance().getAllUsers(request, false);
+        Collection<User> users = DatabaseManager.getInstance().getAllUsersWithCheckingRelationShip(request);
         return new UsersList(users);
     }
 
@@ -171,5 +171,17 @@ public class ApiHandler {
     public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId){
         Collection<Photo> photos = DatabaseManager.getInstance().getPhotosOfPhotoquest(request, photoquestId);
         return new PhotosList(photos);
+    }
+
+    @RequestMapping("/addFriend")
+    public @ResponseBody Object addFriend(@RequestParam("id") Long id){
+        DatabaseManager.getInstance().addFriend(request, id);
+        return new Success();
+    }
+
+    @RequestMapping("/removeFriend")
+    public @ResponseBody Object removeFriend(@RequestParam("id") Long id){
+        DatabaseManager.getInstance().removeFriend(request, id);
+        return new Success();
     }
 }

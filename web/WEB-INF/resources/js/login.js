@@ -24,7 +24,8 @@ main.controller("LoginController", function($rootScope, $scope, ngDialog, $eleme
             if (!data.error) {
                 $scope.setSignedInUser(data);
                 $scope.avatar = data.avatar;
-                alert("Success!");
+                console.log("login success");
+                console.log(data);
             } else {
                 var message = data.error + " " + data.message;
                 alert(message);

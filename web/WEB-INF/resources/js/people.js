@@ -7,12 +7,16 @@ main.controller("PeopleController", function($scope, $location, $element, ngDial
     $scope.addOrRemoveFriend = function(user) {
         var config = {
             params: {
-                name: $scope.createQuestName
+                id: user.id
             }
         };
-        var url = window.location.origin + "/createPhotoquest";
-        $http.get(url, config).success(function(){
-            $scope.closeThisDialog(null);
+        var url = window.location.origin + (!user.isFriend ? "/addFriend" : "/removeFriend");
+        $http.get(url, config).success(function(data){
+            if(!data.error){
+                user.isFriend = !user.isFriend;
+            } else {
+                console.error(data);
+            }
         });
     };
 

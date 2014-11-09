@@ -17,7 +17,7 @@
             <div>
                 <h1>{{user.name}}</h1>
                 <div>
-                    <button ng-show="isSignIn()" ng-click="addOrRemoveFriend()">
+                    <button ng-show="getSignedInUser()" ng-click="addOrRemoveFriend(user)">
                         {{!user.isFriend ? "Add Friend" : "Remove Friend"}}
                     </button>
                 </div>
