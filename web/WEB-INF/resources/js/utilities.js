@@ -67,6 +67,11 @@ Utilities = {
             if(onSuccess){
                 onSuccess(data);
             }
+            console.log("Success " + url);
+            console.log(data);
+        }).error(function(data){
+            console.log("Error " + url);
+            console.log(data);
         })
     },
     parseHashPath: function(hash) {

@@ -100,6 +100,12 @@ public class ApiHandler {
         return new UsersList(users);
     }
 
+    @RequestMapping("/friends")
+    public @ResponseBody Object getFriends() {
+        Collection<User> users = DatabaseManager.getInstance().getFriends(request);
+        return new UsersList(users);
+    }
+
     @RequestMapping("/deleteAllUsers")
     public @ResponseBody Object deleteAllUsers() {
         DatabaseManager.getInstance().deleteAllUsers(request);

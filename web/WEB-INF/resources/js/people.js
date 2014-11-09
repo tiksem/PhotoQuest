@@ -20,7 +20,15 @@ main.controller("PeopleController", function($scope, $location, $element, ngDial
         });
     };
 
-    Utilities.loadDataToScope(window.location.origin + "//users", {}, $scope, $http)
+    var url = window.location.origin;
+    var requestType = Utilities.parseHashPath($location.hash())[0];
+    if(requestType == "friends"){
+        url += "//friends";
+    } else {
+        url += "//users"
+    }
+
+    Utilities.loadDataToScope(url, {}, $scope, $http)
 
     Utilities.applyStylesToHtml($element);
 });

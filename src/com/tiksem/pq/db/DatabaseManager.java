@@ -444,9 +444,9 @@ public class DatabaseManager {
             Long user2 = friendship.getUser2();
 
             if(user1 == userId){
-                result.add(user1);
-            } else if(user2 == userId) {
                 result.add(user2);
+            } else if(user2 == userId) {
+                result.add(user1);
             } else {
                 throw new RuntimeException("WTF? It's impossible!");
             }
@@ -470,7 +470,18 @@ public class DatabaseManager {
     }
 
     public List<User> getFriends(HttpServletRequest request) {
-        return getFriendsOf(getSignedInUserOrThrow(request).getId());
+        return getFriends(request, true);
+    }
+
+    public List<User> getFriends(HttpServletRequest request, boolean fillFriendShipData) {
+        List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId());
+        if (fillFriendShipData) {
+            for(User friend : friends){
+                friend.setIsFriend(true);
+            }
+        }
+
+        return friends;
     }
 
     public List<Long> getFriendsIdes(HttpServletRequest request) {
