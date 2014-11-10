@@ -50,6 +50,14 @@ public class Photoquest implements WithAvatar {
         this.viewsCount = viewsCount;
     }
 
+    public void incrementViewsCount() {
+        if(viewsCount == null){
+            viewsCount = 1l;
+        } else {
+            viewsCount++;
+        }
+    }
+
     public Long getLikesCount() {
         return likesCount;
     }

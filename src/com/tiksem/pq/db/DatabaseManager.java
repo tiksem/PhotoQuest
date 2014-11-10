@@ -341,6 +341,10 @@ public class DatabaseManager {
     }
 
     public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId) {
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
+        photoquest.incrementViewsCount();
+        update(request, photoquest);
+
         Photo photo = new Photo();
         photo.setPhotoquestId(photoQuestId);
         Collection<Photo> photos = ObjectDBUtilities.queryByPattern(persistenceManager, photo);
