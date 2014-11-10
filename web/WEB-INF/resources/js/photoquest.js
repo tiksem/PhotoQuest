@@ -49,5 +49,9 @@ main.controller("PhotoQuest", function($scope, ngDialog, $element, $http, $locat
         }
     };
 
+    $scope.onPhotoClick = function(photo) {
+        $location.hash("photo_" + photo.id);
+    }
+
     Utilities.applyStylesToHtml($element);
 })

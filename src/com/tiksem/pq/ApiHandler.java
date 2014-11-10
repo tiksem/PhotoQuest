@@ -1,6 +1,7 @@
 package com.tiksem.pq;
 
 import com.tiksem.pq.data.*;
+import com.tiksem.pq.data.response.CommentsList;
 import com.tiksem.pq.data.response.PhotoquestsList;
 import com.tiksem.pq.data.response.PhotosList;
 import com.tiksem.pq.db.DatabaseManager;
@@ -8,7 +9,10 @@ import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.db.exceptions.PhotoquestNotFoundException;
 import com.tiksem.pq.db.exceptions.ResourceNotFoundException;
 import com.tiksem.pq.http.HttpUtilities;
+import com.tiksem.pq.image.ScaleType;
 import com.tiksem.pq.utils.MimeTypeUtils;
+import net.coobird.thumbnailator.Thumbnailator;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -17,12 +21,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import javax.xml.crypto.Data;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -125,8 +130,8 @@ public class ApiHandler {
     }
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
-    public @ResponseBody Object addPhotoToPhotoQuest(@RequestParam("photoquest") Long id,
-                                                 @RequestParam("file") MultipartFile file)
+    public @ResponseBody Object addPhotoToPhotoQuest(@RequestParam(value = "photoquest", required = true) Long id,
+                                                 @RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
         DatabaseManager databaseManager = DatabaseManager.getInstance();
 
@@ -146,9 +151,29 @@ public class ApiHandler {
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
             produces = MediaType.IMAGE_JPEG_VALUE)
-    public @ResponseBody HttpEntity<byte[]> getImageById(@PathVariable Long id)
+    public @ResponseBody HttpEntity<byte[]>
+    getImageById(@PathVariable Long id,
+                 @RequestParam(value = "width", required = false) Integer width,
+                 @RequestParam(value = "height", required = false) Integer height)
             throws IOException {
         byte[] image = DatabaseManager.getInstance().getBitmapDataByPhotoIdOrThrow(id);
+
+
+
+        if(width != null || height != null) {
+            InputStream in = new ByteArrayInputStream(image);
+            BufferedImage bufferedImage = ImageIO.read(in);
+
+            if(width == null){
+                width = bufferedImage.getWidth();
+            } else if(height == null) {
+                height = bufferedImage.getHeight();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(Thumbnails.of(bufferedImage).size(width, height).asBufferedImage(), "jpg", baos);
+            image = baos.toByteArray();
+        }
 
         HttpHeaders headers = new HttpHeaders();
         MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
@@ -189,5 +214,20 @@ public class ApiHandler {
     public @ResponseBody Object removeFriend(@RequestParam("id") Long id){
         DatabaseManager.getInstance().removeFriend(request, id);
         return new Success();
+    }
+
+    @RequestMapping("/putComment")
+    public @ResponseBody Object putComment(
+            @RequestParam(value = "photoId", required = true) Long photoId,
+            @RequestParam(value = "message", required = true) String message,
+            @RequestParam(value = "toCommentId", required = false) Long toCommentId) {
+        return DatabaseManager.getInstance().addComment(request, photoId, message, toCommentId);
+    }
+
+    @RequestMapping("/getCommentsOnPhoto")
+    public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId){
+        Collection<Comment> comments = DatabaseManager.getInstance().
+                getCommentsOnPhotoAndFillData(request, photoId);
+        return new CommentsList(comments);
     }
 }

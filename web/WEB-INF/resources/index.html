@@ -50,6 +50,11 @@
                     return 'html/people.html';
                 } else if(path[0] == "friends") {
                     return 'html/friends.html';
+                } else if(path[0] == "photo"){
+                    var photoId = path[1];
+                    if(photoId && photoId.isNumber()){
+                        return 'html/photo.html';
+                    }
                 }
 
                 return defaultContent;
@@ -76,6 +81,7 @@
     <script type="application/javascript" src="js/photoquests.js"> </script>
     <script type="application/javascript" src="js/photoquest.js"> </script>
     <script type="application/javascript" src="js/people.js"> </script>
+    <script type="application/javascript" src="js/photo_controller.js"> </script>
     <div id="center_page_container" ng-include="getCenterPageContent()" align="center">
 
     </div>

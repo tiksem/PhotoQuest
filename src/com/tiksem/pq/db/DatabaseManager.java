@@ -297,6 +297,15 @@ public class DatabaseManager {
         return ObjectDBUtilities.getObjectById(persistenceManager, Photo.class, id);
     }
 
+    public Photo getPhotoByIdOrThrow(long id) {
+        Photo photo = getPhotoById(id);
+        if(photo == null){
+            throw new PhotoNotFoundException(id);
+        }
+
+        return photo;
+    }
+
     public byte[] getBitmapDataByPhotoId(long id) {
         BitmapData bitmapData =
                 ObjectDBUtilities.getObjectById(persistenceManager, BitmapData.class, id);
@@ -503,5 +512,108 @@ public class DatabaseManager {
 
     public void endTransaction() {
         persistenceManager.currentTransaction().commit();
+    }
+
+    public Comment getCommentById(long id) {
+        return ObjectDBUtilities.getObjectById(persistenceManager, Comment.class, id);
+    }
+
+    public Comment getCommentByIdOrThrow(long id) {
+        Comment comment = getCommentById(id);
+        if(comment == null){
+            throw new CommentNotFoundException(id);
+        }
+
+        return comment;
+    }
+
+    public void fillCommentsData(HttpServletRequest request, Collection<Comment> comments) {
+        for (Comment comment : comments) {
+            fillCommentData(request, comment);
+        }
+    }
+
+    public void fillCommentData(HttpServletRequest request, Comment comment) {
+        Long toUserId = comment.getToUserId();
+        if(toUserId != null){
+            User toUser = getUserByIdOrThrow(toUserId);
+            setAvatar(request, toUser);
+            comment.setToUser(toUser);
+        }
+
+        Long userId = comment.getUserId();
+        User user = getUserByIdOrThrow(userId);
+        setAvatar(request, user);
+        comment.setUser(user);
+    }
+
+    public Comment addComment(HttpServletRequest request,
+                              long photoId, String message) {
+        return addComment(request, photoId, message, null);
+    }
+
+    public Comment addComment(HttpServletRequest request,
+                           long photoId, String message, Long toCommentId) {
+        getPhotoByIdOrThrow(photoId);
+        User signedInUser = getSignedInUserOrThrow(request);
+
+        Comment comment = new Comment();
+        comment.setMessage(message);
+        comment.setPhotoId(photoId);
+        comment.setUserId(signedInUser.getId());
+        setAvatar(request, signedInUser);
+        comment.setUser(signedInUser);
+
+        if(toCommentId != null){
+            Comment toComment = getCommentByIdOrThrow(toCommentId);
+            comment.setToCommentId(toCommentId);
+            User toUser = getUserByIdOrThrow(toComment.getUserId());
+            comment.setToUserId(toUser.getId());
+            setAvatar(request, toUser);
+            comment.setToUser(toUser);
+        }
+
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        persistenceManager.makePersistent(comment);
+        transaction.commit();
+
+        return comment;
+    }
+
+    private void removeComment(Comment comment) {
+        Transaction transaction = persistenceManager.currentTransaction();
+        transaction.begin();
+        persistenceManager.deletePersistent(comment);
+        transaction.commit();
+    }
+
+    public void removeComment(long commentId) {
+        Comment comment = getCommentByIdOrThrow(commentId);
+        removeComment(comment);
+    }
+
+    public void removeCommentOfSignedInUser(HttpServletRequest request, long commentId) {
+        User user = getSignedInUserOrThrow(request);
+
+        Comment comment = getCommentByIdOrThrow(commentId);
+        if(!user.getId().equals(comment.getUserId())){
+            throw new PermissionDeniedException("Trying to delete comment," +
+                    " witch is not created by signed in user");
+        }
+
+        removeComment(comment);
+    }
+
+    public Collection<Comment> getCommentsOnPhoto(long photoId) {
+        Comment comment = new Comment();
+        comment.setPhotoId(photoId);
+        return ObjectDBUtilities.queryByPattern(persistenceManager, comment);
+    }
+
+    public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId) {
+        Collection<Comment> comments = getCommentsOnPhoto(photoId);
+        fillCommentsData(request, comments);
+        return comments;
     }
 }

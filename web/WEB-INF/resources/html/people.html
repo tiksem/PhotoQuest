@@ -2,6 +2,7 @@
     .people_container {
         align-self: center;
         margin: 30px;
+        display: inline;
     }
 
 </style>
@@ -11,17 +12,25 @@
     </div>
     <div class="people_container">
         <div ng-repeat="user in users" ng-click="openProfile(user)">
-            <div style="display: inline">
-                <img width="200px" height="200px" ng-src="{{user.avatar}}"/>
-            </div>
-            <div>
-                <h1>{{user.name}}</h1>
-                <div>
-                    <button ng-show="getSignedInUser()" ng-click="addOrRemoveFriend(user)">
-                        {{!user.isFriend ? "Add Friend" : "Remove Friend"}}
-                    </button>
-                </div>
-            </div>
+            <table>
+                <tr>
+                    <td>
+                        <div style="display: inline-block">
+                            <img width="200px" height="200px" ng-src="{{user.avatar}}"/>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: inline-block; height: 200px">
+                            <h1>{{user.name}}</h1>
+                            <div>
+                                <button ng-show="getSignedInUser()" ng-click="addOrRemoveFriend(user)">
+                                    {{!user.isFriend ? "Add Friend" : "Remove Friend"}}
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
 </div>

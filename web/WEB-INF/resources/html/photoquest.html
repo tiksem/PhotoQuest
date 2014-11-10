@@ -11,8 +11,8 @@
             <button ng-click="openAddPhotoDialog()">Add Photo</button>
         </div>
         <br>
-        <div ng-repeat="photo in photos">
-            <img ng-src="{{photo.url}}" />
+        <div ng-repeat="photo in photos" ng-click="onPhotoClick(photo)">
+            <img width="200" height="200" ng-src="{{photo.url + '?width=200&height=200'}}" />
         </div>
     </div>
 </div>
