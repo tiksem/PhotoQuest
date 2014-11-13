@@ -200,6 +200,13 @@ public class ApiHandler {
         return photo;
     }
 
+    @RequestMapping("/getUserById")
+    public @ResponseBody Object getUserById(@RequestParam("id") Long id){
+        User user = DatabaseManager.getInstance().getUserByIdOrThrow(id);
+        DatabaseManager.getInstance().setAvatar(request, user);
+        return user;
+    }
+
     @ExceptionHandler(Throwable.class)
     public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
         return new ExceptionResponse(e);

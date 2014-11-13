@@ -365,7 +365,7 @@ public class DatabaseManager {
         return HttpUtilities.getBaseUrl(request) + "/" + DEFAULT_AVATAR_URL;
     }
 
-    private void setAvatar(HttpServletRequest request, WithAvatar withAvatar) {
+    public void setAvatar(HttpServletRequest request, WithAvatar withAvatar) {
         Long avatarId = withAvatar.getAvatarId();
         if(avatarId == null){
             withAvatar.setAvatar(getDefaultAvatar(request));
@@ -374,7 +374,7 @@ public class DatabaseManager {
         }
     }
 
-    private void setAvatar(HttpServletRequest request, Iterable<? extends WithAvatar> withAvatars) {
+    public void setAvatar(HttpServletRequest request, Iterable<? extends WithAvatar> withAvatars) {
         for(WithAvatar withAvatar : withAvatars){
             setAvatar(request, withAvatar);
         }

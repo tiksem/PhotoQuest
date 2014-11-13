@@ -17,4 +17,7 @@
     <a ng-href="##friends">
         Friends
     </a>
+    <a ng-href="{{'##profile_' + getSignedInUser().id}}" ng-show="getSignedInUser()">
+        Profile
+    </a>
 </div>

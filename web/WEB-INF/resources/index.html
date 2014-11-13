@@ -55,6 +55,11 @@
                     if(photoId && photoId.isNumber()){
                         return 'html/photo.html';
                     }
+                } else if(path[0] == "profile") {
+                    var id = path[1];
+                    if(id && id.isNumber()){
+                        return 'html/profile.html';
+                    }
                 }
 
                 return defaultContent;
@@ -82,6 +87,7 @@
     <script type="application/javascript" src="js/photoquest.js"> </script>
     <script type="application/javascript" src="js/people.js"> </script>
     <script type="application/javascript" src="js/photo.js"> </script>
+    <script type="application/javascript" src="js/profile.js"> </script>
     <div id="center_page_container" ng-include="getCenterPageContent()" align="center">
 
     </div>
