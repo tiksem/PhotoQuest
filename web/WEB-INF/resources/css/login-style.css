@@ -44,3 +44,12 @@ label {
     font-weight: bold;
     color: #84091e;
 }
+
+.count_widget {
+    background-color: #560400;
+    color: #ffffff;
+    padding: 4px;
+    border-radius: 2px;
+    cursor: pointer;
+    cursor: hand;
+}

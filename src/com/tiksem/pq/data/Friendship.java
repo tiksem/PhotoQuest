@@ -1,12 +1,12 @@
 package com.tiksem.pq.data;
 
 import javax.jdo.annotations.Index;
-import javax.persistence.Entity;
+import javax.jdo.annotations.PersistenceCapable;
 
 /**
  * Created by CM on 11/8/2014.
  */
-@Entity
+@PersistenceCapable
 public class Friendship {
     @Index
     private Long user1;

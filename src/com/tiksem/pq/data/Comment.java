@@ -1,19 +1,17 @@
 package com.tiksem.pq.data;
 
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.Persistent;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import com.tiksem.pq.data.response.Likable;
+
+import javax.jdo.annotations.*;
+import javax.persistence.Transient;
 
 /**
  * Created by CM on 11/10/2014.
  */
-@Entity
-public class Comment {
-    @Id
-    @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
+@PersistenceCapable
+public class Comment implements Likable {
+    @PrimaryKey
+    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
     private String message;
     @Index
@@ -22,6 +20,8 @@ public class Comment {
     private Long userId;
     @Persistent
     private Long toUserId;
+    @Persistent
+    private long likesCount = 0;
 
     @NotPersistent
     private User user;
@@ -29,6 +29,9 @@ public class Comment {
     private User toUser;
     @Persistent
     private Long toCommentId;
+
+    @NotPersistent
+    private Like yourLike;
 
     public Long getId() {
         return id;
@@ -92,5 +95,31 @@ public class Comment {
 
     public void setToUser(User toUser) {
         this.toUser = toUser;
+    }
+
+    public long getLikesCount() {
+        return likesCount;
+    }
+
+    public void setLikesCount(long likesCount) {
+        this.likesCount = likesCount;
+    }
+
+    @Override
+    public void incrementLikesCount() {
+        likesCount++;
+    }
+
+    @Override
+    public void decrementLikesCount() {
+        likesCount--;
+    }
+
+    public Like getYourLike() {
+        return yourLike;
+    }
+
+    public void setYourLike(Like yourLike) {
+        this.yourLike = yourLike;
     }
 }

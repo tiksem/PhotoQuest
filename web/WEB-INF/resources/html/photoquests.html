@@ -3,15 +3,12 @@
         align-self: center;
         margin: 30px;
     }
-    .views_count_photoquest {
+
+    .photoquest_views_count {
         position: absolute;
         right: 0;
         bottom: 0;
         margin: 10px;
-        background-color: #560400;
-        color: #ffffff;
-        padding: 4px;
-        border-radius: 2px;
     }
 </style>
 <div ng-controller="PhotoQuests" style="width: 600px; align-self: center;">
@@ -23,7 +20,7 @@
         <div ng-repeat="quest in quests" ng-click="openQuest(quest)">
             <div style="position: relative; width: 200px; height: 200px">
                 <img width="200px" height="200px" ng-src="{{quest.avatar}}"/>
-                <div class="views_count_photoquest">
+                <div class="count_widget photoquest_views_count">
                     {{quest.viewsCount}}
                 </div>
             </div>

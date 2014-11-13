@@ -1,11 +1,40 @@
 <style>
-    #photoquest_content {
+    #photo_content {
         align-self: center;
     }
+    #photo_info {
+        width: 300px;
+        height: 50px;
+        position: relative;
+    }
+    #photo_likes_count {
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin: 10px;
+    }
 </style>
-<div id="photoquest_content" ng-controller="PhotoController" >
-    <div>
-        <img ng-src="{{image}}" />
+<div id="photo_content" ng-controller="PhotoController" >
+    <div id="photo_container">
+        <table>
+            <tr>
+                <td>
+                    <div style="position: relative">
+                        <img id="photo_image" ng-src="{{image}}" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div id="photo_info">
+                        <div id="photo_likes_count" class="count_widget" ng-click="like()">
+                            <span>{{photo.likesCount + " like it!"}}</span>
+                            <span ng-show="photo.yourLike">&nbsp; including You</span>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
     <div style="width: 100%">
         <div ng-repeat="comment in comments">

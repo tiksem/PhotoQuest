@@ -1,13 +1,13 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.*;
+import com.tiksem.pq.data.response.Likable;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
+import org.datanucleus.api.jdo.*;
 
-import javax.jdo.PersistenceManager;
-import javax.jdo.PersistenceManagerFactory;
-import javax.jdo.Query;
-import javax.jdo.Transaction;
+import javax.jdo.*;
+import javax.jdo.JDOEnhancer;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
@@ -31,12 +31,25 @@ public class DatabaseManager {
     }
 
     private DatabaseManager()     {
-        PersistenceManagerFactory factory  = ObjectDBUtilities.createLocalConnectionFactory("PhotoQuest");
+        PersistenceManagerFactory factory  = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
         persistenceManager = factory.getPersistenceManager();
+        //DBUtilities.enhanceClassesInPackage("com.tiksem.pq.data");
+    }
+
+    private <T> T makePersistent(T object) {
+        return DBUtilities.makePersistent(persistenceManager, object);
+    }
+
+    private void deletePersistent(Object object) {
+        DBUtilities.deletePersistent(persistenceManager, object);
+    }
+
+    private void deleteAllPersistent(Collection objects) {
+        DBUtilities.deleteAllPersistent(persistenceManager, objects);
     }
 
     public User getUserById(long id) {
-        return ObjectDBUtilities.getObjectById(persistenceManager, User.class, id);
+        return DBUtilities.getObjectById(persistenceManager, User.class, id);
     }
 
     public User getUserByIdOrThrow(long id) {
@@ -51,7 +64,7 @@ public class DatabaseManager {
     public User getUserByLogin(String login) {
         User user = new User();
         user.setLogin(login);
-        return ObjectDBUtilities.getObjectByPattern(persistenceManager, user);
+        return DBUtilities.getObjectByPattern(persistenceManager, user);
     }
 
     public User getUserByLoginOrThrow(String login) {
@@ -121,13 +134,13 @@ public class DatabaseManager {
     public Photoquest getPhotoQuestByName(String photoquestName) {
         Photoquest photoquest = new Photoquest();
         photoquest.setName(photoquestName);
-        return ObjectDBUtilities.getObjectByPattern(persistenceManager, photoquest);
+        return DBUtilities.getObjectByPattern(persistenceManager, photoquest);
     }
 
     public Photoquest getPhotoQuestById(long id) {
         Photoquest photoquest = new Photoquest();
         photoquest.setId(id);
-        return ObjectDBUtilities.getObjectByPattern(persistenceManager, photoquest);
+        return DBUtilities.getObjectByPattern(persistenceManager, photoquest);
     }
 
     public Photoquest getPhotoQuestByIdOrThrow(long id) {
@@ -141,13 +154,7 @@ public class DatabaseManager {
 
     public Photoquest createSystemPhotoquest(String photoquestName) {
         Photoquest photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
-
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        photoquest = persistenceManager.makePersistent(photoquest);
-        transaction.commit();
-
-        return photoquest;
+        return makePersistent(photoquest);
     }
 
     public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName) {
@@ -160,18 +167,13 @@ public class DatabaseManager {
         photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
         photoquest.setUserId(user.getId());
 
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        photoquest = persistenceManager.makePersistent(photoquest);
-        transaction.commit();
-
-        return photoquest;
+        return makePersistent(photoquest);
     }
 
     public List<Photoquest> getPhotoquestsCreatedByUser(long userId) {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
-        Collection<Photoquest> photoquests = ObjectDBUtilities.queryByPattern(persistenceManager, photoquest);
+        Collection<Photoquest> photoquests = DBUtilities.queryByPattern(persistenceManager, photoquest);
         return new ArrayList<Photoquest>(photoquests);
     }
 
@@ -181,10 +183,7 @@ public class DatabaseManager {
     }
 
     public void update(HttpServletRequest request, Object object) {
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.makePersistent(object);
-        transaction.commit();
+        makePersistent(object);
 
         if(object instanceof WithAvatar){
             WithAvatar withAvatar = (WithAvatar) object;
@@ -203,12 +202,7 @@ public class DatabaseManager {
         FieldsCheckingUtilities.checkLoginAndPassword(login, password);
         FieldsCheckingUtilities.fixFields(user);
 
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        user = persistenceManager.makePersistent(user);
-        transaction.commit();
-
-        return user;
+        return makePersistent(user);
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request) {
@@ -225,17 +219,17 @@ public class DatabaseManager {
         User signedInUser = null;
 
         if (includeSignedInUser) {
-            users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager,
+            users = DBUtilities.getAllObjectsOfClass(persistenceManager,
                     User.class);
         } else {
             signedInUser = getSignedInUser(request);
             if(signedInUser == null){
-                users = ObjectDBUtilities.getAllObjectsOfClass(persistenceManager,
+                users = DBUtilities.getAllObjectsOfClass(persistenceManager,
                         User.class);
             } else {
                 User user = new User();
                 user.setId(signedInUser.getId());
-                users = ObjectDBUtilities.queryByExcludePattern(persistenceManager, user);
+                users = DBUtilities.queryByExcludePattern(persistenceManager, user);
             }
         }
 
@@ -252,22 +246,16 @@ public class DatabaseManager {
     }
 
     public void deleteAllUsers(HttpServletRequest request) {
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.deletePersistentAll(getAllUsers(request));
-        transaction.commit();
+        deleteAllPersistent(getAllUsers(request));
     }
 
     public void deleteAllPhotoquests(HttpServletRequest request) {
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.deletePersistentAll(getPhotoQuests(request));
-        transaction.commit();
+        deleteAllPersistent(getPhotoQuests(request));
     }
 
     public void deleteAllPhotos() {
-        ObjectDBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
-        ObjectDBUtilities.deleteAllObjectsOfClass(persistenceManager, BitmapData.class);
+        DBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
+        DBUtilities.deleteAllObjectsOfClass(persistenceManager, BitmapData.class);
     }
 
     public Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
@@ -277,24 +265,20 @@ public class DatabaseManager {
             userId = user.getId();
         }
 
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
         photo.setLikesCount(0l);
         photo.setUserId(userId);
-        photo = persistenceManager.makePersistent(photo);
-        transaction.commit();
-        transaction = persistenceManager.currentTransaction();
-        transaction.begin();
+        makePersistent(photo);
+
         BitmapData data = new BitmapData();
         data.setId(photo.getId());
         data.setImage(bitmapData);
-        persistenceManager.makePersistent(data);
-        transaction.commit();
+        makePersistent(data);
+
         return photo;
     }
 
     public Photo getPhotoById(long id) {
-        return ObjectDBUtilities.getObjectById(persistenceManager, Photo.class, id);
+        return DBUtilities.getObjectById(persistenceManager, Photo.class, id);
     }
 
     public Photo getPhotoByIdOrThrow(long id) {
@@ -308,7 +292,7 @@ public class DatabaseManager {
 
     public byte[] getBitmapDataByPhotoId(long id) {
         BitmapData bitmapData =
-                ObjectDBUtilities.getObjectById(persistenceManager, BitmapData.class, id);
+                DBUtilities.getObjectById(persistenceManager, BitmapData.class, id);
         if(bitmapData == null){
             return null;
         }
@@ -340,16 +324,41 @@ public class DatabaseManager {
         }
     }
 
+    public void initYourLikeParameter(HttpServletRequest request, Iterable<Photo> photos) {
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser != null){
+            Long signedInUserId = signedInUser.getId();
+            for(Photo photo : photos){
+                Like like = getLikeByUserAndPhotoId(signedInUserId, photo.getId());
+                photo.setYourLike(like);
+            }
+        }
+    }
+
+    public void initYourLikeParameter(HttpServletRequest request, Photo photos) {
+        initYourLikeParameter(request, Collections.singletonList(photos));
+    }
+
+    public Collection<Photo> getAllPhotos(HttpServletRequest request) {
+        Collection<Photo> photos = DBUtilities.getAllObjectsOfClass(persistenceManager, Photo.class);
+        initPhotosUrl(photos, request);
+        return photos;
+    }
+
     public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
         photoquest.incrementViewsCount();
         update(request, photoquest);
 
-        Photo photo = new Photo();
-        photo.setPhotoquestId(photoQuestId);
-        Collection<Photo> photos = ObjectDBUtilities.queryByPattern(persistenceManager, photo);
+        Photo photoPattern = new Photo();
+        photoPattern.setPhotoquestId(photoQuestId);
+        Collection<Photo> photos = DBUtilities.queryByPattern(persistenceManager, photoPattern);
         initPhotosUrl(photos, request);
+
+        initYourLikeParameter(request, photos);
+
         return photos;
+
     }
 
     public String getDefaultAvatar(HttpServletRequest request) {
@@ -373,7 +382,7 @@ public class DatabaseManager {
 
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request) {
         Collection<Photoquest> result =
-                ObjectDBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class);
+                DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class);
         setAvatar(request, result);
         return result;
     }
@@ -421,10 +430,7 @@ public class DatabaseManager {
         }
 
         Friendship friendship = new Friendship(userId, signedInUserId);
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.makePersistent(friendship);
-        transaction.commit();
+        makePersistent(friendship);
     }
 
     public void removeFriend(HttpServletRequest request, long userId) {
@@ -433,10 +439,7 @@ public class DatabaseManager {
         long signedInUserId = user.getId();
 
         Friendship friendship = getFriendshipOrThrow(userId, signedInUserId);
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.deletePersistent(friendship);
-        transaction.commit();
+        deletePersistent(friendship);
     }
 
     public List<Long> getFriendsIdesOf(long userId) {
@@ -519,7 +522,7 @@ public class DatabaseManager {
     }
 
     public Comment getCommentById(long id) {
-        return ObjectDBUtilities.getObjectById(persistenceManager, Comment.class, id);
+        return DBUtilities.getObjectById(persistenceManager, Comment.class, id);
     }
 
     public Comment getCommentByIdOrThrow(long id) {
@@ -531,6 +534,33 @@ public class DatabaseManager {
         return comment;
     }
 
+    public Like getLikeById(long id) {
+        return DBUtilities.getObjectById(persistenceManager, Like.class, id);
+    }
+
+    public Like getLikeByUserAndPhotoId(long userId, long photoId) {
+        Like like = new Like();
+        like.setUserId(userId);
+        like.setPhotoId(photoId);
+        return DBUtilities.getObjectByPattern(persistenceManager, like);
+    }
+
+    public Like getLikeByUserAndCommentId(long userId, long commentId) {
+        Like like = new Like();
+        like.setUserId(userId);
+        like.setPhotoId(commentId);
+        return DBUtilities.getObjectByPattern(persistenceManager, like);
+    }
+
+    public Like getLikeByIdOrThrow(long id) {
+        Like like = getLikeById(id);
+        if(like == null){
+            throw new LikeNotFoundException(id);
+        }
+
+        return like;
+    }
+    
     public void fillCommentsData(HttpServletRequest request, Collection<Comment> comments) {
         for (Comment comment : comments) {
             fillCommentData(request, comment);
@@ -577,19 +607,11 @@ public class DatabaseManager {
             comment.setToUser(toUser);
         }
 
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.makePersistent(comment);
-        transaction.commit();
-
-        return comment;
+        return makePersistent(comment);
     }
 
     private void removeComment(Comment comment) {
-        Transaction transaction = persistenceManager.currentTransaction();
-        transaction.begin();
-        persistenceManager.deletePersistent(comment);
-        transaction.commit();
+        deletePersistent(comment);
     }
 
     public void removeComment(long commentId) {
@@ -609,15 +631,105 @@ public class DatabaseManager {
         removeComment(comment);
     }
 
-    public Collection<Comment> getCommentsOnPhoto(long photoId) {
-        Comment comment = new Comment();
-        comment.setPhotoId(photoId);
-        return ObjectDBUtilities.queryByPattern(persistenceManager, comment);
+    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId) {
+        Comment commentPattern = new Comment();
+        commentPattern.setPhotoId(photoId);
+        Collection<Comment> comments =
+                DBUtilities.queryByPattern(persistenceManager, commentPattern);
+
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser != null){
+            long userId = signedInUser.getId();
+            for(Comment comment : comments){
+                Like like = getLikeByUserAndCommentId(userId, comment.getId());
+                comment.setYourLike(like);
+            }
+        }
+
+        return comments;
     }
 
     public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId) {
-        Collection<Comment> comments = getCommentsOnPhoto(photoId);
+        Collection<Comment> comments = getCommentsOnPhoto(request, photoId);
         fillCommentsData(request, comments);
         return comments;
+    }
+
+    public Like likePhoto(HttpServletRequest request, long photoId) {
+        Photo photo = getPhotoByIdOrThrow(photoId);
+
+        Like like = new Like();
+        like.setPhotoId(photoId);
+
+        like = like(request, like);
+
+        incrementLikesCount(request, photo);
+
+        return like;
+    }
+
+    public Like likeComment(HttpServletRequest request, long commentId) {
+        Comment comment = getCommentByIdOrThrow(commentId);
+
+        Like like = new Like();
+        like.setCommentId(commentId);
+
+        like = like(request, like);
+
+        incrementLikesCount(request, comment);
+
+        return like;
+    }
+
+    private void incrementLikesCount(HttpServletRequest request, Likable likable) {
+        likable.incrementLikesCount();
+        update(request, likable);
+    }
+
+    private void decrementLikesCount(HttpServletRequest request, Likable likable) {
+        likable.decrementLikesCount();
+        update(request, likable);
+    }
+
+    private Like like(HttpServletRequest request, Like like) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        like.setUserId(signedInUser.getId());
+
+        if(DBUtilities.getObjectByPattern(persistenceManager, like) != null){
+            throw new LikeExistsException(like);
+        }
+
+        like = makePersistent(like);
+        like.setUser(signedInUser);
+
+        return like;
+    }
+    
+    public void unlike(HttpServletRequest request, long likeId) {
+        Like like = getLikeByIdOrThrow(likeId);
+
+        Long photoId = like.getPhotoId();
+        Long commentId = like.getCommentId();
+
+        if(photoId != null){
+            if(commentId != null){
+                throw new RuntimeException("WTF?");
+            }
+
+            Photo photo = getPhotoByIdOrThrow(photoId);
+            decrementLikesCount(request, photo);
+
+        } else if(commentId != null) {
+            Comment comment = getCommentByIdOrThrow(commentId);
+            decrementLikesCount(request, comment);
+        } else {
+            throw new RuntimeException("WTF?");
+        }
+
+        deletePersistent(like);
+    }
+
+    public Collection<Like> getAllLikes(HttpServletRequest request) {
+        return DBUtilities.getAllObjectsOfClass(persistenceManager, Like.class);
     }
 }

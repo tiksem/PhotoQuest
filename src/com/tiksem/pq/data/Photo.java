@@ -1,24 +1,20 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.db.DatabaseManager;
+import com.tiksem.pq.data.response.Likable;
 
 import javax.jdo.InstanceCallbacks;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.Persistent;
-import javax.persistence.Entity;
-import javax.persistence.Id;;
+import javax.jdo.annotations.*;
+import javax.persistence.Transient;
 
 /**
  * Created by CM on 10/31/2014.
  */
-@Entity
-public class Photo {
+@PersistenceCapable
+public class Photo implements Likable, InstanceCallbacks {
     public static final String IMAGE_URL_PATH = "/image/";
 
-    @Id
-    @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
+    @PrimaryKey
+    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
     @Index
@@ -32,6 +28,9 @@ public class Photo {
 
     @NotPersistent
     private String url;
+
+    @NotPersistent
+    private Like yourLike;
 
     public Long getLikesCount() {
         return likesCount;
@@ -71,5 +70,53 @@ public class Photo {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    @Override
+    public void incrementLikesCount() {
+        if(likesCount == null){
+            likesCount = 1l;
+        } else {
+            likesCount++;
+        }
+    }
+
+    @Override
+    public void decrementLikesCount() {
+        if(likesCount == null){
+            likesCount = 0l;
+        } else {
+            likesCount--;
+        }
+    }
+
+    public Like getYourLike() {
+        return yourLike;
+    }
+
+    public void setYourLike(Like yourLike) {
+        this.yourLike = yourLike;
+    }
+
+    @Override
+    public void jdoPreClear() {
+
+    }
+
+    @Override
+    public void jdoPreDelete() {
+
+    }
+
+    @Override
+    public void jdoPostLoad() {
+        if(likesCount == null){
+            likesCount = 0l;
+        }
+    }
+
+    @Override
+    public void jdoPreStore() {
+
     }
 }

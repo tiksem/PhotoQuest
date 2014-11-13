@@ -1,22 +1,18 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.datanucleus.enhancer.Persistable;
 
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.Persistent;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.jdo.annotations.*;
 
 /**
  * Created by CM on 10/30/2014.
  */
 
-@Entity
+@PersistenceCapable
 public class User implements WithAvatar {
-    @Id
-    @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
+    @PrimaryKey
+    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
     @Index
@@ -113,4 +109,6 @@ public class User implements WithAvatar {
     public void setIsFriend(Boolean isFriend) {
         this.isFriend = isFriend;
     }
+
+
 }

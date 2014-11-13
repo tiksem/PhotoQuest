@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.jdo.annotations.NotPersistent;
+import javax.jdo.annotations.PersistenceCapable;
+import javax.persistence.Transient;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -158,22 +161,19 @@ public class ApiHandler {
             throws IOException {
         byte[] image = DatabaseManager.getInstance().getBitmapDataByPhotoIdOrThrow(id);
 
+        InputStream in = new ByteArrayInputStream(image);
+        BufferedImage bufferedImage = ImageIO.read(in);
 
-
-        if(width != null || height != null) {
-            InputStream in = new ByteArrayInputStream(image);
-            BufferedImage bufferedImage = ImageIO.read(in);
-
-            if(width == null){
-                width = bufferedImage.getWidth();
-            } else if(height == null) {
-                height = bufferedImage.getHeight();
-            }
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(Thumbnails.of(bufferedImage).size(width, height).asBufferedImage(), "jpg", baos);
-            image = baos.toByteArray();
+        if(width == null){
+            width = bufferedImage.getWidth();
         }
+        if(height == null) {
+            height = bufferedImage.getHeight();
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(Thumbnails.of(bufferedImage).size(width, height).asBufferedImage(), "png", baos);
+        image = baos.toByteArray();
 
         HttpHeaders headers = new HttpHeaders();
         MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
@@ -193,10 +193,17 @@ public class ApiHandler {
         return DatabaseManager.getInstance().getPhotoQuestByIdOrThrow(id);
     }
 
-    @ExceptionHandler(Throwable.class)
-    public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
-        return new ExceptionResponse(e);
+    @RequestMapping("/getPhotoById")
+    public @ResponseBody Object getPhotoById(@RequestParam("id") Long id){
+        Photo photo = DatabaseManager.getInstance().getPhotoByIdOrThrow(id);
+        DatabaseManager.getInstance().initYourLikeParameter(request, photo);
+        return photo;
     }
+
+//    @ExceptionHandler(Throwable.class)
+//    public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
+//        return new ExceptionResponse(e);
+//    }
 
     @RequestMapping("/getPhotosOfPhotoquest")
     public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId){
@@ -229,5 +236,39 @@ public class ApiHandler {
         Collection<Comment> comments = DatabaseManager.getInstance().
                 getCommentsOnPhotoAndFillData(request, photoId);
         return new CommentsList(comments);
+    }
+
+    private void checkLikeParams(Long photoId, Long commentId) {
+        if((photoId == null && commentId == null) || (commentId != null && photoId != null)){
+            throw new IllegalArgumentException("Specify one, photoId or commentId");
+        }
+    }
+
+    @RequestMapping("/like")
+    public @ResponseBody Object like(@RequestParam(value = "photoId", required = false) Long photoId,
+                                     @RequestParam(value = "commentId", required = false) Long commentId){
+        checkLikeParams(photoId, commentId);
+
+        if(photoId != null){
+            return DatabaseManager.getInstance().likePhoto(request, photoId);
+        } else {
+            return DatabaseManager.getInstance().likeComment(request, commentId);
+        }
+    }
+
+    @RequestMapping("/unlike")
+    public @ResponseBody Object unlike(@RequestParam("id") Long likeId) {
+        DatabaseManager.getInstance().unlike(request, likeId);
+        return new Success();
+    }
+
+    @RequestMapping("/photos")
+    public @ResponseBody Object photos() {
+        return DatabaseManager.getInstance().getAllPhotos(request);
+    }
+
+    @RequestMapping("/likes")
+    public @ResponseBody Object likes() {
+        return DatabaseManager.getInstance().getAllLikes(request);
     }
 }

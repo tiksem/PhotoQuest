@@ -4,18 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.jdo.InstanceCallbacks;
 import javax.jdo.annotations.*;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.Transient;
 
 /**
  * Created by CM on 10/31/2014.
  */
 
-@Entity
+@PersistenceCapable
 public class Photoquest implements WithAvatar {
-    @Id
-    @Persistent(valueStrategy = IdGeneratorStrategy.SEQUENCE)
+    @PrimaryKey
+    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
     @Unique

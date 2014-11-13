@@ -1,13 +1,13 @@
 package com.tiksem.pq.data;
 
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Unique;
-import javax.persistence.Entity;
 
 /**
  * Created by CM on 11/6/2014.
  */
-@Entity
+@PersistenceCapable
 public class BitmapData {
     @Index
     @Unique
