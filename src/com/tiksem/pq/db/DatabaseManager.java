@@ -548,7 +548,7 @@ public class DatabaseManager {
     public Like getLikeByUserAndCommentId(long userId, long commentId) {
         Like like = new Like();
         like.setUserId(userId);
-        like.setPhotoId(commentId);
+        like.setCommentId(commentId);
         return DBUtilities.getObjectByPattern(persistenceManager, like);
     }
 
@@ -731,5 +731,9 @@ public class DatabaseManager {
 
     public Collection<Like> getAllLikes(HttpServletRequest request) {
         return DBUtilities.getAllObjectsOfClass(persistenceManager, Like.class);
+    }
+
+    public Collection<Comment> getAllComments() {
+        return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class);
     }
 }

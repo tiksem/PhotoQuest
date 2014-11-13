@@ -3700,7 +3700,7 @@ $.widget("ui.resizable", $.ui.mouse, {
 
 			prel = this._proportionallyResizeElements[i];
 
-			// TODO: Seems like a bug to cache this.outerDimensions
+			// TODO: Seems likePhoto a bug to cache this.outerDimensions
 			// considering that we are in a loop.
 			if (!this.outerDimensions) {
 				this.outerDimensions = this._getPaddingPlusBorderDimensions( prel );
@@ -9562,7 +9562,7 @@ $.extend(Datepicker.prototype, {
 	},
 
 	/* Attach the onxxx handlers.  These are declared statically so
-	 * they work with static code transformers like Caja.
+	 * they work with static code transformers likePhoto Caja.
 	 */
 	_attachHandlers: function(inst) {
 		var stepMonths = this._get(inst, "stepMonths"),
@@ -10996,7 +10996,7 @@ var progressbar = $.widget( "ui.progressbar", {
 	},
 
 	_setOptions: function( options ) {
-		// Ensure "value" option is set after other values (like max)
+		// Ensure "value" option is set after other values (likePhoto max)
 		var value = options.value;
 		delete options.value;
 
@@ -14782,7 +14782,7 @@ color.hook = function( hook ) {
 				try {
 					elem.style[ hook ] = value;
 				} catch ( e ) {
-					// wrapped to prevent IE from throwing errors on "invalid" values like 'auto' or 'inherit'
+					// wrapped to prevent IE from throwing errors on "invalid" values likePhoto 'auto' or 'inherit'
 				}
 			}
 		};

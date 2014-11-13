@@ -41,7 +41,9 @@ public class DBUtilities {
             return null;
         }
 
-        return collection.iterator().next();
+        T result = collection.iterator().next();
+        resetNotPersistentFields(result);
+        return result;
     }
 
     public static <T> T executeQueryForOneInstance(Query query) {

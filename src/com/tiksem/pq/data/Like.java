@@ -1,7 +1,6 @@
 package com.tiksem.pq.data;
 
 import javax.jdo.annotations.*;
-import javax.persistence.Transient;
 
 /**
  * Created by CM on 11/10/2014.
@@ -12,9 +11,9 @@ public class Like extends Data {
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
-    @Persistent
+    @Index
     private Long photoId;
-    @Persistent
+    @Index
     private Long commentId;
     @Index
     private Long userId;

@@ -268,7 +268,7 @@ msie = document.documentMode;
 /**
  * @private
  * @param {*} obj
- * @return {boolean} Returns true if `obj` is an array or array-like object (NodeList, Arguments,
+ * @return {boolean} Returns true if `obj` is an array or array-likePhoto object (NodeList, Arguments,
  *                   String ...)
  */
 function isArrayLike(obj) {
@@ -1261,7 +1261,7 @@ function getNgAttribute(element, ngAttr) {
    </file>
  </example>
  *
- * Using `ngStrictDi`, you would see something like this:
+ * Using `ngStrictDi`, you would see something likePhoto this:
  *
  <example ng-app-included="true">
    <file name="index.html">
@@ -1541,7 +1541,7 @@ function bindJQuery() {
       inheritedData: JQLitePrototype.inheritedData
     });
 
-    // All nodes removed from the DOM via various jQuery APIs like .remove()
+    // All nodes removed from the DOM via various jQuery APIs likePhoto .remove()
     // are passed through jQuery.cleanData. Monkey-patch this method to fire
     // the $destroy event on all removed nodes.
     originalCleanData = jQuery.cleanData;
@@ -1629,7 +1629,7 @@ function getter(obj, path, bindFnToScope) {
 
 /**
  * Return the DOM siblings between the first and last node in the given array.
- * @param {Array} array like object
+ * @param {Array} array likePhoto object
  * @returns {jqLite} jqLite collection containing the nodes
  */
 function getBlockNodes(nodes) {
@@ -1731,7 +1731,7 @@ function setupModuleLoader(window) {
      * }]);
      * ```
      *
-     * Then you can create an injector and load your modules like this:
+     * Then you can create an injector and load your modules likePhoto this:
      *
      * ```js
      * var injector = angular.injector(['ng', 'myModule'])
@@ -2540,7 +2540,7 @@ function jqLiteRemoveData(element, name) {
       jqLiteOff(element);
     }
     delete jqCache[expandoId];
-    element.ng339 = undefined; // don't delete DOM expandos. IE and Chrome don't like it
+    element.ng339 = undefined; // don't delete DOM expandos. IE and Chrome don't likePhoto it
   }
 }
 
@@ -3767,7 +3767,7 @@ function annotate(fn, strictDi, name) {
  *     };
  *   }]);
  * ```
- * You would then inject and use this service like this:
+ * You would then inject and use this service likePhoto this:
  * ```js
  *   someModule.controller('Ctrl', ['ping', function(ping) {
  *     ping();
@@ -3808,7 +3808,7 @@ function annotate(fn, strictDi, name) {
  *   };
  *   $provide.service('ping', Ping);
  * ```
- * You would then inject and use this service like this:
+ * You would then inject and use this service likePhoto this:
  * ```js
  *   someModule.controller('Ctrl', ['ping', function(ping) {
  *     ping.send();
@@ -5366,7 +5366,7 @@ function $CacheFactoryProvider() {
        * Example test:
        *
        * ```js
-       *  it('should behave like a cache', inject(function(superCache) {
+       *  it('should behave likePhoto a cache', inject(function(superCache) {
        *    superCache.put('key', 'value');
        *    superCache.put('another key', 'another value');
        *
@@ -5396,7 +5396,7 @@ function $CacheFactoryProvider() {
          * @description
          * Inserts a named entry into the {@link $cacheFactory.Cache Cache} object to be
          * retrieved later, and incrementing the size of the cache if the key was not already
-         * present in the cache. If behaving like an LRU cache, it will also remove stale
+         * present in the cache. If behaving likePhoto an LRU cache, it will also remove stale
          * entries from the set.
          *
          * It will not insert undefined values into the cache.
@@ -5851,7 +5851,7 @@ function $TemplateCacheProvider() {
  *        * only needed for transcludes that are allowed to contain non html elements (e.g. SVG elements)
  *          and when the `cloneLinkinFn` is passed,
  *          as those elements need to created and cloned in a special way when they are defined outside their
- *          usual containers (e.g. like `<svg>`).
+ *          usual containers (e.g. likePhoto `<svg>`).
  *        * See also the `directive.templateNamespace` property.
  *
  *
@@ -5890,7 +5890,7 @@ function $TemplateCacheProvider() {
  * #### `templateNamespace`
  * String representing the document type used by the markup in the template.
  * AngularJS needs this information as those elements need to be created and cloned
- * in a special way when they are defined outside their usual containers like `<svg>` and `<math>`.
+ * in a special way when they are defined outside their usual containers likePhoto `<svg>` and `<math>`.
  *
  * * `html` - All root nodes in the template are HTML. Root nodes may also be
  *   top-level elements such as `<svg>` or `<math>`.
@@ -6142,7 +6142,7 @@ function $TemplateCacheProvider() {
  * was taken.
  *
  * For example consider a directive that uses transclusion and isolated scope. The DOM hierarchy might look
- * like this:
+ * likePhoto this:
  *
  * ```html
  * <div ng-app>
@@ -6153,7 +6153,7 @@ function $TemplateCacheProvider() {
  * </div>
  * ```
  *
- * The `$parent` scope hierarchy will look like this:
+ * The `$parent` scope hierarchy will look likePhoto this:
  *
  * ```
  * - $rootScope
@@ -6176,7 +6176,7 @@ function $TemplateCacheProvider() {
  * `link()` or `compile()` functions. It has a variety of uses.
  *
  * accessing *Normalized attribute names:*
- * Directives like 'ngBind' can be expressed in many ways: 'ng:bind', `data-ng-bind`, or 'x-ng-bind'.
+ * Directives likePhoto 'ngBind' can be expressed in many ways: 'ng:bind', `data-ng-bind`, or 'x-ng-bind'.
  * the attributes object allows for normalized access to
  *   the attributes.
  *
@@ -7721,7 +7721,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           dst['style'] = (dst['style'] ? dst['style'] + ';' : '') + value;
           // `dst` will never contain hasOwnProperty as DOM parser won't let it.
           // You will get an "InvalidCharacterError: DOM Exception 5" error if you
-          // have an attribute like "has-own-property" or "data-has-own-property", etc.
+          // have an attribute likePhoto "has-own-property" or "data-has-own-property", etc.
         } else if (key.charAt(0) != '$' && !dst.hasOwnProperty(key)) {
           dst[key] = value;
           dstAttr[key] = srcAttr[key];
@@ -10847,7 +10847,7 @@ forEach([LocationHashbangInHtml5Url, LocationHashbangUrl, LocationHtml5Url], fun
    *
    * NOTE: This method is supported only in HTML5 mode and only in browsers supporting
    * the HTML5 History API (i.e. methods `pushState` and `replaceState`). If you need to support
-   * older browsers (like IE9 or Android < 4.0), don't use this method.
+   * older browsers (likePhoto IE9 or Android < 4.0), don't use this method.
    *
    * @param {object=} state State object for pushState or replaceState
    * @return {object} state
@@ -12575,7 +12575,7 @@ function $ParseProvider() {
           parsedExpression.$$watchDelegate !== inputsWatchDelegate) {
         fn.$$watchDelegate = parsedExpression.$$watchDelegate;
       } else if (!interceptorFn.$stateful) {
-        // If there is an interceptor, but no watchDelegate then treat the interceptor like
+        // If there is an interceptor, but no watchDelegate then treat the interceptor likePhoto
         // we treat filters - it is assumed to be a pure function unless flagged with $stateful
         fn.$$watchDelegate = inputsWatchDelegate;
         fn.inputs = [parsedExpression];
@@ -12606,7 +12606,7 @@ function $ParseProvider() {
  * While the constructor-style use is supported, not all of the supporting methods from ES6 Harmony promises are
  * available yet.
  *
- * It can be used like so:
+ * It can be used likePhoto so:
  *
  * ```js
  *   // for the purpose of this example let's assume that variables `$q` and `okToGreet`
@@ -12735,7 +12735,7 @@ function $ParseProvider() {
  *   more information.
  *
  *   Because `finally` is a reserved word in JavaScript and reserved keywords are not supported as
- *   property names by ES3, you'll need to invoke the method like `promise['finally'](callback)` to
+ *   property names by ES3, you'll need to invoke the method likePhoto `promise['finally'](callback)` to
  *   make your code IE8 and Android 2.x compatible.
  *
  * # Chaining promises
@@ -12754,7 +12754,7 @@ function $ParseProvider() {
  *
  * It is possible to create chains of any length and since a promise can be resolved with another
  * promise (which will defer its resolution further), it is possible to pause/defer resolution of
- * the promises at any point in the chain. This makes it possible to implement powerful APIs like
+ * the promises at any point in the chain. This makes it possible to implement powerful APIs likePhoto
  * $http's response interceptors.
  *
  *
@@ -14598,7 +14598,7 @@ function adjustMatcher(matcher) {
   } else if (isString(matcher)) {
     // Strings match exactly except for 2 wildcards - '*' and '**'.
     // '*' matches any character except those from the set ':/.?&'.
-    // '**' matches any character (like .* in a RegExp).
+    // '**' matches any character (likePhoto .* in a RegExp).
     // More than 2 *'s raises an error as it's ill defined.
     if (matcher.indexOf('***') > -1) {
       throw $sceMinErr('iwcard',
@@ -14679,7 +14679,7 @@ function adjustMatchers(matchers) {
  *   `http://srv01.assets.example.com/`,  `http://srv02.assets.example.com/`, etc.
  * - and you have an open redirect at `http://myapp.example.com/clickThru?...`.
  *
- * Here is what a secure configuration for this scenario might look like:
+ * Here is what a secure configuration for this scenario might look likePhoto:
  *
  * ```
  *  angular.module('myApp', []).config(function($sceDelegateProvider) {
@@ -15063,7 +15063,7 @@ function $SceDelegateProvider() {
  * won't work on all browsers.  Also, loading templates from `file://` URL does not work on some
  * browsers.
  *
- * ## This feels like too much overhead
+ * ## This feels likePhoto too much overhead
  *
  * It's important to remember that SCE only applies to interpolation expressions.
  *
@@ -15337,7 +15337,7 @@ function $SceProvider() {
      * @name $sce#parseAs
      *
      * @description
-     * Converts Angular {@link guide/expression expression} into a function.  This is like {@link
+     * Converts Angular {@link guide/expression expression} into a function.  This is likePhoto {@link
      * ng.$parse $parse} and is identical when the expression is a literal constant.  Otherwise, it
      * wraps the expression in a call to {@link ng.$sce#getTrusted $sce.getTrusted(*type*,
      * *result*)}
@@ -16012,7 +16012,7 @@ var originUrl = urlResolve(window.location.href, true);
  * IE7 does not normalize the URL when assigned to an anchor node.  (Apparently, it does, if one
  * uses the inner HTML approach to assign the URL as part of an HTML snippet -
  * http://stackoverflow.com/a/472729)  However, setting img[src] does normalize the URL.
- * Unfortunately, setting img[src] to something like "javascript:foo" on IE throws an exception.
+ * Unfortunately, setting img[src] to something likePhoto "javascript:foo" on IE throws an exception.
  * Since the primary usage for normalizing URLs is to sanitize such URLs, we can't use that
  * method and IE < 8 is unsupported.
  *
@@ -16090,7 +16090,7 @@ function urlIsSameOrigin(requestUrl) {
  * it is a global variable. In angular we always refer to it through the
  * `$window` service, so it may be overridden, removed or mocked for testing.
  *
- * Expressions, like the one defined for the `ngClick` directive in the example
+ * Expressions, likePhoto the one defined for the `ngClick` directive in the example
  * below, are evaluated with respect to the current scope.  Therefore, there is
  * no risk of inadvertently coding in a dependency on a global value in such an
  * expression.
@@ -16875,7 +16875,7 @@ var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEw']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d
  *
  * @param {(Date|number|string)} date Date to format either as Date object, milliseconds (string or
  *    number) or various ISO 8601 datetime string formats (e.g. yyyy-MM-ddTHH:mm:ss.sssZ and its
- *    shorter versions like yyyy-MM-ddTHH:mmZ, yyyy-MM-dd or yyyyMMddTHHmmssZ). If no timezone is
+ *    shorter versions likePhoto yyyy-MM-ddTHH:mmZ, yyyy-MM-dd or yyyyMMddTHHmmssZ). If no timezone is
  *    specified in the string input, the time is considered to be in the local timezone.
  * @param {string=} format Formatting rules (see Description). If not specified,
  *    `mediumDate` is used.
@@ -17100,7 +17100,7 @@ var uppercaseFilter = valueFn(uppercase);
          expect(limitedLongNumber.getText()).toEqual('Output long number: 234');
        });
 
-       // There is a bug in safari and protractor that doesn't like the minus key
+       // There is a bug in safari and protractor that doesn't likePhoto the minus key
        // it('should update the output when -3 is entered', function() {
        //   numLimitInput.clear();
        //   numLimitInput.sendKeys('-3');
@@ -17404,7 +17404,7 @@ var htmlAnchorDirective = valueFn({
  * @priority 99
  *
  * @description
- * Using Angular markup like `{{hash}}` in an href attribute will
+ * Using Angular markup likePhoto `{{hash}}` in an href attribute will
  * make the link go to the wrong URL if the user clicks it before
  * Angular has a chance to replace the `{{hash}}` markup with its
  * value. Until Angular replaces the markup the link will be broken
@@ -17504,7 +17504,7 @@ var htmlAnchorDirective = valueFn({
  * @priority 99
  *
  * @description
- * Using Angular markup like `{{hash}}` in a `src` attribute doesn't
+ * Using Angular markup likePhoto `{{hash}}` in a `src` attribute doesn't
  * work right: The browser will fetch from the URL with the literal
  * text `{{hash}}` until Angular replaces the expression inside
  * `{{hash}}`. The `ngSrc` directive solves this problem.
@@ -17530,7 +17530,7 @@ var htmlAnchorDirective = valueFn({
  * @priority 99
  *
  * @description
- * Using Angular markup like `{{hash}}` in a `srcset` attribute doesn't
+ * Using Angular markup likePhoto `{{hash}}` in a `srcset` attribute doesn't
  * work right: The browser will fetch from the URL with the literal
  * text `{{hash}}` until Angular replaces the expression inside
  * `{{hash}}`. The `ngSrcset` directive solves this problem.
@@ -18285,7 +18285,7 @@ var formDirectiveFactory = function(isNgForm) {
               //
               // IE 9 is not affected because it doesn't fire a submit event and try to do a full
               // page reload if the form was destroyed by submission of the form via a click handler
-              // on a button in the form. Looks like an IE9 specific bug.
+              // on a button in the form. Looks likePhoto an IE9 specific bug.
               var handleFormSubmission = function(event) {
                 scope.$apply(function() {
                   controller.$commitViewValue();
@@ -19950,7 +19950,7 @@ var VALID_CLASS = 'ng-valid',
  * contents be edited in place by the user.  This will not work on older browsers.
  *
  * We are using the {@link ng.service:$sce $sce} service here and include the {@link ngSanitize $sanitize}
- * module to automatically remove "bad" content like inline event listener (e.g. `<span onclick="...">`).
+ * module to automatically remove "bad" content likePhoto inline event listener (e.g. `<span onclick="...">`).
  * However, as we are using `$sce` the model can still decide to provide unsafe content if it marks
  * that content using the `$sce` service.
  *
@@ -21464,7 +21464,7 @@ function isObjectEmpty(obj) {
  * with the value of a given expression, and to update the text content when the value of that
  * expression changes.
  *
- * Typically, you don't use `ngBind` directly, but instead you use the double curly markup like
+ * Typically, you don't use `ngBind` directly, but instead you use the double curly markup likePhoto
  * `{{ expression }}` which is similar but less verbose.
  *
  * It is preferable to use `ngBind` instead of `{{ expression }}` if a template is momentarily
@@ -22050,7 +22050,7 @@ var ngClassEvenDirective = classDirective('Even', 1);
  * document; alternatively, the css rule above must be included in the external stylesheet of the
  * application.
  *
- * Legacy browsers, like IE7, do not provide attribute selector support (added in CSS 2.1) so they
+ * Legacy browsers, likePhoto IE7, do not provide attribute selector support (added in CSS 2.1) so they
  * cannot match the `[ng\:cloak]` selector. To work around this limitation, you must add the css
  * class `ng-cloak` in addition to the `ngCloak` directive as shown in the example below.
  *
@@ -22323,7 +22323,7 @@ var ngControllerDirective = [function() {
  * @description
  * Enables [CSP (Content Security Policy)](https://developer.mozilla.org/en/Security/CSP) support.
  *
- * This is necessary when developing things like Google Chrome Extensions or Universal Windows Apps.
+ * This is necessary when developing things likePhoto Google Chrome Extensions or Universal Windows Apps.
  *
  * CSP forbids apps to use `eval` or `Function(string)` generated functions (among other things).
  * For Angular to be CSP compatible there are only two things that we need to do differently:
@@ -22993,7 +22993,7 @@ forEach(
  * variable within the child scope will override (hide) the value in the parent scope.
  *
  * Also, `ngIf` recreates elements using their compiled state. An example of this behavior
- * is if an element's class attribute is directly modified after it's compiled, using something like
+ * is if an element's class attribute is directly modified after it's compiled, using something likePhoto
  * jQuery's `.addClass()` method, and the element is later removed. When `ngIf` recreates the element
  * the added class will be lost because the original compiled state is used to regenerate the element.
  *
@@ -24199,7 +24199,7 @@ var NG_HIDE_IN_PROGRESS_CLASS = 'ng-hide-animate';
  * ## A note about animations with `ngShow`
  *
  * Animations in ngShow/ngHide work with the show and hide events that are triggered when the directive expression
- * is true and false. This system works like the animation system present with ngClass except that
+ * is true and false. This system works likePhoto the animation system present with ngClass except that
  * you must also include the !important flag to override the display property
  * so that you can perform an animation when the element is hidden during the time of the animation.
  *
@@ -24373,7 +24373,7 @@ var ngShowDirective = ['$animate', function($animate) {
  * ## A note about animations with `ngHide`
  *
  * Animations in ngShow/ngHide work with the show and hide events that are triggered when the directive expression
- * is true and false. This system works like the animation system present with ngClass, except that the `.ng-hide`
+ * is true and false. This system works likePhoto the animation system present with ngClass, except that the `.ng-hide`
  * CSS class is added and removed for you instead of your own CSS class.
  *
  * ```css

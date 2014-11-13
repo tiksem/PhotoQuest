@@ -38,40 +38,62 @@ main.controller("PhotoController", function($scope, ngDialog, $element, $http, $
     };
 
     Utilities.loadDataToScope(url, params, scope, $http, function(){
-        $scope.like = function() {
-            if (!$scope.photo.yourLike) {
-                var url = window.location.origin + "//like";
-                var config = {
-                    params: {
-                        photoId: photoId
-                    }
-                };
-                $http.get(url, config).success(function (data) {
-                    if (!data.error) {
-                        $scope.photo.yourLike = data;
-                        $scope.photo.likesCount++;
-                        console.log(data);
-                    } else {
-                        console.error(data);
-                    }
-                })
+        var unlike = function(item) {
+            var url = window.location.origin + "//unlike";
+            var config = {
+                params: {
+                    id: item.yourLike.id
+                }
+            };
+            $http.get(url, config).success(function (data) {
+                if (!data.error) {
+                    item.yourLike = null;
+                    item.likesCount--;
+                    console.log(data);
+                } else {
+                    console.error(data);
+                }
+            })
+        }
+
+        var like = function(item, params) {
+            var url = window.location.origin + "//like";
+            var config = {
+                params: params
+            };
+            $http.get(url, config).success(function (data) {
+                if (!data.error) {
+                    item.yourLike = data;
+                    item.likesCount++;
+                    console.log(data);
+                } else {
+                    console.error(data);
+                }
+            })
+        };
+
+        var toggleLikeState = function(item, params) {
+            if (item.yourLike) {
+                unlike(item);
             } else {
-                var url = window.location.origin + "//unlike";
-                var config = {
-                    params: {
-                        id: $scope.photo.yourLike.id
-                    }
-                };
-                $http.get(url, config).success(function (data) {
-                    if (!data.error) {
-                        $scope.photo.yourLike = null;
-                        $scope.photo.likesCount--;
-                        console.log(data);
-                    } else {
-                        console.error(data);
-                    }
-                })
+                like(item, params);
             }
+        };
+
+        $scope.likePhoto = function() {
+            var params = {
+                photoId: photoId
+            };
+
+            toggleLikeState($scope.photo, params);
+        };
+
+        $scope.likeComment = function(comment) {
+            var params = {
+                commentId: comment.id
+            };
+
+            toggleLikeState(comment, params);
         }
     });
 

@@ -13,6 +13,9 @@
         top: 0;
         margin: 10px;
     }
+    .comment_likes_count {
+        margin: 10px;
+    }
 </style>
 <div id="photo_content" ng-controller="PhotoController" >
     <div id="photo_container">
@@ -27,7 +30,7 @@
             <tr>
                 <td>
                     <div id="photo_info">
-                        <div id="photo_likes_count" class="count_widget" ng-click="like()">
+                        <div id="photo_likes_count" class="count_widget" ng-click="likePhoto(comment)">
                             <span>{{photo.likesCount + " like it!"}}</span>
                             <span ng-show="photo.yourLike">&nbsp; including You</span>
                         </div>
@@ -52,6 +55,13 @@
                     </td>
                 </tr>
             </table>
+
+            <div style="position: relative">
+                <div class="count_widget comment_likes_count" ng-click="likeComment(comment)">
+                    <span>{{comment.likesCount + " like it!"}}</span>
+                    <span ng-show="comment.yourLike">&nbsp; including You</span>
+                </div>
+            </div>
         </div>
     </div>
     <div>

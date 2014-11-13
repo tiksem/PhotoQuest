@@ -200,10 +200,10 @@ public class ApiHandler {
         return photo;
     }
 
-//    @ExceptionHandler(Throwable.class)
-//    public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
-//        return new ExceptionResponse(e);
-//    }
+    @ExceptionHandler(Throwable.class)
+    public @ResponseBody ExceptionResponse handleError(HttpServletRequest request, Throwable e) {
+        return new ExceptionResponse(e);
+    }
 
     @RequestMapping("/getPhotosOfPhotoquest")
     public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId){
@@ -270,5 +270,10 @@ public class ApiHandler {
     @RequestMapping("/likes")
     public @ResponseBody Object likes() {
         return DatabaseManager.getInstance().getAllLikes(request);
+    }
+
+    @RequestMapping("/comments")
+    public @ResponseBody Object comments() {
+        return DatabaseManager.getInstance().getAllComments();
     }
 }
