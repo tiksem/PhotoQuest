@@ -97,6 +97,32 @@ main.controller("PhotoController", function($scope, ngDialog, $element, $http, $
         }
     });
 
+    $scope.isMineComment = function(comment) {
+        var signedUser = $scope.getSignedInUser();
+        if(!signedUser){
+            return false;
+        }
+
+        return comment.userId === signedUser.id;
+    };
+
+    $scope.deleteComment = function(comment) {
+        var url = window.location.origin + "//deleteComment";
+        var config = {
+            params: {
+                id: comment.id
+            }
+        };
+        $http.get(url, config).success(function (data) {
+            if (!data.error) {
+                $scope.comments.remove(comment);
+                console.log(data);
+            } else {
+                console.error(data);
+            }
+        })
+    };
+
     Utilities.applyStylesToHtml($element);
 })
 

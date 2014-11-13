@@ -66,6 +66,9 @@
                     <span ng-show="comment.yourLike">&nbsp; including You</span>
                 </div>
             </div>
+            <button ng-show="isMineComment(comment)" ng-click="deleteComment(comment)">
+                Delete
+            </button>
         </div>
     </div>
     <div>

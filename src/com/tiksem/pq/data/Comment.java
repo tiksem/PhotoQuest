@@ -18,7 +18,7 @@ public class Comment implements Likable {
     private Long photoId;
     @Index
     private Long userId;
-    @Persistent
+    @Index
     private Long toUserId;
     @Persistent
     private long likesCount = 0;
@@ -27,7 +27,7 @@ public class Comment implements Likable {
     private User user;
     @NotPersistent
     private User toUser;
-    @Persistent
+    @Index
     private Long toCommentId;
 
     @NotPersistent

@@ -6,12 +6,8 @@ import com.tiksem.pq.data.response.PhotoquestsList;
 import com.tiksem.pq.data.response.PhotosList;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
-import com.tiksem.pq.db.exceptions.PhotoquestNotFoundException;
-import com.tiksem.pq.db.exceptions.ResourceNotFoundException;
 import com.tiksem.pq.http.HttpUtilities;
-import com.tiksem.pq.image.ScaleType;
 import com.tiksem.pq.utils.MimeTypeUtils;
-import net.coobird.thumbnailator.Thumbnailator;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -22,17 +18,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.persistence.Transient;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.crypto.Data;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.Collection;
-import java.util.HashMap;
 
 /**
  * Created by CM on 10/24/2014.
@@ -232,10 +223,18 @@ public class ApiHandler {
 
     @RequestMapping("/putComment")
     public @ResponseBody Object putComment(
-            @RequestParam(value = "photoId", required = true) Long photoId,
+            @RequestParam(value = "photoId", required = false) Long photoId,
             @RequestParam(value = "message", required = true) String message,
-            @RequestParam(value = "toCommentId", required = false) Long toCommentId) {
+            @RequestParam(value = "commentId", required = false) Long toCommentId) {
+        checkLikeCommentParams(photoId, toCommentId);
         return DatabaseManager.getInstance().addComment(request, photoId, message, toCommentId);
+    }
+
+    @RequestMapping("/deleteComment")
+    public @ResponseBody Object deleteComment(
+            @RequestParam(value = "id", required = true) Long commentId) {
+        DatabaseManager.getInstance().deleteComment(request, commentId);
+        return new Success();
     }
 
     @RequestMapping("/getCommentsOnPhoto")
@@ -245,7 +244,7 @@ public class ApiHandler {
         return new CommentsList(comments);
     }
 
-    private void checkLikeParams(Long photoId, Long commentId) {
+    private void checkLikeCommentParams(Long photoId, Long commentId) {
         if((photoId == null && commentId == null) || (commentId != null && photoId != null)){
             throw new IllegalArgumentException("Specify one, photoId or commentId");
         }
@@ -254,7 +253,7 @@ public class ApiHandler {
     @RequestMapping("/like")
     public @ResponseBody Object like(@RequestParam(value = "photoId", required = false) Long photoId,
                                      @RequestParam(value = "commentId", required = false) Long commentId){
-        checkLikeParams(photoId, commentId);
+        checkLikeCommentParams(photoId, commentId);
 
         if(photoId != null){
             return DatabaseManager.getInstance().likePhoto(request, photoId);

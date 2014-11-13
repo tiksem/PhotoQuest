@@ -587,14 +587,44 @@ public class DatabaseManager {
         return addComment(request, photoId, message, null);
     }
 
+    public Collection<Like> getCommentLikes(long commentId) {
+        Like like = new Like();
+        like.setCommentId(commentId);
+        return DBUtilities.queryByPattern(persistenceManager, like);
+    }
+
+    public Collection<Comment> getCommentsOnComment(long commentId) {
+        Comment comment = new Comment();
+        comment.setToCommentId(commentId);
+        return DBUtilities.queryByPattern(persistenceManager, comment);
+    }
+
+    private void addCommentToDeleteStack(List<Object> deleteStack, Comment comment) {
+        Long commentId = comment.getId();
+        Collection<Like> likes = getCommentLikes(commentId);
+        deleteStack.addAll(likes);
+        Collection<Comment> comments = getCommentsOnComment(commentId);
+        deleteStack.addAll(comments);
+
+        for(Comment innerComment: comments){
+            addCommentToDeleteStack(deleteStack, innerComment);
+        }
+    }
+
+    public void deleteComment(HttpServletRequest request, long commentId) {
+        Comment comment = getCommentByIdOrThrow(commentId);
+        List<Object> deleteStack = new ArrayList<Object>();
+        addCommentToDeleteStack(deleteStack, comment);
+        deleteAllPersistent(deleteStack);
+        deletePersistent(comment);
+    }
+
     public Comment addComment(HttpServletRequest request,
-                           long photoId, String message, Long toCommentId) {
-        getPhotoByIdOrThrow(photoId);
+                           Long photoId, String message, Long toCommentId) {
         User signedInUser = getSignedInUserOrThrow(request);
 
         Comment comment = new Comment();
         comment.setMessage(message);
-        comment.setPhotoId(photoId);
         comment.setUserId(signedInUser.getId());
         setAvatar(request, signedInUser);
         comment.setUser(signedInUser);
@@ -606,7 +636,14 @@ public class DatabaseManager {
             comment.setToUserId(toUser.getId());
             setAvatar(request, toUser);
             comment.setToUser(toUser);
+
+            photoId = toComment.getPhotoId();
+            getPhotoByIdOrThrow(photoId);
+        } else {
+            getPhotoByIdOrThrow(photoId);
         }
+
+        comment.setPhotoId(photoId);
 
         return makePersistent(comment);
     }
