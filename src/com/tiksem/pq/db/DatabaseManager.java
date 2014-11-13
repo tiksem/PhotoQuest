@@ -494,6 +494,7 @@ public class DatabaseManager {
         if (fillFriendShipData) {
             for(User friend : friends){
                 friend.setIsFriend(true);
+                setAvatar(request, friend);
             }
         }
 
