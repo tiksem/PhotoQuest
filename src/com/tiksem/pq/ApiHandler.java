@@ -4,6 +4,7 @@ import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.CommentsList;
 import com.tiksem.pq.data.response.PhotoquestsList;
 import com.tiksem.pq.data.response.PhotosList;
+import com.tiksem.pq.data.response.UsersList;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
@@ -228,6 +229,18 @@ public class ApiHandler {
             @RequestParam(value = "commentId", required = false) Long toCommentId) {
         checkLikeCommentParams(photoId, toCommentId);
         return DatabaseManager.getInstance().addComment(request, photoId, message, toCommentId);
+    }
+
+    @RequestMapping("/sendMessage")
+    public @ResponseBody Object sendMessage(
+            @RequestParam(value = "toUserId", required = true) Long toUserId,
+            @RequestParam(value = "message", required = true) String message) {
+        return DatabaseManager.getInstance().addMessage(request, toUserId, message);
+    }
+
+    @RequestMapping("/getMessages")
+    public @ResponseBody Object getMessages() {
+        return DatabaseManager.getInstance().getMessagesOfSignedInUser(request);
     }
 
     @RequestMapping("/deleteComment")

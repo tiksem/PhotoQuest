@@ -1,9 +1,13 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.datanucleus.enhancer.Persistable;
+import com.tiksem.pq.data.annotations.AddingDate;
+import com.tiksem.pq.data.annotations.Login;
+import com.tiksem.pq.data.annotations.NameField;
+import com.tiksem.pq.data.annotations.Password;
 
 import javax.jdo.annotations.*;
+import java.sql.Date;
 
 /**
  * Created by CM on 10/30/2014.
@@ -16,17 +20,26 @@ public class User implements WithAvatar {
     private Long id;
 
     @Index
+    @Login
     private String login;
     @Index
+    @Password
     private String password;
+
     @JsonIgnore
     @Index
     private Long avatarId;
 
     @Index
+    @NameField
     private String name;
     @Index
+    @NameField
     private String lastName;
+
+    @Index
+    @AddingDate
+    private Long addingDate;
 
     @NotPersistent
     private String avatar;
@@ -110,5 +123,11 @@ public class User implements WithAvatar {
         this.isFriend = isFriend;
     }
 
+    public Long getAddingDate() {
+        return addingDate;
+    }
 
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
+    }
 }

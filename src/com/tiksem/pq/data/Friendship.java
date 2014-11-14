@@ -1,5 +1,7 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.data.annotations.Relation;
+
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 
@@ -8,8 +10,10 @@ import javax.jdo.annotations.PersistenceCapable;
  */
 @PersistenceCapable
 public class Friendship {
+    @Relation(relationName = "user")
     @Index
     private Long user1;
+    @Relation(relationName = "user")
     @Index
     private Long user2;
 

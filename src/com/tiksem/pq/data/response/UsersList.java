@@ -1,4 +1,6 @@
-package com.tiksem.pq.data;
+package com.tiksem.pq.data.response;
+
+import com.tiksem.pq.data.User;
 
 import java.util.Collection;
 

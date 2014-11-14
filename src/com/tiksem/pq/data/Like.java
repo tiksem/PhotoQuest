@@ -6,7 +6,7 @@ import javax.jdo.annotations.*;
  * Created by CM on 11/10/2014.
  */
 @PersistenceCapable
-public class Like extends Data {
+public class Like {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;

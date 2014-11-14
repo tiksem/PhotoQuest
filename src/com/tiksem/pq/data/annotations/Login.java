@@ -4,11 +4,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * User: Tikhonenko.S
- * Date: 28.04.2014
- * Time: 14:05
+ * Created by CM on 11/14/2014.
  */
-
 @Retention(RetentionPolicy.RUNTIME)
-public @interface FixFieldsMethod {
+public @interface Login {
 }

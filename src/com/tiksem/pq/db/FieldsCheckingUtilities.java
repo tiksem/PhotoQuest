@@ -1,13 +1,12 @@
 package com.tiksem.pq.db;
 
-import com.tiksem.pq.data.annotations.FixFieldsMethod;
-import com.tiksem.pq.data.annotations.NameField;
-import com.tiksem.pq.db.exceptions.NameFieldPatternException;
-import com.tiksem.pq.db.exceptions.NameFieldTypeMismatchException;
-import com.tiksem.pq.db.exceptions.PasswordPatternException;
-import com.tiksem.pq.db.exceptions.UserNamePatternException;
+import com.tiksem.pq.data.annotations.*;
+import com.tiksem.pq.db.exceptions.*;
+import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
 
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -35,7 +34,7 @@ public class FieldsCheckingUtilities {
         return CHECK_NAME_FIELD_PATTERN.matcher(name).matches();
     }
 
-    public static void fixNameField(Field field, Object object) {
+    private static void fixNameField(Field field, Object object) {
         Class clazz = field.getType();
         NameField nameField = field.getAnnotation(NameField.class);
 
@@ -45,7 +44,7 @@ public class FieldsCheckingUtilities {
             }
 
             try {
-                String value = (String) field.get(object);
+                String value = (String) Reflection.getValueOfField(object, field);
                 if(value == null || value.isEmpty()){
                     return;
                 }
@@ -64,19 +63,64 @@ public class FieldsCheckingUtilities {
         }
     }
 
-    public static void fixFields(Object object){
+    private static void checkLogin(Field field, Object object) {
+        Class clazz = field.getType();
+        Login loginField = field.getAnnotation(Login.class);
+
+        if(loginField != null){
+            if(!String.class.isAssignableFrom(clazz)){
+                throw new IllegalArgumentException("Login field should be string");
+            }
+
+            String value = (String) Reflection.getValueOfField(object, field);
+            checkLoginThrow(value);
+        }
+    }
+
+    private static void checkEmail(Field field, Object object) {
+        Class clazz = field.getType();
+        Email email = field.getAnnotation(Email.class);
+
+        if(email != null){
+            if(!String.class.isAssignableFrom(clazz)){
+                throw new IllegalArgumentException("Email field should be string");
+            }
+
+            String value = (String) Reflection.getValueOfField(object, field);
+            validateEmailAddress(value);
+        }
+    }
+
+    private static void checkPassword(Field field, Object object) {
+        Class clazz = field.getType();
+        Password passwordField = field.getAnnotation(Password.class);
+
+        if(passwordField != null){
+            if(!String.class.isAssignableFrom(clazz)){
+                throw new IllegalArgumentException("Password field should be string");
+            }
+
+            String value = (String) Reflection.getValueOfField(object, field);
+            checkPasswordThrow(value);
+        }
+    }
+
+    public static void fixAndCheckFields(Object object){
         Class clazz = object.getClass();
         Field[] fields = clazz.getFields();
 
         for (Field field : fields) {
             field.setAccessible(true);
             fixNameField(field, object);
+            checkLogin(field, object);
+            checkPassword(field, object);
+            checkEmail(field, object);
         }
 
-        Method[] methods = clazz.getMethods();
+        List<Method> methods = Reflection.getAllMethods(object);
         for (Method method : methods) {
-            FixFieldsMethod fixFieldsMethod = method.getAnnotation(FixFieldsMethod.class);
-            if(fixFieldsMethod != null){
+            OnPrepareForStorage onPrepareForStorage = method.getAnnotation(OnPrepareForStorage.class);
+            if(onPrepareForStorage != null){
                 try {
                     method.setAccessible(true);
                     method.invoke(object);
@@ -91,12 +135,24 @@ public class FieldsCheckingUtilities {
 
     public static void fixFields(List<Object> objects) {
         for(Object object : objects){
-            fixFields(object);
+            fixAndCheckFields(object);
         }
     }
 
     public static boolean checkLogin(String login) {
         return CHECK_LOGIN_FIELD_PATTERN.matcher(login).matches();
+    }
+
+    public static void checkLoginThrow(String login) {
+        if(!checkLogin(login)){
+            throw new LoginPatternException();
+        }
+    }
+
+    public static void checkPasswordThrow(String password) {
+        if(!checkPassword(password)){
+            throw new PasswordPatternException();
+        }
     }
 
     public static boolean checkPassword(String password) {
@@ -105,11 +161,28 @@ public class FieldsCheckingUtilities {
 
     public static void checkLoginAndPassword(String login, String password) {
         if(!checkLogin(login)){
-            throw new UserNamePatternException();
+            throw new LoginPatternException();
         }
 
         if(!checkPassword(password)){
             throw new PasswordPatternException();
         }
+    }
+
+    public static void validateEmailAddress(String email) {
+        if(!isValidEmailAddress(email)){
+            throw new InvalidEmailException(email);
+        }
+    }
+
+    public static boolean isValidEmailAddress(String email) {
+        boolean result = true;
+        try {
+            InternetAddress emailAddress = new InternetAddress(email);
+            emailAddress.validate();
+        } catch (AddressException ex) {
+            result = false;
+        }
+        return result;
     }
 }

@@ -4,10 +4,8 @@ import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.Likable;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
-import org.datanucleus.api.jdo.*;
 
 import javax.jdo.*;
-import javax.jdo.JDOEnhancer;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
@@ -199,9 +197,6 @@ public class DatabaseManager {
             throw new UserExistsRegisterException(login);
         }
 
-        FieldsCheckingUtilities.checkLoginAndPassword(login, password);
-        FieldsCheckingUtilities.fixFields(user);
-
         return makePersistent(user);
     }
 
@@ -288,6 +283,19 @@ public class DatabaseManager {
         }
 
         return photo;
+    }
+
+    public Message getMessageById(long id) {
+        return DBUtilities.getObjectById(persistenceManager, Message.class, id);
+    }
+
+    public Message getMessageByIdOrThrow(long id) {
+        Message message = getMessageById(id);
+        if(message == null){
+            throw new MessageNotFoundException(id);
+        }
+
+        return message;
     }
 
     public byte[] getBitmapDataByPhotoId(long id) {
@@ -392,23 +400,10 @@ public class DatabaseManager {
     }
 
     public Friendship getFriendship(long user1Id, long user2Id) {
-        Query query = persistenceManager.newQuery(Friendship.class);
-        query.declareParameters("long user1, long user2");
-
-        Map<String, Object> args = new HashMap<String, Object>();
-        args.put("user1", user1Id);
-        args.put("user2", user2Id);
-
-        String filter = "(this.user1 == user1 && this.user2 == user2) || " +
-                "(this.user1 == user2 && this.user2 == user1)";
-        query.setFilter(filter);
-
-        Collection<Friendship> result = (Collection<Friendship>) query.executeWithMap(args);
-        if(result.isEmpty()){
-            return null;
-        }
-
-        return result.iterator().next();
+        Friendship friendship = new Friendship();
+        friendship.setUser1(user1Id);
+        friendship.setUser2(user2Id);
+        return DBUtilities.getObjectByPattern(persistenceManager, friendship);
     }
 
     public Friendship getFriendshipOrThrow(long user1Id, long user2Id) {
@@ -773,5 +768,73 @@ public class DatabaseManager {
 
     public Collection<Comment> getAllComments() {
         return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class);
+    }
+
+    public Message addMessage(long fromUser, long toUser, String messageText) {
+        Message message = new Message();
+        message.setFromUserId(fromUser);
+        message.setToUserId(toUser);
+        message.setMessage(messageText);
+
+        makePersistent(message);
+        return message;
+    }
+
+    public Message addMessage(HttpServletRequest request, long toUser, String messageText) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        return addMessage(signedInUser.getId(), toUser, messageText);
+    }
+
+    public void deleteMessage(long id) {
+        Message message = getMessageByIdOrThrow(id);
+        deletePersistent(message);
+    }
+
+    public void readMessage(HttpServletRequest request, long messageId) {
+        User user = getSignedInUserOrThrow(request);
+        long userId = user.getId();
+        Message message = getMessageByIdAndUserId(userId, messageId);
+        if(userId == message.getFromUserId()){
+            throw new MessageReadException("Message was sent by the user, it couldn't be marked as read");
+        }
+
+        message.setRead(true);
+        update(request, message);
+    }
+
+    public void markMessageAsDeleted(HttpServletRequest request, long messageId) {
+        User user = getSignedInUserOrThrow(request);
+        long userId = user.getId();
+        Message message = getMessageByIdAndUserId(userId, messageId);
+
+        if(userId == message.getFromUserId()){
+            message.setDeletedBySender(true);
+        } else {
+            message.setDeletedByReceiver(true);
+        }
+    }
+
+    public Collection<Message> getMessagesByUserId(long userId, boolean includeDeleted) {
+        Message message = new Message();
+        message.setFromUserId(userId);
+        return DBUtilities.queryByPattern(persistenceManager, message);
+    }
+
+    public Message getMessageByIdAndUserId(long userId, long messageId) {
+        return getMessageByIdAndUserId(userId, messageId, false);
+    }
+
+    public Message getMessageByIdAndUserId(long userId, long messageId, boolean includeDeleted) {
+        Message message = getMessageByIdOrThrow(messageId);
+        if(message.getFromUserId() != userId && message.getToUserId() != userId){
+            throw new MessageNotOwnedByUserException(userId, messageId);
+        }
+
+        return message;
+    }
+
+    public Collection<Message> getMessagesOfSignedInUser(HttpServletRequest request) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        return getMessagesByUserId(signedInUser.getId(), false);
     }
 }
