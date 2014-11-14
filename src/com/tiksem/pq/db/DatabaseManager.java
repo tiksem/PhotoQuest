@@ -1,7 +1,7 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.*;
-import com.tiksem.pq.data.response.Likable;
+import com.tiksem.pq.data.Likable;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 
@@ -168,16 +168,16 @@ public class DatabaseManager {
         return makePersistent(photoquest);
     }
 
-    public List<Photoquest> getPhotoquestsCreatedByUser(long userId) {
+    public List<Photoquest> getPhotoquestsCreatedByUser(long userId, OffsetLimit offsetLimit) {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
-        Collection<Photoquest> photoquests = DBUtilities.queryByPattern(persistenceManager, photoquest);
+        Collection<Photoquest> photoquests = DBUtilities.queryByPattern(persistenceManager, photoquest, offsetLimit);
         return new ArrayList<Photoquest>(photoquests);
     }
 
-    public  List<Photoquest> getPhotoquestsCreatedByUser(String login) {
+    public  List<Photoquest> getPhotoquestsCreatedByUser(String login, OffsetLimit offsetLimit) {
         User user = getUserByLoginOrThrow(login);
-        return getPhotoquestsCreatedByUser(user.getId());
+        return getPhotoquestsCreatedByUser(user.getId(), offsetLimit);
     }
 
     public void update(HttpServletRequest request, Object object) {
@@ -200,31 +200,31 @@ public class DatabaseManager {
         return makePersistent(user);
     }
 
-    public Collection<User> getAllUsers(HttpServletRequest request) {
-        return getAllUsers(request, true, false);
+    public Collection<User> getAllUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return getAllUsers(request, true, false, offsetLimit);
     }
 
-    public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request) {
-        return getAllUsers(request, false, true);
+    public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return getAllUsers(request, false, true, offsetLimit);
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser,
-                                        boolean fillRelationshipData) {
+                                        boolean fillRelationshipData, OffsetLimit offsetLimit) {
         Collection<User> users = null;
         User signedInUser = null;
 
         if (includeSignedInUser) {
             users = DBUtilities.getAllObjectsOfClass(persistenceManager,
-                    User.class);
+                    User.class, offsetLimit);
         } else {
             signedInUser = getSignedInUser(request);
             if(signedInUser == null){
                 users = DBUtilities.getAllObjectsOfClass(persistenceManager,
-                        User.class);
+                        User.class, offsetLimit);
             } else {
                 User user = new User();
                 user.setId(signedInUser.getId());
-                users = DBUtilities.queryByExcludePattern(persistenceManager, user);
+                users = DBUtilities.queryByExcludePattern(persistenceManager, user, offsetLimit);
             }
         }
 
@@ -240,8 +240,8 @@ public class DatabaseManager {
         return users;
     }
 
-    public void deleteAllUsers(HttpServletRequest request) {
-        deleteAllPersistent(getAllUsers(request));
+    public void deleteAllUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
+        deleteAllPersistent(getAllUsers(request, offsetLimit));
     }
 
     public void deleteAllPhotoquests(HttpServletRequest request) {
@@ -353,14 +353,15 @@ public class DatabaseManager {
         return photos;
     }
 
-    public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId) {
+    public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId,
+                                                   OffsetLimit offsetLimit) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
         photoquest.incrementViewsCount();
         update(request, photoquest);
 
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
-        Collection<Photo> photos = DBUtilities.queryByPattern(persistenceManager, photoPattern);
+        Collection<Photo> photos = DBUtilities.queryByPattern(persistenceManager, photoPattern, offsetLimit);
         initPhotosUrl(photos, request);
 
         initYourLikeParameter(request, photos);
@@ -582,34 +583,34 @@ public class DatabaseManager {
         return addComment(request, photoId, message, null);
     }
 
-    public Collection<Like> getCommentLikes(long commentId) {
+    public Collection<Like> getCommentLikes(long commentId, OffsetLimit offsetLimit) {
         Like like = new Like();
         like.setCommentId(commentId);
-        return DBUtilities.queryByPattern(persistenceManager, like);
+        return DBUtilities.queryByPattern(persistenceManager, like, offsetLimit);
     }
 
-    public Collection<Comment> getCommentsOnComment(long commentId) {
+    public Collection<Comment> getCommentsOnComment(long commentId, OffsetLimit offsetLimit) {
         Comment comment = new Comment();
         comment.setToCommentId(commentId);
-        return DBUtilities.queryByPattern(persistenceManager, comment);
+        return DBUtilities.queryByPattern(persistenceManager, comment, offsetLimit);
     }
 
-    private void addCommentToDeleteStack(List<Object> deleteStack, Comment comment) {
+    private void addCommentToDeleteStack(List<Object> deleteStack, Comment comment, OffsetLimit offsetLimit) {
         Long commentId = comment.getId();
-        Collection<Like> likes = getCommentLikes(commentId);
+        Collection<Like> likes = getCommentLikes(commentId, offsetLimit);
         deleteStack.addAll(likes);
-        Collection<Comment> comments = getCommentsOnComment(commentId);
+        Collection<Comment> comments = getCommentsOnComment(commentId, offsetLimit);
         deleteStack.addAll(comments);
 
         for(Comment innerComment: comments){
-            addCommentToDeleteStack(deleteStack, innerComment);
+            addCommentToDeleteStack(deleteStack, innerComment, offsetLimit);
         }
     }
 
-    public void deleteComment(HttpServletRequest request, long commentId) {
+    public void deleteComment(HttpServletRequest request, long commentId, OffsetLimit offsetLimit) {
         Comment comment = getCommentByIdOrThrow(commentId);
         List<Object> deleteStack = new ArrayList<Object>();
-        addCommentToDeleteStack(deleteStack, comment);
+        addCommentToDeleteStack(deleteStack, comment, offsetLimit);
         deleteAllPersistent(deleteStack);
         deletePersistent(comment);
     }
@@ -664,11 +665,11 @@ public class DatabaseManager {
         removeComment(comment);
     }
 
-    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId) {
+    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId, OffsetLimit offsetLimit) {
         Comment commentPattern = new Comment();
         commentPattern.setPhotoId(photoId);
         Collection<Comment> comments =
-                DBUtilities.queryByPattern(persistenceManager, commentPattern);
+                DBUtilities.queryByPattern(persistenceManager, commentPattern, offsetLimit);
 
         User signedInUser = getSignedInUser(request);
         if(signedInUser != null){
@@ -682,8 +683,9 @@ public class DatabaseManager {
         return comments;
     }
 
-    public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId) {
-        Collection<Comment> comments = getCommentsOnPhoto(request, photoId);
+    public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId,
+                                                             OffsetLimit offsetLimit) {
+        Collection<Comment> comments = getCommentsOnPhoto(request, photoId, offsetLimit);
         fillCommentsData(request, comments);
         return comments;
     }
@@ -814,10 +816,10 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<Message> getMessagesByUserId(long userId, boolean includeDeleted) {
+    public Collection<Message> getMessagesByUserId(long userId, OffsetLimit offsetLimit, boolean includeDeleted) {
         Message message = new Message();
         message.setFromUserId(userId);
-        return DBUtilities.queryByPattern(persistenceManager, message);
+        return DBUtilities.queryByPattern(persistenceManager, message, offsetLimit);
     }
 
     public Message getMessageByIdAndUserId(long userId, long messageId) {
@@ -833,8 +835,8 @@ public class DatabaseManager {
         return message;
     }
 
-    public Collection<Message> getMessagesOfSignedInUser(HttpServletRequest request) {
+    public Collection<Message> getMessagesOfSignedInUser(HttpServletRequest request, OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
-        return getMessagesByUserId(signedInUser.getId(), false);
+        return getMessagesByUserId(signedInUser.getId(), offsetLimit, false);
     }
 }

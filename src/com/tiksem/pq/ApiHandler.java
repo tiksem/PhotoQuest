@@ -6,6 +6,7 @@ import com.tiksem.pq.data.response.PhotoquestsList;
 import com.tiksem.pq.data.response.PhotosList;
 import com.tiksem.pq.data.response.UsersList;
 import com.tiksem.pq.db.DatabaseManager;
+import com.tiksem.pq.db.OffsetLimit;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
@@ -95,8 +96,9 @@ public class ApiHandler {
     }
 
     @RequestMapping("/users")
-    public @ResponseBody Object getAllUsers() {
-        Collection<User> users = DatabaseManager.getInstance().getAllUsersWithCheckingRelationShip(request);
+    public @ResponseBody Object getAllUsers(OffsetLimit offsetLimit) {
+        Collection<User> users = DatabaseManager.getInstance().
+                getAllUsersWithCheckingRelationShip(request, offsetLimit);
         return new UsersList(users);
     }
 
@@ -107,8 +109,8 @@ public class ApiHandler {
     }
 
     @RequestMapping("/deleteAllUsers")
-    public @ResponseBody Object deleteAllUsers() {
-        DatabaseManager.getInstance().deleteAllUsers(request);
+    public @ResponseBody Object deleteAllUsers(OffsetLimit offsetLimit) {
+        DatabaseManager.getInstance().deleteAllUsers(request, offsetLimit);
         return new Success();
     }
 
@@ -205,8 +207,9 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getPhotosOfPhotoquest")
-    public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId){
-        Collection<Photo> photos = DatabaseManager.getInstance().getPhotosOfPhotoquest(request, photoquestId);
+    public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId, OffsetLimit offsetLimit){
+        Collection<Photo> photos = DatabaseManager.getInstance().
+                getPhotosOfPhotoquest(request, photoquestId, offsetLimit);
         return new PhotosList(photos);
     }
 
@@ -239,21 +242,21 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getMessages")
-    public @ResponseBody Object getMessages() {
-        return DatabaseManager.getInstance().getMessagesOfSignedInUser(request);
+    public @ResponseBody Object getMessages(OffsetLimit offsetLimit) {
+        return DatabaseManager.getInstance().getMessagesOfSignedInUser(request, offsetLimit);
     }
 
     @RequestMapping("/deleteComment")
-    public @ResponseBody Object deleteComment(
+    public @ResponseBody Object deleteComment(OffsetLimit offsetLimit,
             @RequestParam(value = "id", required = true) Long commentId) {
-        DatabaseManager.getInstance().deleteComment(request, commentId);
+        DatabaseManager.getInstance().deleteComment(request, commentId, offsetLimit);
         return new Success();
     }
 
     @RequestMapping("/getCommentsOnPhoto")
-    public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId){
+    public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId, OffsetLimit offsetLimit){
         Collection<Comment> comments = DatabaseManager.getInstance().
-                getCommentsOnPhotoAndFillData(request, photoId);
+                getCommentsOnPhotoAndFillData(request, photoId, offsetLimit);
         return new CommentsList(comments);
     }
 

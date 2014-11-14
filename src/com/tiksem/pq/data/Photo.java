@@ -1,10 +1,7 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.response.Likable;
-
 import javax.jdo.InstanceCallbacks;
 import javax.jdo.annotations.*;
-import javax.persistence.Transient;
 
 /**
  * Created by CM on 10/31/2014.

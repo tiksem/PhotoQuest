@@ -2,10 +2,8 @@ package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.annotations.AddingDate;
 import com.tiksem.pq.data.annotations.Relation;
-import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.collections.map.MultiMap;
-import com.utils.framework.collections.map.MultiMapEntry;
 import com.utils.framework.collections.map.SetValuesHashMultiMap;
 import com.utils.framework.strings.Strings;
 
@@ -15,7 +13,6 @@ import javax.jdo.annotations.NotPersistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
 import java.lang.reflect.Field;
-import java.sql.Ref;
 import java.util.*;
 
 /**
@@ -59,21 +56,25 @@ public class DBUtilities {
         return collection.iterator().next();
     }
 
-    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern) {
-        return queryByPattern(manager, pattern, false);
-    }
-
-    public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern) {
-        return queryByExcludePattern(manager, pattern, false);
-    }
-
-    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern, boolean ignoreRelations) {
-        return queryByPattern(manager, pattern, false, ignoreRelations);
+    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern, OffsetLimit offsetLimit) {
+        return queryByPattern(manager, pattern, false, offsetLimit);
     }
 
     public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern,
-                                                          boolean ignoreRelations) {
-        return queryByPattern(manager, pattern, true, ignoreRelations);
+                                                          OffsetLimit offsetLimit) {
+        return queryByExcludePattern(manager, pattern, false, offsetLimit);
+    }
+
+    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
+                                                   boolean ignoreRelations,
+                                                   OffsetLimit offsetLimit) {
+        return queryByPattern(manager, pattern, false, ignoreRelations, offsetLimit);
+    }
+
+    public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern,
+                                                          boolean ignoreRelations,
+                                                          OffsetLimit offsetLimit) {
+        return queryByPattern(manager, pattern, true, ignoreRelations, offsetLimit);
     }
 
     private static MultiMap<String, Field> getRelations(Class aClass) {
@@ -95,7 +96,8 @@ public class DBUtilities {
 
     private static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
                                                               boolean asExcludePattern,
-                                                              boolean ignoreRelations) {
+                                                              boolean ignoreRelations,
+                                                              OffsetLimit offsetLimit) {
         Class<?> patternClass = pattern.getClass();
         List<Class> relationsClasses = ignoreRelations ? Arrays.<Class>asList() : Arrays.<Class>asList(Relation.class);
         List<Field> fields =
@@ -186,6 +188,7 @@ public class DBUtilities {
         Query query = manager.newQuery(patternClass);
         query.declareParameters(parametersString);
         query.setFilter(filtersString);
+        offsetLimit.applyToQuery(query);
 
         Collection<T> result = (Collection < T >) query.executeWithMap(args);
         resetNotPersistentFields(result);
@@ -193,7 +196,7 @@ public class DBUtilities {
     }
 
     public static <T> T getObjectByPattern(PersistenceManager manager, T pattern) {
-        Collection<T> collection = queryByPattern(manager, pattern);
+        Collection<T> collection = queryByPattern(manager, pattern, new OffsetLimit(0, 1));
         if(collection.isEmpty()){
             return null;
         }
@@ -202,7 +205,13 @@ public class DBUtilities {
     }
 
     public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass) {
+        return getAllObjectsOfClass(manager, patternClass, new OffsetLimit(0, OffsetLimit.MAX_LIMIT));
+    }
+
+    public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass,
+                                                         OffsetLimit offsetLimit) {
         Query query = manager.newQuery(patternClass);
+        offsetLimit.applyToQuery(query);
         Collection<T> result = (Collection < T >) query.execute();
         resetNotPersistentFields(result);
         return result;

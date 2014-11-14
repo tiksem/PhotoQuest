@@ -1,4 +1,4 @@
-package com.tiksem.pq.data.response;
+package com.tiksem.pq.data;
 
 /**
  * Created by CM on 11/11/2014.
