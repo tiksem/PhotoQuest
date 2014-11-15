@@ -235,27 +235,38 @@ public class DBUtilities {
         }
     }
 
-    public static <T> T makePersistent(PersistenceManager persistenceManager, T object) {
+    public static <T> T[] makeAllPersistent(PersistenceManager persistenceManager, T... objects) {
+        Object[] result = new Object[objects.length];
+
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
 
-        FieldsCheckingUtilities.fixAndCheckFields(object);
+        int index = 0;
+        for (Object object : objects) {
+            FieldsCheckingUtilities.fixAndCheckFields(object);
 
-        try {
-            setAddingDateIfNeed(object, System.currentTimeMillis());
-            object = persistenceManager.makePersistent(object);
-        } catch (RuntimeException e) {
-            transaction.rollback();
-            setAddingDateIfNeed(object, null);
-            throw e;
-        } catch (Error e) {
-            transaction.rollback();
-            setAddingDateIfNeed(object, null);
-            throw e;
+            try {
+                setAddingDateIfNeed(object, System.currentTimeMillis());
+                object = persistenceManager.makePersistent(object);
+            } catch (RuntimeException e) {
+                transaction.rollback();
+                setAddingDateIfNeed(object, null);
+                throw e;
+            } catch (Error e) {
+                transaction.rollback();
+                setAddingDateIfNeed(object, null);
+                throw e;
+            }
+
+            result[index++] = object;
         }
 
         transaction.commit();
-        return object;
+        return (T[]) result;
+    }
+
+    public static <T> T makePersistent(PersistenceManager persistenceManager, T object) {
+        return makeAllPersistent(persistenceManager, object)[0];
     }
 
     public static void deletePersistent(PersistenceManager persistenceManager, Object object) {

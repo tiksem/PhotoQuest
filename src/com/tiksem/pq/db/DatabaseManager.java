@@ -38,6 +38,10 @@ public class DatabaseManager {
         return DBUtilities.makePersistent(persistenceManager, object);
     }
 
+    private <T> T[] makeAllPersistent(T... objects) {
+        return DBUtilities.makeAllPersistent(persistenceManager, objects);
+    }
+
     private void deletePersistent(Object object) {
         DBUtilities.deletePersistent(persistenceManager, object);
     }
@@ -180,12 +184,14 @@ public class DatabaseManager {
         return getPhotoquestsCreatedByUser(user.getId(), offsetLimit);
     }
 
-    public void update(HttpServletRequest request, Object object) {
-        makePersistent(object);
+    public void update(HttpServletRequest request, Object... objects) {
+        makeAllPersistent(objects);
 
-        if(object instanceof WithAvatar){
-            WithAvatar withAvatar = (WithAvatar) object;
-            setAvatar(request, withAvatar);
+        for (Object object : objects) {
+            if(object instanceof WithAvatar){
+                WithAvatar withAvatar = (WithAvatar) object;
+                setAvatar(request, withAvatar);
+            }
         }
     }
 
@@ -213,6 +219,8 @@ public class DatabaseManager {
         Collection<User> users = null;
         User signedInUser = null;
 
+        long signedInUserId = 0;
+
         if (includeSignedInUser) {
             users = DBUtilities.getAllObjectsOfClass(persistenceManager,
                     User.class, offsetLimit);
@@ -222,8 +230,9 @@ public class DatabaseManager {
                 users = DBUtilities.getAllObjectsOfClass(persistenceManager,
                         User.class, offsetLimit);
             } else {
+                signedInUserId = signedInUser.getId();
                 User user = new User();
-                user.setId(signedInUser.getId());
+                user.setId(signedInUserId);
                 users = DBUtilities.queryByExcludePattern(persistenceManager, user, offsetLimit);
             }
         }
@@ -232,8 +241,17 @@ public class DatabaseManager {
 
         if(fillRelationshipData && signedInUser != null){
             for(User user : users){
-                boolean areFriends = hasFriendship(signedInUser.getId(), user.getId());
-                user.setIsFriend(areFriends);
+                Long userId = user.getId();
+                boolean areFriends = hasFriendship(signedInUserId, userId);
+                if (areFriends) {
+                    user.setRelation(RelationStatus.friend);
+                } else {
+                    if(getFriendRequest(signedInUserId, userId) != null){
+                        user.setRelation(RelationStatus.request_sent);
+                    } else if(getFriendRequest(userId, signedInUserId) != null) {
+                        user.setRelation(RelationStatus.request_received);
+                    }
+                }
             }
         }
 
@@ -416,20 +434,34 @@ public class DatabaseManager {
         return friendship;
     }
 
+    private void addFriendShip(User user1, User user2) {
+        Friendship friendship = new Friendship(user1.getId(), user2.getId());
+        user1.incrementFriendsCount();
+        user2.incrementFriendsCount();
+        makeAllPersistent(friendship, user1, user2);
+    }
+
     public void addFriend(HttpServletRequest request, long userId) {
-        User user = getSignedInUserOrThrow(request);
-        getUserByIdOrThrow(userId);
-        long signedInUserId = user.getId();
-
-        if(hasFriendship(userId, signedInUserId)){
-            throw new FriendshipExistsException(userId, signedInUserId);
+        try {
+            acceptFriendRequest(request, userId);
+        } catch (FriendRequestNotFoundException e) {
+            sendFriendRequest(request, userId);
         }
-
-        Friendship friendship = new Friendship(userId, signedInUserId);
-        makePersistent(friendship);
     }
 
     public void removeFriend(HttpServletRequest request, long userId) {
+        try {
+            declineFriendRequest(request, userId);
+        } catch (FriendRequestNotFoundException e) {
+            try {
+                cancelFriendRequest(request, userId);
+            } catch (FriendRequestNotFoundException e1) {
+                removeFriendShip(request, userId);
+            }
+        }
+    }
+
+    private void removeFriendShip(HttpServletRequest request, long userId) {
         User user = getSignedInUserOrThrow(request);
         getUserByIdOrThrow(userId);
         long signedInUserId = user.getId();
@@ -489,7 +521,7 @@ public class DatabaseManager {
         List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId());
         if (fillFriendShipData) {
             for(User friend : friends){
-                friend.setIsFriend(true);
+                friend.setRelation(RelationStatus.friend);
                 setAvatar(request, friend);
             }
         }
@@ -531,6 +563,19 @@ public class DatabaseManager {
         return comment;
     }
 
+    public FriendRequest getFriendRequestById(long id) {
+        return DBUtilities.getObjectById(persistenceManager, FriendRequest.class, id);
+    }
+
+    public FriendRequest getFriendRequestByIdOrThrow(long id) {
+        FriendRequest friendRequest = getFriendRequestById(id);
+        if(friendRequest == null){
+            throw new FriendRequestNotFoundException();
+        }
+
+        return friendRequest;
+    }
+    
     public Like getLikeById(long id) {
         return DBUtilities.getObjectById(persistenceManager, Like.class, id);
     }
@@ -772,19 +817,23 @@ public class DatabaseManager {
         return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class);
     }
 
-    public Message addMessage(long fromUser, long toUser, String messageText) {
+    public Message addMessage(HttpServletRequest request, long fromUser, long toUserId, String messageText) {
+        User toUser = getUserByIdOrThrow(toUserId);
+        toUser.incrementUnreadMessagesCount();
+
         Message message = new Message();
         message.setFromUserId(fromUser);
-        message.setToUserId(toUser);
+        message.setToUserId(toUserId);
         message.setMessage(messageText);
 
-        makePersistent(message);
+        message = makePersistent(message);
+        update(request, toUser);
         return message;
     }
 
     public Message addMessage(HttpServletRequest request, long toUser, String messageText) {
         User signedInUser = getSignedInUserOrThrow(request);
-        return addMessage(signedInUser.getId(), toUser, messageText);
+        return addMessage(request, signedInUser.getId(), toUser, messageText);
     }
 
     public void deleteMessage(long id) {
@@ -800,8 +849,9 @@ public class DatabaseManager {
             throw new MessageReadException("Message was sent by the user, it couldn't be marked as read");
         }
 
+        user.decrementUnreadMessagesCount();
         message.setRead(true);
-        update(request, message);
+        update(request, message, user);
     }
 
     public void markMessageAsDeleted(HttpServletRequest request, long messageId) {
@@ -838,5 +888,72 @@ public class DatabaseManager {
     public Collection<Message> getMessagesOfSignedInUser(HttpServletRequest request, OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
         return getMessagesByUserId(signedInUser.getId(), offsetLimit, false);
+    }
+
+    public FriendRequest getFriendRequest(long fromUserId, long toUserId) {
+        FriendRequest request = new FriendRequest();
+        request.setFromUserId(fromUserId);
+        request.setToUserId(toUserId);
+        return DBUtilities.getObjectByPattern(persistenceManager, request);
+    }
+
+    public FriendRequest getFriendRequestOrThrow(long fromUserId, long toUserId) {
+        FriendRequest friendRequest = getFriendRequest(fromUserId, toUserId);
+        if(friendRequest == null){
+            throw new FriendRequestNotFoundException();
+        }
+
+        return friendRequest;
+    }
+
+    public FriendRequest sendFriendRequest(HttpServletRequest request, long userId) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        User friend = getUserByIdOrThrow(userId);
+
+        long signedInUserId = signedInUser.getId();
+        if(hasFriendship(userId, signedInUserId)){
+            throw new FriendshipExistsException(userId, signedInUserId);
+        }
+
+        if(getFriendRequest(signedInUserId, userId) != null){
+            throw new FriendRequestExistsException();
+        }
+        
+        FriendRequest friendRequest = new FriendRequest();
+        friendRequest.setToUserId(userId);
+        friendRequest.setFromUserId(signedInUserId);
+
+        signedInUser.incrementSentRequestsCount();
+        friend.incrementReceivedRequestsCount();
+
+        return (FriendRequest) makeAllPersistent(friendRequest, signedInUser, friend)[0];
+    }
+
+    private void deleteFriendRequest(HttpServletRequest request, User fromUser, User toUser) {
+        FriendRequest friendRequest = getFriendRequestOrThrow(fromUser.getId(),
+                toUser.getId());
+        deletePersistent(friendRequest);
+        fromUser.decrementSentRequestsCount();
+        toUser.decrementReceivedRequestsCount();
+        update(request, fromUser, toUser);
+    }
+
+    private void cancelFriendRequest(HttpServletRequest request, long userId) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        User friend = getUserByIdOrThrow(userId);
+        deleteFriendRequest(request, signedInUser, friend);
+    }
+
+    private void acceptFriendRequest(HttpServletRequest request, long userId) {
+        User friend = getUserByIdOrThrow(userId);
+        User signedInUser = getSignedInUserOrThrow(request);
+        deleteFriendRequest(request, friend, signedInUser);
+        addFriendShip(friend, signedInUser);
+    }
+
+    private void declineFriendRequest(HttpServletRequest request, long userId) {
+        User friend = getUserByIdOrThrow(userId);
+        User signedInUser = getSignedInUserOrThrow(request);
+        deleteFriendRequest(request, friend, signedInUser);
     }
 }

@@ -24,7 +24,7 @@
                             <h1>{{user.name}}</h1>
                             <div>
                                 <button ng-show="getSignedInUser()" ng-click="addOrRemoveFriend(user)">
-                                    {{!user.isFriend ? "Add Friend" : "Remove Friend"}}
+                                    {{getToggleFriendStatusButtonName(user)}}
                                 </button>
                             </div>
                         </div>

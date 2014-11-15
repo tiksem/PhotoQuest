@@ -1,10 +1,7 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.tiksem.pq.data.annotations.AddingDate;
-import com.tiksem.pq.data.annotations.Login;
-import com.tiksem.pq.data.annotations.NameField;
-import com.tiksem.pq.data.annotations.Password;
+import com.tiksem.pq.data.annotations.*;
 
 import javax.jdo.annotations.*;
 import java.sql.Date;
@@ -41,11 +38,23 @@ public class User implements WithAvatar {
     @AddingDate
     private Long addingDate;
 
+    @Index
+    private Long unreadMessagesCount;
+
+    @Index
+    private Long friendsCount;
+    
+    @Index
+    private Long sentRequestsCount;
+
+    @Index
+    private Long receivedRequestsCount;
+    
     @NotPersistent
     private String avatar;
 
     @NotPersistent
-    private Boolean isFriend;
+    private RelationStatus relation;
 
     public User(String login, String password) {
         this.login = login;
@@ -115,12 +124,12 @@ public class User implements WithAvatar {
         this.lastName = lastName;
     }
 
-    public Boolean getIsFriend() {
-        return isFriend;
+    public RelationStatus getRelation() {
+        return relation;
     }
 
-    public void setIsFriend(Boolean isFriend) {
-        this.isFriend = isFriend;
+    public void setRelation(RelationStatus relation) {
+        this.relation = relation;
     }
 
     public Long getAddingDate() {
@@ -129,5 +138,132 @@ public class User implements WithAvatar {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    @OnPrepareForStorage
+    public void prepareForStorage() {
+        if(unreadMessagesCount == null){
+            unreadMessagesCount = 0l;
+        }
+
+        if(receivedRequestsCount == null){
+            receivedRequestsCount = 0l;
+        }
+
+        if(sentRequestsCount == null){
+            sentRequestsCount = 0l;
+        }
+
+        if(friendsCount == null){
+            friendsCount = 0l;
+        }
+    }
+
+    public Long getUnreadMessagesCount() {
+        return unreadMessagesCount;
+    }
+
+    public void setUnreadMessagesCount(Long unreadMessagesCount) {
+        this.unreadMessagesCount = unreadMessagesCount;
+    }
+
+    public Long getSentRequestsCount() {
+        return sentRequestsCount;
+    }
+
+    public void setSentRequestsCount(Long sentRequestsCount) {
+        this.sentRequestsCount = sentRequestsCount;
+    }
+
+    public Long getReceivedRequestsCount() {
+        return receivedRequestsCount;
+    }
+
+    public void setReceivedRequestsCount(Long receivedRequestsCount) {
+        this.receivedRequestsCount = receivedRequestsCount;
+    }
+
+    public Long getFriendsCount() {
+        return friendsCount;
+    }
+
+    public void setFriendsCount(Long friendsCount) {
+        this.friendsCount = friendsCount;
+    }
+
+    public void incrementUnreadMessagesCount() {
+        if(unreadMessagesCount == null){
+            unreadMessagesCount = 0l;
+        }
+
+        unreadMessagesCount++;
+    }
+
+    public void decrementUnreadMessagesCount() {
+        if(unreadMessagesCount == null){
+            unreadMessagesCount = 0l;
+        }
+
+        unreadMessagesCount--;
+        if(unreadMessagesCount < 0){
+            throw new RuntimeException("unreadMessagesCount < 0");
+        }
+    }
+
+    public void incrementFriendsCount() {
+        if(friendsCount == null){
+            friendsCount = 0l;
+        }
+
+        friendsCount++;
+    }
+
+    public void decrementFriendsCount() {
+        if(friendsCount == null){
+            friendsCount = 0l;
+        }
+
+        friendsCount--;
+        if(friendsCount < 0){
+            throw new RuntimeException("friendsCount < 0");
+        }
+    }
+
+    public void incrementSentRequestsCount() {
+        if(sentRequestsCount == null){
+            sentRequestsCount = 0l;
+        }
+
+        sentRequestsCount++;
+    }
+
+    public void decrementSentRequestsCount() {
+        if(sentRequestsCount == null){
+            sentRequestsCount = 0l;
+        }
+
+        sentRequestsCount--;
+        if(sentRequestsCount < 0){
+            throw new RuntimeException("sentRequestsCount < 0");
+        }
+    }
+
+    public void incrementReceivedRequestsCount() {
+        if(receivedRequestsCount == null){
+            receivedRequestsCount = 0l;
+        }
+
+        receivedRequestsCount++;
+    }
+
+    public void decrementReceivedRequestsCount() {
+        if(receivedRequestsCount == null){
+            receivedRequestsCount = 0l;
+        }
+
+        receivedRequestsCount--;
+        if(receivedRequestsCount < 0){
+            throw new RuntimeException("receivedRequestsCount < 0");
+        }
     }
 }
