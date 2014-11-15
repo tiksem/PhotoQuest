@@ -43,17 +43,28 @@ main.controller("PeopleController", function($scope, $location, $element, ngDial
         } else {
             return "Add friend";
         }
-    }
+    };
 
-    var url = window.location.origin;
-    var requestType = Utilities.parseHashPath($location.hash())[0];
-    if(requestType == "friends"){
-        url += "//friends";
-    } else {
-        url += "//users"
-    }
+    var loadData = function() {
+        var url = window.location.origin;
+        var requestType = Utilities.parseHashPath($location.hash())[0];
+        if(requestType == "friends"){
+            url += "//friends";
+        } else {
+            url += "//users"
+        }
 
-    Utilities.loadDataToScope(url, {}, $scope, $http)
+        Utilities.loadDataToScope(url, {}, $scope, $http);
+    };
 
+    // reload data, when user sign out/sign in
+    $scope.$watch(
+        function($scope) {
+            return $scope.getSignedInUser();
+        },
+        loadData
+    );
+
+    loadData();
     Utilities.applyStylesToHtml($element);
 });
