@@ -1,10 +1,7 @@
 package com.tiksem.pq;
 
 import com.tiksem.pq.data.*;
-import com.tiksem.pq.data.response.CommentsList;
-import com.tiksem.pq.data.response.PhotoquestsList;
-import com.tiksem.pq.data.response.PhotosList;
-import com.tiksem.pq.data.response.UsersList;
+import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.OffsetLimit;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
@@ -103,8 +100,8 @@ public class ApiHandler {
     }
 
     @RequestMapping("/friends")
-    public @ResponseBody Object getFriends() {
-        Collection<User> users = DatabaseManager.getInstance().getFriends(request);
+    public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
+        Collection<User> users = DatabaseManager.getInstance().getFriends(request, offsetLimit);
         return new UsersList(users);
     }
 
@@ -241,9 +238,28 @@ public class ApiHandler {
         return DatabaseManager.getInstance().addMessage(request, toUserId, message);
     }
 
-    @RequestMapping("/getMessages")
-    public @ResponseBody Object getMessages(OffsetLimit offsetLimit) {
+    @RequestMapping("/getAllMessages")
+    public @ResponseBody Object getAllMessages(OffsetLimit offsetLimit) {
         return DatabaseManager.getInstance().getMessagesOfSignedInUser(request, offsetLimit);
+    }
+
+    @RequestMapping("/messages")
+    public @ResponseBody Object getMessagesWithUser(@RequestParam(value = "userId", required = true) Long userId,
+                                               OffsetLimit offsetLimit) {
+        User user = DatabaseManager.getInstance().getUserByIdOrThrow(userId);
+        Collection<Message> result =
+                DatabaseManager.getInstance().getDialogMessages(request, userId, offsetLimit);
+        DatabaseManager.getInstance().setAvatar(request, user);
+        DialogMessages dialogMessages = new DialogMessages();
+        dialogMessages.messages = result;
+        dialogMessages.user = user;
+        return dialogMessages;
+    }
+
+    @RequestMapping("/getDialogs")
+    public @ResponseBody Object getDialogs(OffsetLimit offsetLimit) {
+        Collection<Dialog> dialogs = DatabaseManager.getInstance().getDialogs(request, offsetLimit);
+        return new DialogsList(dialogs);
     }
 
     @RequestMapping("/deleteComment")

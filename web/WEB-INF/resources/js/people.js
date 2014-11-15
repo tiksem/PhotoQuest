@@ -1,7 +1,7 @@
 var main = angular.module("main");
 main.controller("PeopleController", function($scope, $location, $element, ngDialog, $http){
     $scope.openProfile = function(user) {
-
+        $location.hash("profile_" + user.id);
     };
 
     $scope.addOrRemoveFriend = function(user) {
@@ -44,6 +44,10 @@ main.controller("PeopleController", function($scope, $location, $element, ngDial
             return "Add friend";
         }
     };
+
+    $scope.writeMessage = function(user) {
+        $location.hash("messages_" + user.id);
+    }
 
     var loadData = function() {
         var url = window.location.origin;

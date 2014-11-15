@@ -1,0 +1,63 @@
+<style>
+    #messages_container {
+        margin: 30px;
+        width: 400px;
+        height: 250px;
+        overflow: hidden;
+        border-radius: 6px;
+        border-width: 2px;
+        border-color: #1c94c4;
+        border-style: solid;
+    }
+    #message_form {
+        width: 600px;
+    }
+</style>
+<div ng-show="messages && user && getSignedInUser()"
+     ng-controller="MessagesController" style="width: 600px; align-self: center;">
+    <div style="text-align: center; position: relative">
+        <h1>Messages</h1>
+    </div>
+    <div id="messages_container" class="wrapper">
+        <div>
+            <table>
+                <tr ng-repeat="message in messages" ng-click="openMessages(dialog)">
+                    <td>
+                        <img width="30px" height="30px"
+                             ng-src="{{getMessageAvatar(message) + '?width=30&height=30'}}" />
+                    </td>
+                    <td>
+                        <h2>
+                            <a ng-href="##profile_{{message.fromUserId}}">
+                                {{getMessageTitle(message)}}
+                            </a>
+                        </h2>
+                        <div>
+                            {{message.message}}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div id="message_form">
+        <div style="display: inline-flex">
+            <img width="50px" height="50px"
+                 ng-src="{{getSignedInUser().avatar + '?width=50&height=50'}}" />
+        </div>
+        <div style="display: inline-flex">
+            <div>
+                <input height="50px" type="text" ng-model="messageText" />
+            </div>
+        </div>
+        <div style="display: inline-flex">
+            <img width="50px" height="50px"
+                 ng-src="{{user.avatar + '?width=50&height=50'}}" />
+        </div>
+        <div style="display: block">
+            <button ng-show="messageText != ''" ng-click="sendMessage()">
+                Send
+            </button>
+        </div>
+    </div>
+</div>

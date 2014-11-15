@@ -53,3 +53,7 @@ label {
     cursor: pointer;
     cursor: hand;
 }
+
+.hand_cursor {
+    cursor: pointer; cursor: hand;
+}

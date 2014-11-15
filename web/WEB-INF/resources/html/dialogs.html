@@ -1,0 +1,30 @@
+<style>
+    #dialogs_container {
+        align-self: center;
+        margin: 30px;
+    }
+</style>
+<div ng-controller="DialogsController" style="width: 600px; align-self: center;">
+    <div style="text-align: center; position: relative">
+        <h1>Messages</h1>
+    </div>
+    <div id="dialogs_container">
+        <table>
+            <tr ng-repeat="dialog in dialogs">
+                <td>
+                    <a ng-href="##profile_{{dialog.user.id}}">
+                        <img width="50px" height="50px" ng-src="{{dialog.user.avatar + '?width=50&height=50'}}" />
+                    </a>
+                </td>
+                <td class="hand_cursor" ng-click="openMessages(dialog)">
+                    <h2>
+                        {{dialog.user.name + " " + dialog.user.lastName}}
+                    </h2>
+                    <p>
+                        {{dialog.lastMessage.message.getPreview(100, "...")}}
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

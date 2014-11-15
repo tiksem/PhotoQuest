@@ -1,6 +1,7 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.annotations.AddingDate;
+import com.tiksem.pq.data.annotations.ModificationDate;
 import com.tiksem.pq.data.annotations.Relation;
 import com.utils.framework.Reflection;
 import com.utils.framework.collections.map.MultiMap;
@@ -224,14 +225,15 @@ public class DBUtilities {
         transaction.commit();
     }
 
-    private static void setAddingDateIfNeed(Object object, Long value) {
+    private static void setAddingAndModificationDateIfNeed(Object object, Long value) {
         Field addingDateField = Reflection.getFieldWithAnnotation(object.getClass(), AddingDate.class);
         if(addingDateField != null){
-            if (value != null) {
-                Reflection.setValueOfFieldIfNull(object, addingDateField, value);
-            } else {
-                Reflection.setValueOfField(object, addingDateField, null);
-            }
+            Reflection.setValueOfFieldIfNull(object, addingDateField, value);
+        }
+
+        Field modificationDateField = Reflection.getFieldWithAnnotation(object.getClass(), ModificationDate.class);
+        if(modificationDateField != null){
+            Reflection.setValueOfField(object, addingDateField, value);
         }
     }
 
@@ -246,15 +248,13 @@ public class DBUtilities {
             FieldsCheckingUtilities.fixAndCheckFields(object);
 
             try {
-                setAddingDateIfNeed(object, System.currentTimeMillis());
+                setAddingAndModificationDateIfNeed(object, System.currentTimeMillis());
                 object = persistenceManager.makePersistent(object);
             } catch (RuntimeException e) {
                 transaction.rollback();
-                setAddingDateIfNeed(object, null);
                 throw e;
             } catch (Error e) {
                 transaction.rollback();
-                setAddingDateIfNeed(object, null);
                 throw e;
             }
 

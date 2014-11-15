@@ -11,10 +11,10 @@
         <h1>People</h1>
     </div>
     <div class="people_container">
-        <div ng-repeat="user in users" ng-click="openProfile(user)">
+        <div ng-repeat="user in users">
             <table>
                 <tr>
-                    <td>
+                    <td ng-click="openProfile(user)">
                         <div style="display: inline-block">
                             <img width="200px" height="200px" ng-src="{{user.avatar}}"/>
                         </div>
@@ -25,6 +25,11 @@
                             <div>
                                 <button ng-show="getSignedInUser()" ng-click="addOrRemoveFriend(user)">
                                     {{getToggleFriendStatusButtonName(user)}}
+                                </button>
+                            </div>
+                            <div>
+                                <button ng-show="getSignedInUser()" ng-click="writeMessage(user)">
+                                    Write message
                                 </button>
                             </div>
                         </div>

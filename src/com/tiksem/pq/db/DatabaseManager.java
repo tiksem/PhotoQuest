@@ -470,17 +470,10 @@ public class DatabaseManager {
         deletePersistent(friendship);
     }
 
-    public List<Long> getFriendsIdesOf(long userId) {
-        Query query = persistenceManager.newQuery(Friendship.class);
-        query.declareParameters("long userId");
-
-        Map<String, Object> args = new HashMap<String, Object>();
-        args.put("userId", userId);
-
-        String filter = "this.user1 == userId || this.user2 == userId";
-        query.setFilter(filter);
-
-        Collection<Friendship> friendships = (Collection<Friendship>) query.executeWithMap(args);
+    public List<Long> getFriendsIdesOf(long userId, OffsetLimit offsetLimit) {
+        Friendship friendshipPattern = new Friendship();
+        Collection<Friendship> friendships =
+                DBUtilities.queryByPattern(persistenceManager, friendshipPattern, offsetLimit);
         ArrayList<Long> result = new ArrayList<Long>(friendships.size());
 
         for(Friendship friendship : friendships){
@@ -509,16 +502,16 @@ public class DatabaseManager {
         return result;
     }
 
-    public List<User> getFriendsOf(long userId) {
-        return getUsersByIdes(getFriendsIdesOf(userId));
+    public List<User> getFriendsOf(long userId, OffsetLimit offsetLimit) {
+        return getUsersByIdes(getFriendsIdesOf(userId, offsetLimit));
     }
 
-    public List<User> getFriends(HttpServletRequest request) {
-        return getFriends(request, true);
+    public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return getFriends(request, offsetLimit, true);
     }
 
-    public List<User> getFriends(HttpServletRequest request, boolean fillFriendShipData) {
-        List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId());
+    public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit, boolean fillFriendShipData) {
+        List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId(), offsetLimit);
         if (fillFriendShipData) {
             for(User friend : friends){
                 friend.setRelation(RelationStatus.friend);
@@ -529,8 +522,8 @@ public class DatabaseManager {
         return friends;
     }
 
-    public List<Long> getFriendsIdes(HttpServletRequest request) {
-        return getFriendsIdesOf(getSignedInUserOrThrow(request).getId());
+    public List<Long> getFriendsIdes(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return getFriendsIdesOf(getSignedInUserOrThrow(request).getId(), offsetLimit);
     }
 
     public Photoquest getOrCreateSystemPhotoQuest(String photoquestName) {
@@ -817,23 +810,30 @@ public class DatabaseManager {
         return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class);
     }
 
-    public Message addMessage(HttpServletRequest request, long fromUser, long toUserId, String messageText) {
-        User toUser = getUserByIdOrThrow(toUserId);
+    private Message addMessage(HttpServletRequest request, User fromUser, User toUser, String messageText) {
         toUser.incrementUnreadMessagesCount();
 
+        long fromUserId = fromUser.getId();
+        long toUserId = toUser.getId();
+
         Message message = new Message();
-        message.setFromUserId(fromUser);
+        message.setFromUserId(fromUserId);
         message.setToUserId(toUserId);
         message.setMessage(messageText);
 
         message = makePersistent(message);
-        update(request, toUser);
+        Dialog dialog = getOrCreateDialog(fromUserId, toUserId);
+        dialog.setLastMessageId(message.getId());
+        dialog.setLastMessageTime(message.getAddingDate());
+
+        update(request, toUser, dialog);
         return message;
     }
 
-    public Message addMessage(HttpServletRequest request, long toUser, String messageText) {
+    public Message addMessage(HttpServletRequest request, long toUserId, String messageText) {
         User signedInUser = getSignedInUserOrThrow(request);
-        return addMessage(request, signedInUser.getId(), toUser, messageText);
+        User toUser = getUserByIdOrThrow(toUserId);
+        return addMessage(request, signedInUser, toUser, messageText);
     }
 
     public void deleteMessage(long id) {
@@ -869,6 +869,16 @@ public class DatabaseManager {
     public Collection<Message> getMessagesByUserId(long userId, OffsetLimit offsetLimit, boolean includeDeleted) {
         Message message = new Message();
         message.setFromUserId(userId);
+        return DBUtilities.queryByPattern(persistenceManager, message, offsetLimit);
+    }
+
+    public Collection<Message> getDialogMessages(HttpServletRequest request, long widthUserId,
+                                                 OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        getUserByIdOrThrow(widthUserId);
+        Message message = new Message();
+        message.setFromUserId(widthUserId);
+        message.setToUserId(signedInUser.getId());
         return DBUtilities.queryByPattern(persistenceManager, message, offsetLimit);
     }
 
@@ -955,5 +965,44 @@ public class DatabaseManager {
         User friend = getUserByIdOrThrow(userId);
         User signedInUser = getSignedInUserOrThrow(request);
         deleteFriendRequest(request, friend, signedInUser);
+    }
+
+    private Dialog getOrCreateDialog(long user1Id, long user2Id) {
+        Dialog dialog = new Dialog();
+        dialog.setUser1(user1Id);
+        dialog.setUser2(user2Id);
+        Dialog result = DBUtilities.getObjectByPattern(persistenceManager, dialog);
+        if(result != null){
+            return result;
+        }
+
+        return dialog;
+    }
+
+    public Collection<Dialog> getDialogs(HttpServletRequest request, OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        Dialog dialogPattern = new Dialog();
+        long signedInUserId = signedInUser.getId();
+        dialogPattern.setUser1(signedInUserId);
+
+        Collection<Dialog> result = DBUtilities.queryByPattern(persistenceManager, dialogPattern, offsetLimit);
+        for(Dialog dialog : result){
+            Message lastMessage = getMessageByIdOrThrow(dialog.getLastMessageId());
+
+            long userId = dialog.getUser1();
+            if(userId == signedInUserId){
+                userId = dialog.getUser2();
+            } else if(signedInUserId != dialog.getUser2()) {
+                throw new RuntimeException("Broken database, dialog, associated with the signed in user " +
+                        "doesn't have lastMassage, associated with him");
+            }
+
+            User user = getUserByIdOrThrow(userId);
+            setAvatar(request, user);
+            dialog.setLastMessage(lastMessage);
+            dialog.setUser(user);
+        }
+
+        return result;
     }
 }
