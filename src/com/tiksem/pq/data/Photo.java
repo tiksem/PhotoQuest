@@ -1,5 +1,7 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.data.annotations.NotNull;
+
 import javax.jdo.InstanceCallbacks;
 import javax.jdo.annotations.*;
 
@@ -17,9 +19,11 @@ public class Photo implements Likable, InstanceCallbacks {
     @Index
     private Long likesCount;
 
+    @NotNull
     @Index
     private Long photoquestId;
 
+    @NotNull
     @Index
     private Long userId;
 

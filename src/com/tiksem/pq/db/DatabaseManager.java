@@ -31,7 +31,6 @@ public class DatabaseManager {
     private DatabaseManager()     {
         PersistenceManagerFactory factory  = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
         persistenceManager = factory.getPersistenceManager();
-        //DBUtilities.enhanceClassesInPackage("com.tiksem.pq.data");
     }
 
     private <T> T makePersistent(T object) {
@@ -88,6 +87,7 @@ public class DatabaseManager {
     }
 
     public User login(HttpServletRequest request, String login, String password) {
+        makePersistent(getOrCreatePerformedPhotoquest(2, 5));
         User user = getUserByLogin(login);
         if(user != null && user.getPassword().equals(password)){
             setAvatar(request, user);
@@ -172,16 +172,41 @@ public class DatabaseManager {
         return makePersistent(photoquest);
     }
 
-    public List<Photoquest> getPhotoquestsCreatedByUser(long userId, OffsetLimit offsetLimit) {
+    public Collection<Photoquest> getPhotoquestsCreatedByUser(long userId, OffsetLimit offsetLimit) {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
-        Collection<Photoquest> photoquests = DBUtilities.queryByPattern(persistenceManager, photoquest, offsetLimit);
-        return new ArrayList<Photoquest>(photoquests);
+        return DBUtilities.queryByPattern(persistenceManager, photoquest, offsetLimit);
     }
 
-    public  List<Photoquest> getPhotoquestsCreatedByUser(String login, OffsetLimit offsetLimit) {
-        User user = getUserByLoginOrThrow(login);
-        return getPhotoquestsCreatedByUser(user.getId(), offsetLimit);
+    private Collection<PerformedPhotoquest> getPerformedPhotoquestsByUser(long userId, OffsetLimit offsetLimit) {
+        getUserByIdOrThrow(userId);
+        PerformedPhotoquest performedPhotoquest = new PerformedPhotoquest();
+        performedPhotoquest.setUserId(userId);
+        return DBUtilities.queryByPattern(persistenceManager, performedPhotoquest, offsetLimit);
+    }
+
+    public Collection<Photoquest> getPhotoquestsPerformedByUser(HttpServletRequest request, long userId,
+                                                                OffsetLimit offsetLimit) {
+        Collection<PerformedPhotoquest> performedPhotoquests = getPerformedPhotoquestsByUser(userId, offsetLimit);
+        Collection<Photoquest> result = new ArrayList<Photoquest>();
+        for(PerformedPhotoquest performedPhotoquest : performedPhotoquests){
+            Photoquest photoquest = getPhotoQuestByIdOrThrow(performedPhotoquest.getPhotoquestId());
+            result.add(photoquest);
+        }
+
+        setAvatar(request, result);
+        return result;
+    }
+
+    public Collection<Photoquest> getPhotoquestsPerformedBySignedInUser(HttpServletRequest request,
+                                                                        OffsetLimit offsetLimit) {
+        User user = getSignedInUserOrThrow(request);
+        return getPhotoquestsPerformedByUser(request, user.getId(), offsetLimit);
+    }
+
+    public Collection<Photoquest> getPhotoquestsCreatedBySignedInUser(HttpServletRequest request,
+                                                                      OffsetLimit offsetLimit) {
+        return getPhotoquestsCreatedByUser(getSignedInUserOrThrow(request).getId(), offsetLimit);
     }
 
     public void update(HttpServletRequest request, Object... objects) {
@@ -262,13 +287,21 @@ public class DatabaseManager {
         deleteAllPersistent(getAllUsers(request, offsetLimit));
     }
 
-    public void deleteAllPhotoquests(HttpServletRequest request) {
-        deleteAllPersistent(getPhotoQuests(request));
-    }
-
     public void deleteAllPhotos() {
         DBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
         DBUtilities.deleteAllObjectsOfClass(persistenceManager, BitmapData.class);
+    }
+
+    public PerformedPhotoquest getOrCreatePerformedPhotoquest(long userId, long photoquestId) {
+        PerformedPhotoquest pattern = new PerformedPhotoquest();
+        pattern.setUserId(userId);
+        pattern.setPhotoquestId(photoquestId);
+        PerformedPhotoquest performedPhotoquest = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+        if(performedPhotoquest == null){
+            return pattern;
+        }
+
+        return performedPhotoquest;
     }
 
     public Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
@@ -280,12 +313,12 @@ public class DatabaseManager {
 
         photo.setLikesCount(0l);
         photo.setUserId(userId);
-        makePersistent(photo);
 
+        photo = makePersistent(photo);
         BitmapData data = new BitmapData();
         data.setId(photo.getId());
         data.setImage(bitmapData);
-        makePersistent(data);
+        makeAllPersistent(data, getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId()));
 
         return photo;
     }
@@ -407,9 +440,9 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<Photoquest> getPhotoQuests(HttpServletRequest request) {
+    public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit) {
         Collection<Photoquest> result =
-                DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class);
+                DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class, offsetLimit);
         setAvatar(request, result);
         return result;
     }

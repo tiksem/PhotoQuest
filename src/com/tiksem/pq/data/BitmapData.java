@@ -1,5 +1,7 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.data.annotations.NotNull;
+
 import javax.jdo.annotations.Index;
 import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Unique;
@@ -9,6 +11,7 @@ import javax.jdo.annotations.Unique;
  */
 @PersistenceCapable
 public class BitmapData {
+    @NotNull
     @Index
     @Unique
     private Long id;

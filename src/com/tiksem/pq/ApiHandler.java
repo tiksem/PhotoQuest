@@ -2,6 +2,7 @@ package com.tiksem.pq;
 
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
+import com.tiksem.pq.db.DBUtilities;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.OffsetLimit;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
@@ -174,8 +175,22 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getPhotoquests")
-    public @ResponseBody Object getPhotoquests(){
-        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().getPhotoQuests(request);
+    public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit){
+        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().getPhotoQuests(request, offsetLimit);
+        return new PhotoquestsList(photoquests);
+    }
+
+    @RequestMapping("/getMyPhotoquests")
+    public @ResponseBody Object getMyPhotoquests(OffsetLimit offsetLimit){
+        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().
+                getPhotoquestsCreatedBySignedInUser(request, offsetLimit);
+        return new PhotoquestsList(photoquests);
+    }
+
+    @RequestMapping("/getMyPerformedPhotoquests")
+    public @ResponseBody Object getMyPerformedPhotoquests(OffsetLimit offsetLimit){
+        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().
+                getPhotoquestsPerformedBySignedInUser(request, offsetLimit);
         return new PhotoquestsList(photoquests);
     }
 
@@ -313,5 +328,11 @@ public class ApiHandler {
     @RequestMapping("/comments")
     public @ResponseBody Object comments() {
         return DatabaseManager.getInstance().getAllComments();
+    }
+
+    @RequestMapping("/refreshDatabase")
+    public @ResponseBody Object refreshDatabase() {
+        DBUtilities.enhanceClassesInPackage("com.tiksem.pq.data");
+        return new Success();
     }
 }

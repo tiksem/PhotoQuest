@@ -63,6 +63,17 @@ public class FieldsCheckingUtilities {
         }
     }
 
+    private static void checkNotNullField(Field field, Object object) {
+        NotNull notNull = field.getAnnotation(NotNull.class);
+
+        if(notNull != null){
+            Object value = Reflection.getValueOfField(object, field);
+            if(value == null){
+                throw new NullPointerException(field.getName() + " should not be null");
+            }
+        }
+    }
+
     private static void checkLogin(Field field, Object object) {
         Class clazz = field.getType();
         Login loginField = field.getAnnotation(Login.class);
@@ -115,6 +126,7 @@ public class FieldsCheckingUtilities {
             checkLogin(field, object);
             checkPassword(field, object);
             checkEmail(field, object);
+            checkNotNullField(field, object);
         }
 
         List<Method> methods = Reflection.getAllMethods(object);

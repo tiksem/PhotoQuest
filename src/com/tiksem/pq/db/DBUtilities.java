@@ -23,16 +23,16 @@ public class DBUtilities {
     public static PersistenceManagerFactory createMySQLConnectionFactory(String databaseName) {
         Properties properties = new Properties();
         properties.setProperty("javax.jdo.PersistenceManagerFactoryClass",
-                "com.objectdb.jdo.PMF");
-//        properties.setProperty("javax.jdo.option.ConnectionDriverName","com.mysql.jdbc.Driver");
+                "org.datanucleus.api.jdo.JDOPersistenceManagerFactory");
+        properties.setProperty("javax.jdo.option.ConnectionDriverName","com.mysql.jdbc.Driver");
         properties.setProperty("javax.jdo.option.ConnectionURL",
-                        databaseName);
-//        properties.setProperty("javax.jdo.option.ConnectionUserName","root");
-//        properties.setProperty("javax.jdo.option.ConnectionPassword","fightforme");
-//        properties.setProperty("datanucleus.schema.autoCreateTables", "true");
-        PersistenceManagerFactory persistenceManagerFactory = JDOHelper.getPersistenceManagerFactory(properties);
+                        "jdbc:mysql://localhost/" + databaseName);
+        properties.setProperty("javax.jdo.option.ConnectionUserName","root");
+        properties.setProperty("javax.jdo.option.ConnectionPassword","fightforme");
+        properties.setProperty("datanucleus.schema.autoCreateTables", "true");
+        properties.setProperty("datanucleus.schema.autoCreateColumns", "true");
 
-        return persistenceManagerFactory;
+        return JDOHelper.getPersistenceManagerFactory(properties);
     }
 
     public static <T> T getObjectById(PersistenceManager manager, Class<T> aClass, long id) {
