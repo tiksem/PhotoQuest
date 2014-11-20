@@ -4,10 +4,15 @@ import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
+import com.utils.framework.io.Network;
+import com.utils.framework.randomuser.RandomUserGenerator;
+import com.utils.framework.randomuser.Response;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.jdo.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -220,7 +225,7 @@ public class DatabaseManager {
         }
     }
 
-    public User registerUser(User user) {
+    private User registerUser(User user) {
         String login = user.getLogin();
         String password = user.getPassword();
 
@@ -229,6 +234,43 @@ public class DatabaseManager {
         }
 
         return makePersistent(user);
+    }
+
+    public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) {
+        byte[] avatarBytes = null;
+        try {
+            avatarBytes = avatar.getBytes();
+        } catch (IOException e) {
+
+        }
+
+        return registerUser(request, user, avatarBytes);
+    }
+
+    public User registerUser(HttpServletRequest request, User user, byte[] avatar) {
+        user = registerUser(user);
+
+        if(user.getLogin() == null){
+            throw new RuntimeException("WTF?");
+        }
+
+        if (avatar != null) {
+            Photo photo = new Photo();
+            Photoquest avatarPhotoQuest =
+                    getOrCreateSystemPhotoQuest(DatabaseManager.AVATAR_QUEST_NAME);
+            photo.setPhotoquestId(avatarPhotoQuest.getId());
+            photo.setUserId(user.getId());
+            photo = addPhoto(request, photo, avatar);
+            user.setAvatarId(photo.getId());
+
+            if(user.getLogin() == null){
+                throw new RuntimeException("WTF?");
+            }
+
+            DatabaseManager.getInstance().update(request, user);
+        }
+
+        return user;
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
@@ -1034,6 +1076,26 @@ public class DatabaseManager {
             setAvatar(request, user);
             dialog.setLastMessage(lastMessage);
             dialog.setUser(user);
+        }
+
+        return result;
+    }
+
+    public List<User> registerRandomUsers(HttpServletRequest request, int startId, int count, String password)
+            throws IOException {
+        List<Response> data = RandomUserGenerator.generate(count);
+        List<User> result = new ArrayList<User>(count);
+
+        for(Response userData : data){
+            User user = new User();
+            user.setName(userData.name);
+            user.setLastName(userData.lastName);
+            user.setLogin("user" + startId++);
+            user.setPassword(password);
+
+            byte[] avatar = Network.getBytesFromUrl(userData.largeAvatar);
+            user = registerUser(request, user, avatar);
+            result.add(user);
         }
 
         return result;

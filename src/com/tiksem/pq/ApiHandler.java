@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Created by CM on 10/24/2014.
@@ -70,27 +71,17 @@ public class ApiHandler {
         user.setName(name);
         user.setLastName(lastName);
 
-        DatabaseManager databaseManager = DatabaseManager.getInstance();
-        user = databaseManager.registerUser(user);
+        return DatabaseManager.getInstance().registerUser(request, user, avatar);
+    }
 
-        if (!avatar.isEmpty()) {
-            Photo photo = new Photo();
-            Photoquest avatarPhotoQuest = databaseManager.
-                    getOrCreateSystemPhotoQuest(DatabaseManager.AVATAR_QUEST_NAME);
-            photo.setPhotoquestId(avatarPhotoQuest.getId());
-            photo.setUserId(user.getId());
-            try {
-                byte[] bytes = avatar.getBytes();
-                photo = databaseManager.addPhoto(request, photo, bytes);
-                user.setAvatarId(photo.getId());
+    @RequestMapping(value = "/registerRandom", method = RequestMethod.GET)
+    public @ResponseBody Object registerRandom(@RequestParam(value="count", required=true) Integer count,
+                                         @RequestParam(value="startId", required=true) Integer startId,
+                                         @RequestParam(value="password", required=false, defaultValue = "password")
+                                         String password) throws IOException {
 
-                DatabaseManager.getInstance().update(request, user);
-            } catch (IOException e) {
-
-            }
-        }
-
-        return user;
+        List<User> users = DatabaseManager.getInstance().registerRandomUsers(request, startId, count, password);
+        return new UsersList(users);
     }
 
     @RequestMapping("/users")

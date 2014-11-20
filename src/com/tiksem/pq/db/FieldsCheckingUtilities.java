@@ -10,6 +10,7 @@ import javax.mail.internet.InternetAddress;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -27,7 +28,7 @@ public class FieldsCheckingUtilities {
     private static final Pattern CHECK_LOGIN_FIELD_PATTERN = Pattern.compile(CHECK_LOGIN_FIELD_PATTERN_STRING);
 
     public static final String CHECK_PASSWORD_FIELD_PATTERN_STRING =
-            "^(?=.*\\d)(?=.*[a-zA-Z]).{4,8}$";
+            ".+";
     private static final Pattern CHECK_PASSWORD_FIELD_PATTERN = Pattern.compile(CHECK_PASSWORD_FIELD_PATTERN_STRING);
 
     public static boolean checkNameField(String name){
@@ -118,15 +119,17 @@ public class FieldsCheckingUtilities {
 
     public static void fixAndCheckFields(Object object){
         Class clazz = object.getClass();
-        Field[] fields = clazz.getFields();
+        List<Field> fields = Reflection.getAllFieldsOfClass(clazz);
 
         for (Field field : fields) {
-            field.setAccessible(true);
-            fixNameField(field, object);
-            checkLogin(field, object);
-            checkPassword(field, object);
-            checkEmail(field, object);
-            checkNotNullField(field, object);
+            if (!Modifier.isStatic(field.getModifiers())) {
+                field.setAccessible(true);
+                fixNameField(field, object);
+                checkLogin(field, object);
+                checkPassword(field, object);
+                checkEmail(field, object);
+                checkNotNullField(field, object);
+            }
         }
 
         List<Method> methods = Reflection.getAllMethods(object);
