@@ -6,6 +6,7 @@ import javax.jdo.annotations.*;
  * Created by CM on 11/10/2014.
  */
 @PersistenceCapable
+@PersistenceAware
 public class Comment implements Likable {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)

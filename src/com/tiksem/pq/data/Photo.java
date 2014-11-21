@@ -9,6 +9,7 @@ import javax.jdo.annotations.*;
  * Created by CM on 10/31/2014.
  */
 @PersistenceCapable
+@PersistenceAware
 public class Photo implements Likable, InstanceCallbacks {
     public static final String IMAGE_URL_PATH = "/image/";
 

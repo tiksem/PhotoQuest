@@ -11,6 +11,7 @@ import java.sql.Date;
  */
 
 @PersistenceCapable
+@PersistenceAware
 public class User implements WithAvatar {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)

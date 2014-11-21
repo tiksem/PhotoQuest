@@ -8,6 +8,7 @@ import javax.jdo.annotations.*;
  * Created by CM on 11/15/2014.
  */
 @PersistenceCapable
+@PersistenceAware
 public class FriendRequest {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)

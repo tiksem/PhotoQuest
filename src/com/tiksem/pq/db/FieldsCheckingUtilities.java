@@ -44,23 +44,19 @@ public class FieldsCheckingUtilities {
                 throw new NameFieldTypeMismatchException(field, clazz);
             }
 
-            try {
-                String value = (String) Reflection.getValueOfField(object, field);
-                if(value == null || value.isEmpty()){
-                    return;
-                }
-
-                value = value.toLowerCase();
-
-                if(!checkNameField(value)){
-                    throw new NameFieldPatternException(clazz.getName(), field.getName(), value);
-                }
-
-                value = Strings.capitalize(value).toString();
-                field.set(object, value);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
+            String value = (String) Reflection.getFieldValueUsingGetter(object, field);
+            if(value == null || value.isEmpty()){
+                return;
             }
+
+            value = value.toLowerCase();
+
+            if(!checkNameField(value)){
+                throw new NameFieldPatternException(clazz.getName(), field.getName(), value);
+            }
+
+            value = Strings.capitalize(value).toString();
+            Reflection.setFieldValueUsingSetter(object, field, value);
         }
     }
 
@@ -68,7 +64,7 @@ public class FieldsCheckingUtilities {
         NotNull notNull = field.getAnnotation(NotNull.class);
 
         if(notNull != null){
-            Object value = Reflection.getValueOfField(object, field);
+            Object value = Reflection.getFieldValueUsingGetter(object, field);
             if(value == null){
                 throw new NullPointerException(field.getName() + " should not be null");
             }
@@ -84,7 +80,7 @@ public class FieldsCheckingUtilities {
                 throw new IllegalArgumentException("Login field should be string");
             }
 
-            String value = (String) Reflection.getValueOfField(object, field);
+            String value = (String) Reflection.getFieldValueUsingGetter(object, field);
             checkLoginThrow(value);
         }
     }
@@ -98,7 +94,7 @@ public class FieldsCheckingUtilities {
                 throw new IllegalArgumentException("Email field should be string");
             }
 
-            String value = (String) Reflection.getValueOfField(object, field);
+            String value = (String) Reflection.getFieldValueUsingGetter(object, field);
             validateEmailAddress(value);
         }
     }
@@ -112,7 +108,7 @@ public class FieldsCheckingUtilities {
                 throw new IllegalArgumentException("Password field should be string");
             }
 
-            String value = (String) Reflection.getValueOfField(object, field);
+            String value = (String) Reflection.getFieldValueUsingGetter(object, field);
             checkPasswordThrow(value);
         }
     }

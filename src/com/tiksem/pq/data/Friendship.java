@@ -3,12 +3,14 @@ package com.tiksem.pq.data;
 import com.tiksem.pq.data.annotations.Relation;
 
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.PersistenceAware;
 import javax.jdo.annotations.PersistenceCapable;
 
 /**
  * Created by CM on 11/8/2014.
  */
 @PersistenceCapable
+@PersistenceAware
 public class Friendship {
     @Relation(relationName = "user")
     @Index

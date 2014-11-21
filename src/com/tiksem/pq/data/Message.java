@@ -10,6 +10,7 @@ import javax.jdo.annotations.*;
  * Created by CM on 11/14/2014.
  */
 @PersistenceCapable
+@PersistenceAware
 public class Message {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)

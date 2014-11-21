@@ -11,6 +11,7 @@ import javax.persistence.Transient;
  */
 
 @PersistenceCapable
+@PersistenceAware
 public class Photoquest implements WithAvatar {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
