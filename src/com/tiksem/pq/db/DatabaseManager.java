@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.jdo.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.*;
 
@@ -19,22 +20,18 @@ import java.util.*;
  * Created by CM on 10/30/2014.
  */
 public class DatabaseManager {
-    private static DatabaseManager instance;
+    private static final PersistenceManagerFactory factory;
+    
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
 
     private final PersistenceManager persistenceManager;
 
-    public static DatabaseManager getInstance() {
-        if(instance == null ){
-            instance = new DatabaseManager();
-        }
-
-        return instance;
+    static {
+        factory  = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
     }
 
-    private DatabaseManager()     {
-        PersistenceManagerFactory factory  = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
+    public DatabaseManager() {
         persistenceManager = factory.getPersistenceManager();
     }
 
@@ -267,7 +264,7 @@ public class DatabaseManager {
                 throw new RuntimeException("WTF?");
             }
 
-            DatabaseManager.getInstance().update(request, user);
+            update(request, user);
         }
 
         return user;
@@ -643,7 +640,7 @@ public class DatabaseManager {
 
         return friendRequest;
     }
-    
+
     public Like getLikeById(long id) {
         return DBUtilities.getObjectById(persistenceManager, Like.class, id);
     }
@@ -670,7 +667,7 @@ public class DatabaseManager {
 
         return like;
     }
-    
+
     public void fillCommentsData(HttpServletRequest request, Collection<Comment> comments) {
         for (Comment comment : comments) {
             fillCommentData(request, comment);
@@ -852,7 +849,7 @@ public class DatabaseManager {
 
         return like;
     }
-    
+
     public void unlike(HttpServletRequest request, long likeId) {
         Like like = getLikeByIdOrThrow(likeId);
 
@@ -1003,7 +1000,7 @@ public class DatabaseManager {
         if(getFriendRequest(signedInUserId, userId) != null){
             throw new FriendRequestExistsException();
         }
-        
+
         FriendRequest friendRequest = new FriendRequest();
         friendRequest.setToUserId(userId);
         friendRequest.setFromUserId(signedInUserId);
@@ -1099,5 +1096,11 @@ public class DatabaseManager {
         }
 
         return result;
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        persistenceManager.close();
     }
 }

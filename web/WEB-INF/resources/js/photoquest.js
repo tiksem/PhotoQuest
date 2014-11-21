@@ -6,7 +6,8 @@ main.controller("PhotoQuest", function($scope, ngDialog, $element, $http, $locat
     var scope = $scope.quest = {};
     var url = window.location.origin + "//getPhotoquestById";
     var params = {
-        id: questId
+        id: questId,
+        limit: 50
     };
 
     Utilities.loadDataToScope(url, params, scope, $http, function(){

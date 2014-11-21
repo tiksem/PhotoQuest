@@ -26,7 +26,8 @@ public class DBUtilities {
                 "org.datanucleus.api.jdo.JDOPersistenceManagerFactory");
         properties.setProperty("javax.jdo.option.ConnectionDriverName","com.mysql.jdbc.Driver");
         properties.setProperty("javax.jdo.option.ConnectionURL",
-                        "jdbc:mysql://localhost/" + databaseName);
+                        "jdbc:mysql://localhost/" + databaseName + "?autoReconnect=true&relaxAutoCommit=true" +
+                                "&autoCommit=false");
         properties.setProperty("javax.jdo.option.ConnectionUserName","root");
         properties.setProperty("javax.jdo.option.ConnectionPassword","fightforme");
         properties.setProperty("datanucleus.schema.autoCreateTables", "true");
@@ -191,7 +192,7 @@ public class DBUtilities {
         query.setFilter(filtersString);
         offsetLimit.applyToQuery(query);
 
-        Collection<T> result = (Collection < T >) query.executeWithMap(args);
+        Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));
         resetNotPersistentFields(result);
         return result;
     }
@@ -213,7 +214,7 @@ public class DBUtilities {
                                                          OffsetLimit offsetLimit) {
         Query query = manager.newQuery(patternClass);
         offsetLimit.applyToQuery(query);
-        Collection<T> result = (Collection < T >) query.execute();
+        Collection<T> result = new ArrayList<T>((Collection < T >) query.execute());
         resetNotPersistentFields(result);
         return result;
     }

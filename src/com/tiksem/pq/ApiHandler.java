@@ -35,6 +35,10 @@ public class ApiHandler {
     @Autowired
     private HttpServletRequest request;
 
+    private DatabaseManager getDatabaseManager() {
+        return new DatabaseManager();
+    }
+    
     @RequestMapping("/")
     public String index() {
         return "redirect:/index.html";
@@ -44,7 +48,7 @@ public class ApiHandler {
     public @ResponseBody Object login(@RequestParam(value="login", required=true) String login,
                                       @RequestParam(value="password", required=true) String password,
                                       HttpServletResponse response){
-        User user = DatabaseManager.getInstance().loginOrThrow(request, login, password);
+        User user = getDatabaseManager().loginOrThrow(request, login, password);
 
         response.addCookie(new Cookie("login", login));
         response.addCookie(new Cookie("password", password));
@@ -71,7 +75,7 @@ public class ApiHandler {
         user.setName(name);
         user.setLastName(lastName);
 
-        return DatabaseManager.getInstance().registerUser(request, user, avatar);
+        return getDatabaseManager().registerUser(request, user, avatar);
     }
 
     @RequestMapping(value = "/registerRandom", method = RequestMethod.GET)
@@ -80,46 +84,46 @@ public class ApiHandler {
                                          @RequestParam(value="password", required=false, defaultValue = "password")
                                          String password) throws IOException {
 
-        List<User> users = DatabaseManager.getInstance().registerRandomUsers(request, startId, count, password);
+        List<User> users = getDatabaseManager().registerRandomUsers(request, startId, count, password);
         return new UsersList(users);
     }
 
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers(OffsetLimit offsetLimit) {
-        Collection<User> users = DatabaseManager.getInstance().
+        Collection<User> users = getDatabaseManager().
                 getAllUsersWithCheckingRelationShip(request, offsetLimit);
         return new UsersList(users);
     }
 
     @RequestMapping("/friends")
     public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
-        Collection<User> users = DatabaseManager.getInstance().getFriends(request, offsetLimit);
+        Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit);
         return new UsersList(users);
     }
 
     @RequestMapping("/deleteAllUsers")
     public @ResponseBody Object deleteAllUsers(OffsetLimit offsetLimit) {
-        DatabaseManager.getInstance().deleteAllUsers(request, offsetLimit);
+        getDatabaseManager().deleteAllUsers(request, offsetLimit);
         return new Success();
     }
 
     @RequestMapping("/deleteAllPhotos")
     public @ResponseBody Object deleteAllPhotos() {
-        DatabaseManager.getInstance().deleteAllPhotos();
+        getDatabaseManager().deleteAllPhotos();
         return new Success();
     }
 
     @RequestMapping("/createPhotoquest")
     public @ResponseBody Object createPhotoquest(
             @RequestParam(value = "name", required = true) String name) {
-        return DatabaseManager.getInstance().createPhotoQuest(request, name);
+        return getDatabaseManager().createPhotoQuest(request, name);
     }
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
     public @ResponseBody Object addPhotoToPhotoQuest(@RequestParam(value = "photoquest", required = true) Long id,
                                                  @RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
-        DatabaseManager databaseManager = DatabaseManager.getInstance();
+        DatabaseManager databaseManager = getDatabaseManager();
 
         Photoquest photoquest = databaseManager.getPhotoQuestByIdOrThrow(id);
 
@@ -137,70 +141,76 @@ public class ApiHandler {
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
             produces = MediaType.IMAGE_JPEG_VALUE)
-    public @ResponseBody HttpEntity<byte[]>
+    public @ResponseBody Object
     getImageById(@PathVariable Long id,
                  @RequestParam(value = "width", required = false) Integer width,
                  @RequestParam(value = "height", required = false) Integer height)
             throws IOException {
-        byte[] image = DatabaseManager.getInstance().getBitmapDataByPhotoIdOrThrow(id);
+        try {
+            byte[] image = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
 
-        InputStream in = new ByteArrayInputStream(image);
-        BufferedImage bufferedImage = ImageIO.read(in);
+            InputStream in = new ByteArrayInputStream(image);
+            BufferedImage bufferedImage = ImageIO.read(in);
 
-        if(width == null){
-            width = bufferedImage.getWidth();
+            if(width == null){
+                width = bufferedImage.getWidth();
+            }
+            if(height == null) {
+                height = bufferedImage.getHeight();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(Thumbnails.of(bufferedImage).size(width, height).asBufferedImage(), "png", baos);
+            image = baos.toByteArray();
+
+            HttpHeaders headers = new HttpHeaders();
+            MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
+            headers.setContentType(mediaType);
+            headers.setContentLength(image.length);
+            return new HttpEntity<byte[]>(image, headers);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
-        if(height == null) {
-            height = bufferedImage.getHeight();
-        }
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(Thumbnails.of(bufferedImage).size(width, height).asBufferedImage(), "png", baos);
-        image = baos.toByteArray();
-
-        HttpHeaders headers = new HttpHeaders();
-        MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
-        headers.setContentType(mediaType);
-        headers.setContentLength(image.length);
-        return new HttpEntity<byte[]>(image, headers);
     }
 
     @RequestMapping("/getPhotoquests")
     public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().getPhotoQuests(request, offsetLimit);
+        final Collection<Photoquest> photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit);
         return new PhotoquestsList(photoquests);
     }
 
     @RequestMapping("/getMyPhotoquests")
     public @ResponseBody Object getMyPhotoquests(OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().
+        final Collection<Photoquest> photoquests = getDatabaseManager().
                 getPhotoquestsCreatedBySignedInUser(request, offsetLimit);
         return new PhotoquestsList(photoquests);
     }
 
     @RequestMapping("/getMyPerformedPhotoquests")
     public @ResponseBody Object getMyPerformedPhotoquests(OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = DatabaseManager.getInstance().
+        final Collection<Photoquest> photoquests = getDatabaseManager().
                 getPhotoquestsPerformedBySignedInUser(request, offsetLimit);
         return new PhotoquestsList(photoquests);
     }
 
     @RequestMapping("/getPhotoquestById")
     public @ResponseBody Object getPhotoquestById(@RequestParam("id") Long id){
-        return DatabaseManager.getInstance().getPhotoQuestByIdOrThrow(id);
+        return getDatabaseManager().getPhotoQuestByIdOrThrow(id);
     }
 
     @RequestMapping("/getPhotoById")
     public @ResponseBody Object getPhotoById(@RequestParam("id") Long id){
-        Photo photo = DatabaseManager.getInstance().getPhotoByIdOrThrow(id);
-        DatabaseManager.getInstance().initYourLikeParameter(request, photo);
+        DatabaseManager databaseManager = getDatabaseManager();
+        Photo photo = databaseManager.getPhotoByIdOrThrow(id);
+        databaseManager.initYourLikeParameter(request, photo);
         return photo;
     }
 
     @RequestMapping("/getUserById")
     public @ResponseBody Object getUserById(@RequestParam("id") Long id){
-        User user = DatabaseManager.getInstance().getUserByIdOrThrow(id);
-        DatabaseManager.getInstance().setAvatar(request, user);
+        DatabaseManager databaseManager = getDatabaseManager();
+        User user = databaseManager.getUserByIdOrThrow(id);
+        databaseManager.setAvatar(request, user);
         return user;
     }
 
@@ -211,20 +221,20 @@ public class ApiHandler {
 
     @RequestMapping("/getPhotosOfPhotoquest")
     public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId, OffsetLimit offsetLimit){
-        Collection<Photo> photos = DatabaseManager.getInstance().
+        Collection<Photo> photos = getDatabaseManager().
                 getPhotosOfPhotoquest(request, photoquestId, offsetLimit);
         return new PhotosList(photos);
     }
 
     @RequestMapping("/addFriend")
     public @ResponseBody Object addFriend(@RequestParam("id") Long id){
-        DatabaseManager.getInstance().addFriend(request, id);
+        getDatabaseManager().addFriend(request, id);
         return new Success();
     }
 
     @RequestMapping("/removeFriend")
     public @ResponseBody Object removeFriend(@RequestParam("id") Long id){
-        DatabaseManager.getInstance().removeFriend(request, id);
+        getDatabaseManager().removeFriend(request, id);
         return new Success();
     }
 
@@ -234,28 +244,29 @@ public class ApiHandler {
             @RequestParam(value = "message", required = true) String message,
             @RequestParam(value = "commentId", required = false) Long toCommentId) {
         checkLikeCommentParams(photoId, toCommentId);
-        return DatabaseManager.getInstance().addComment(request, photoId, message, toCommentId);
+        return getDatabaseManager().addComment(request, photoId, message, toCommentId);
     }
 
     @RequestMapping("/sendMessage")
     public @ResponseBody Object sendMessage(
             @RequestParam(value = "toUserId", required = true) Long toUserId,
             @RequestParam(value = "message", required = true) String message) {
-        return DatabaseManager.getInstance().addMessage(request, toUserId, message);
+        return getDatabaseManager().addMessage(request, toUserId, message);
     }
 
     @RequestMapping("/getAllMessages")
     public @ResponseBody Object getAllMessages(OffsetLimit offsetLimit) {
-        return DatabaseManager.getInstance().getMessagesOfSignedInUser(request, offsetLimit);
+        return getDatabaseManager().getMessagesOfSignedInUser(request, offsetLimit);
     }
 
     @RequestMapping("/messages")
     public @ResponseBody Object getMessagesWithUser(@RequestParam(value = "userId", required = true) Long userId,
                                                OffsetLimit offsetLimit) {
-        User user = DatabaseManager.getInstance().getUserByIdOrThrow(userId);
+        DatabaseManager databaseManager = getDatabaseManager();
+        User user = databaseManager.getUserByIdOrThrow(userId);
         Collection<Message> result =
-                DatabaseManager.getInstance().getDialogMessages(request, userId, offsetLimit);
-        DatabaseManager.getInstance().setAvatar(request, user);
+                databaseManager.getDialogMessages(request, userId, offsetLimit);
+        databaseManager.setAvatar(request, user);
         DialogMessages dialogMessages = new DialogMessages();
         dialogMessages.messages = result;
         dialogMessages.user = user;
@@ -264,20 +275,20 @@ public class ApiHandler {
 
     @RequestMapping("/getDialogs")
     public @ResponseBody Object getDialogs(OffsetLimit offsetLimit) {
-        Collection<Dialog> dialogs = DatabaseManager.getInstance().getDialogs(request, offsetLimit);
+        Collection<Dialog> dialogs = getDatabaseManager().getDialogs(request, offsetLimit);
         return new DialogsList(dialogs);
     }
 
     @RequestMapping("/deleteComment")
     public @ResponseBody Object deleteComment(OffsetLimit offsetLimit,
             @RequestParam(value = "id", required = true) Long commentId) {
-        DatabaseManager.getInstance().deleteComment(request, commentId, offsetLimit);
+        getDatabaseManager().deleteComment(request, commentId, offsetLimit);
         return new Success();
     }
 
     @RequestMapping("/getCommentsOnPhoto")
     public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId, OffsetLimit offsetLimit){
-        Collection<Comment> comments = DatabaseManager.getInstance().
+        Collection<Comment> comments = getDatabaseManager().
                 getCommentsOnPhotoAndFillData(request, photoId, offsetLimit);
         return new CommentsList(comments);
     }
@@ -293,32 +304,33 @@ public class ApiHandler {
                                      @RequestParam(value = "commentId", required = false) Long commentId){
         checkLikeCommentParams(photoId, commentId);
 
+        DatabaseManager databaseManager = getDatabaseManager();
         if(photoId != null){
-            return DatabaseManager.getInstance().likePhoto(request, photoId);
+            return databaseManager.likePhoto(request, photoId);
         } else {
-            return DatabaseManager.getInstance().likeComment(request, commentId);
+            return databaseManager.likeComment(request, commentId);
         }
     }
 
     @RequestMapping("/unlike")
     public @ResponseBody Object unlike(@RequestParam("id") Long likeId) {
-        DatabaseManager.getInstance().unlike(request, likeId);
+        getDatabaseManager().unlike(request, likeId);
         return new Success();
     }
 
     @RequestMapping("/photos")
     public @ResponseBody Object photos() {
-        return DatabaseManager.getInstance().getAllPhotos(request);
+        return getDatabaseManager().getAllPhotos(request);
     }
 
     @RequestMapping("/likes")
     public @ResponseBody Object likes() {
-        return DatabaseManager.getInstance().getAllLikes(request);
+        return getDatabaseManager().getAllLikes(request);
     }
 
     @RequestMapping("/comments")
     public @ResponseBody Object comments() {
-        return DatabaseManager.getInstance().getAllComments();
+        return getDatabaseManager().getAllComments();
     }
 
     @RequestMapping("/refreshDatabase")
