@@ -18,9 +18,7 @@ gen/
 
 # IDEA files
 .idea/
-out/
 *.iml
-!out/artifacts/unnamed/WEB-INF/classes/
 
 # Eclipse files
 .userSettings/
