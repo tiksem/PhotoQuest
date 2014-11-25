@@ -4,3 +4,6 @@
 [submodule "web/WEB-INF/resources"]
 	path = web/WEB-INF/resources
 	url = https://privetgnil@code.google.com/p/yabivdulres/
+[submodule "out/artifacts/unnamed/com"]
+	path = out/artifacts/unnamed/com
+	url = https://privetgnil@code.google.com/p/yabivdulclasses/

@@ -9,12 +9,11 @@ build/
 *.dex
 
 # Java class files
-*.class
 
 # generated files
-bin/
-classes/
-gen/
+out/production
+out/artifacts/com
+out/artifacts/unnamed/WEB-INF
 
 # IDEA files
 .idea/
