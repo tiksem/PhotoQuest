@@ -59,24 +59,17 @@ public class DBUtilities {
     }
 
     public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern, OffsetLimit offsetLimit) {
-        return queryByPattern(manager, pattern, false, offsetLimit);
+        QueryParams params = new QueryParams();
+        params.offsetLimit = offsetLimit;
+        return queryByPattern(manager, pattern, params);
     }
 
     public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern,
                                                           OffsetLimit offsetLimit) {
-        return queryByExcludePattern(manager, pattern, false, offsetLimit);
-    }
-
-    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
-                                                   boolean ignoreRelations,
-                                                   OffsetLimit offsetLimit) {
-        return queryByPattern(manager, pattern, false, ignoreRelations, offsetLimit);
-    }
-
-    public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern,
-                                                          boolean ignoreRelations,
-                                                          OffsetLimit offsetLimit) {
-        return queryByPattern(manager, pattern, true, ignoreRelations, offsetLimit);
+        QueryParams params = new QueryParams();
+        params.offsetLimit = offsetLimit;
+        params.asExcludePattern = true;
+        return queryByPattern(manager, pattern, params);
     }
 
     private static MultiMap<String, Field> getRelations(Class aClass) {
@@ -223,13 +216,22 @@ public class DBUtilities {
         return result;
     }
 
-    private static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
-                                                              boolean asExcludePattern,
-                                                              boolean ignoreRelations,
-                                                              OffsetLimit offsetLimit) {
+    public static class QueryParams {
+        public boolean asExcludePattern = false;
+        public boolean ignoreRelations = false;
+        public OffsetLimit offsetLimit = new OffsetLimit();
+        public String ordering;
+    }
+
+    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
+                                                              QueryParams queryParams) {
         Map<String, Object> args = new HashMap<String, Object>();
-        Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations);
-        offsetLimit.applyToQuery(query);
+        Query query = getQueryByPattern(manager, pattern, args, queryParams.asExcludePattern,
+                queryParams.ignoreRelations);
+        queryParams.offsetLimit.applyToQuery(query);
+        if (queryParams.ordering != null) {
+            query.setOrdering(queryParams.ordering);
+        }
 
         Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));
         resetNotPersistentFields(result);
@@ -245,14 +247,20 @@ public class DBUtilities {
         return collection.iterator().next();
     }
 
-    public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass) {
-        return getAllObjectsOfClass(manager, patternClass, new OffsetLimit(0, OffsetLimit.MAX_LIMIT));
+    public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass,
+                                                         OffsetLimit offsetLimit) {
+        return getAllObjectsOfClass(manager, patternClass, offsetLimit, null);
     }
 
     public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass,
-                                                         OffsetLimit offsetLimit) {
+                                                         OffsetLimit offsetLimit, String ordering) {
         Query query = manager.newQuery(patternClass);
         offsetLimit.applyToQuery(query);
+
+        if(ordering != null){
+            query.setOrdering(ordering);
+        }
+
         Collection<T> result = new ArrayList<T>((Collection < T >) query.execute());
         resetNotPersistentFields(result);
         return result;
@@ -267,7 +275,7 @@ public class DBUtilities {
     public static  <T> void deleteAllObjectsOfClass(PersistenceManager manager, Class<T> aClass) {
         Transaction transaction = manager.currentTransaction();
         transaction.begin();
-        manager.deletePersistentAll(getAllObjectsOfClass(manager, aClass));
+        manager.deletePersistentAll(getAllObjectsOfClass(manager, aClass, new OffsetLimit(0, OffsetLimit.MAX_LIMIT)));
         transaction.commit();
     }
 
@@ -279,7 +287,7 @@ public class DBUtilities {
 
         Field modificationDateField = Reflection.getFieldWithAnnotation(object.getClass(), ModificationDate.class);
         if(modificationDateField != null){
-            Reflection.setValueOfField(object, addingDateField, value);
+            Reflection.setFieldValueUsingSetter(object, addingDateField, value);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.tiksem.pq.data.annotations.AddingDate;
 
 import javax.jdo.InstanceCallbacks;
 import javax.jdo.annotations.*;
@@ -29,6 +30,10 @@ public class Photoquest implements WithAvatar {
     @Index
     @JsonIgnore
     private Long avatarId;
+
+    @Index
+    @AddingDate
+    private Long addingDate;
 
     @NotPersistent
     private String avatar;
@@ -107,5 +112,13 @@ public class Photoquest implements WithAvatar {
     @Override
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public Long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
     }
 }

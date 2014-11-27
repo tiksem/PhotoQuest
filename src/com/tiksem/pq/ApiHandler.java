@@ -5,6 +5,7 @@ import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.db.DBUtilities;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.OffsetLimit;
+import com.tiksem.pq.db.RatingOrder;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
@@ -184,8 +185,10 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getPhotoquests")
-    public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit);
+    public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit,
+                                               @RequestParam(value = "order", required = false, defaultValue = "newest")
+                                               RatingOrder order){
+        final Collection<Photoquest> photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit, order);
         return new PhotoquestsList(photoquests);
     }
 
@@ -196,9 +199,11 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getMyPhotoquests")
-    public @ResponseBody Object getMyPhotoquests(OffsetLimit offsetLimit){
+    public @ResponseBody Object getMyPhotoquests(
+            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+                                                 OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests = getDatabaseManager().
-                getPhotoquestsCreatedBySignedInUser(request, offsetLimit);
+                getPhotoquestsCreatedBySignedInUser(request, offsetLimit, order);
         return new PhotoquestsList(photoquests);
     }
 
@@ -335,18 +340,18 @@ public class ApiHandler {
     }
 
     @RequestMapping("/photos")
-    public @ResponseBody Object photos() {
-        return getDatabaseManager().getAllPhotos(request);
+    public @ResponseBody Object photos(OffsetLimit offsetLimit) {
+        return getDatabaseManager().getAllPhotos(request, offsetLimit);
     }
 
     @RequestMapping("/likes")
-    public @ResponseBody Object likes() {
-        return getDatabaseManager().getAllLikes(request);
+    public @ResponseBody Object likes(OffsetLimit offsetLimit) {
+        return getDatabaseManager().getAllLikes(request, offsetLimit);
     }
 
     @RequestMapping("/comments")
-    public @ResponseBody Object comments() {
-        return getDatabaseManager().getAllComments();
+    public @ResponseBody Object comments(OffsetLimit offsetLimit) {
+        return getDatabaseManager().getAllComments(offsetLimit);
     }
 
     @RequestMapping("/refreshDatabase")

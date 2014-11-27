@@ -174,7 +174,7 @@ public class DatabaseManager {
         return makePersistent(photoquest);
     }
 
-    public Collection<Photoquest> getPhotoquestsCreatedByUser(long userId, OffsetLimit offsetLimit) {
+    public Collection<Photoquest> getPhotoquestsCreatedByUser(long userId, OffsetLimit offsetLimit, RatingOrder order) {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
         return DBUtilities.queryByPattern(persistenceManager, photoquest, offsetLimit);
@@ -213,8 +213,9 @@ public class DatabaseManager {
     }
 
     public Collection<Photoquest> getPhotoquestsCreatedBySignedInUser(HttpServletRequest request,
-                                                                      OffsetLimit offsetLimit) {
-        return getPhotoquestsCreatedByUser(getSignedInUserOrThrow(request).getId(), offsetLimit);
+                                                                      OffsetLimit offsetLimit,
+                                                                      RatingOrder order) {
+        return getPhotoquestsCreatedByUser(getSignedInUserOrThrow(request).getId(), offsetLimit, order);
     }
 
     public long getPhotoquestsCountCreatedBySignedInUser(HttpServletRequest request) {
@@ -457,8 +458,8 @@ public class DatabaseManager {
         initYourLikeParameter(request, Collections.singletonList(photos));
     }
 
-    public Collection<Photo> getAllPhotos(HttpServletRequest request) {
-        Collection<Photo> photos = DBUtilities.getAllObjectsOfClass(persistenceManager, Photo.class);
+    public Collection<Photo> getAllPhotos(HttpServletRequest request, OffsetLimit offsetLimit) {
+        Collection<Photo> photos = DBUtilities.getAllObjectsOfClass(persistenceManager, Photo.class, offsetLimit);
         initPhotosUrl(photos, request);
         return photos;
     }
@@ -499,9 +500,29 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit) {
+    private String getRatingOrderingString(RatingOrder order) {
+        String orderString = " descending";
+        switch (order) {
+            case hottest:
+                throw new UnsupportedOperationException("hottest is not supported yet");
+            case rated:
+                orderString = "likesCount" + orderString;
+                break;
+            default:
+                orderString = "addingDate" + orderString;
+                break;
+        }
+
+        return orderString;
+    }
+
+    public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
+                                                 RatingOrder order) {
+        String orderString = getRatingOrderingString(order);
+
         Collection<Photoquest> result =
-                DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class, offsetLimit);
+                DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class,
+                        offsetLimit, orderString);
         setAvatar(request, result);
         return result;
     }
@@ -905,12 +926,12 @@ public class DatabaseManager {
         deletePersistent(like);
     }
 
-    public Collection<Like> getAllLikes(HttpServletRequest request) {
-        return DBUtilities.getAllObjectsOfClass(persistenceManager, Like.class);
+    public Collection<Like> getAllLikes(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return DBUtilities.getAllObjectsOfClass(persistenceManager, Like.class, offsetLimit);
     }
 
-    public Collection<Comment> getAllComments() {
-        return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class);
+    public Collection<Comment> getAllComments(OffsetLimit offsetLimit) {
+        return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class, offsetLimit);
     }
 
     private Message addMessage(HttpServletRequest request, User fromUser, User toUser, String messageText) {
