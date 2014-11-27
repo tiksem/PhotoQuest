@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.data.annotations.AddingDate;
 import com.tiksem.pq.data.annotations.NotNull;
 
 import javax.jdo.InstanceCallbacks;
@@ -33,6 +34,10 @@ public class Photo implements Likable, InstanceCallbacks {
 
     @NotPersistent
     private Like yourLike;
+
+    @Index
+    @AddingDate
+    private Long addingDate;
 
     public Long getLikesCount() {
         return likesCount;
@@ -120,5 +125,13 @@ public class Photo implements Likable, InstanceCallbacks {
     @Override
     public void jdoPreStore() {
 
+    }
+
+    public Long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
     }
 }

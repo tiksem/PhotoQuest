@@ -241,9 +241,13 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getPhotosOfPhotoquest")
-    public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId, OffsetLimit offsetLimit){
+    public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId,
+                                                      @RequestParam(value = "order", required = false,
+                                                              defaultValue = "newest")
+                                                      RatingOrder order,
+                                                      OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
-                getPhotosOfPhotoquest(request, photoquestId, offsetLimit);
+                getPhotosOfPhotoquest(request, photoquestId, offsetLimit, order);
         return new PhotosList(photos);
     }
 

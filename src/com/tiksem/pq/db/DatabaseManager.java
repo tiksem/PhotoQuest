@@ -465,14 +465,18 @@ public class DatabaseManager {
     }
 
     public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId,
-                                                   OffsetLimit offsetLimit) {
+                                                   OffsetLimit offsetLimit, RatingOrder order) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
         photoquest.incrementViewsCount();
         update(request, photoquest);
 
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
-        Collection<Photo> photos = DBUtilities.queryByPattern(persistenceManager, photoPattern, offsetLimit);
+        String orderString = getRatingOrderingString(order);
+        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
+        params.offsetLimit = offsetLimit;
+        params.ordering = orderString;
+        Collection<Photo> photos = DBUtilities.queryByPattern(persistenceManager, photoPattern, params);
         initPhotosUrl(photos, request);
 
         initYourLikeParameter(request, photos);
