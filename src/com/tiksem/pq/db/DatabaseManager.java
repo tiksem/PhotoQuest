@@ -21,14 +21,14 @@ import java.util.*;
  */
 public class DatabaseManager {
     private static final PersistenceManagerFactory factory;
-    
+
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
 
     private final PersistenceManager persistenceManager;
 
     static {
-        factory  = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
+        factory = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
     }
 
     public DatabaseManager() {
@@ -57,7 +57,7 @@ public class DatabaseManager {
 
     public User getUserByIdOrThrow(long id) {
         User user = getUserById(id);
-        if(user == null){
+        if (user == null) {
             throw new UnknownUserException(String.valueOf(id));
         }
 
@@ -72,7 +72,7 @@ public class DatabaseManager {
 
     public User getUserByLoginOrThrow(String login) {
         User user = getUserByLogin(login);
-        if(user == null){
+        if (user == null) {
             throw new UnknownUserException(login);
         }
 
@@ -81,7 +81,7 @@ public class DatabaseManager {
 
     public User getUserByLoginAndPassword(String login, String password) {
         User user = getUserByLogin(login);
-        if(user != null && user.getPassword().equals(password)){
+        if (user != null && user.getPassword().equals(password)) {
             return user;
         }
 
@@ -91,7 +91,7 @@ public class DatabaseManager {
     public User login(HttpServletRequest request, String login, String password) {
         makePersistent(getOrCreatePerformedPhotoquest(2, 5));
         User user = getUserByLogin(login);
-        if(user != null && user.getPassword().equals(password)){
+        if (user != null && user.getPassword().equals(password)) {
             setAvatar(request, user);
             return user;
         }
@@ -101,7 +101,7 @@ public class DatabaseManager {
 
     public User loginOrThrow(HttpServletRequest request, String login, String password) {
         User user = login(request, login, password);
-        if(user == null){
+        if (user == null) {
             throw new LoginFailedException();
         }
 
@@ -111,12 +111,12 @@ public class DatabaseManager {
     public User getSignedInUser(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         Cookie loginCookie = HttpUtilities.getCookie("login", cookies);
-        if(loginCookie == null){
+        if (loginCookie == null) {
             return null;
         }
 
         Cookie passwordCookie = HttpUtilities.getCookie("password", cookies);
-        if(passwordCookie == null){
+        if (passwordCookie == null) {
             return null;
         }
 
@@ -126,9 +126,9 @@ public class DatabaseManager {
         return user;
     }
 
-    public User getSignedInUserOrThrow(HttpServletRequest request){
+    public User getSignedInUserOrThrow(HttpServletRequest request) {
         User user = getSignedInUser(request);
-        if(user == null){
+        if (user == null) {
             throw new UserIsNotSignInException();
         }
 
@@ -149,7 +149,7 @@ public class DatabaseManager {
 
     public Photoquest getPhotoQuestByIdOrThrow(long id) {
         Photoquest photoquest = getPhotoQuestById(id);
-        if(photoquest == null){
+        if (photoquest == null) {
             throw new PhotoquestNotFoundException(String.valueOf(id));
         }
 
@@ -164,7 +164,7 @@ public class DatabaseManager {
     public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName) {
         User user = getSignedInUserOrThrow(request);
         Photoquest photoquest = getPhotoQuestByName(photoquestName);
-        if(photoquest != null){
+        if (photoquest != null) {
             throw new PhotoquestExistsException(photoquestName);
         }
 
@@ -180,6 +180,12 @@ public class DatabaseManager {
         return DBUtilities.queryByPattern(persistenceManager, photoquest, offsetLimit);
     }
 
+    public long getPhotoquestsCountCreatedByUser(long userId) {
+        Photoquest photoquest = new Photoquest();
+        photoquest.setUserId(userId);
+        return DBUtilities.queryCountByPattern(persistenceManager, photoquest);
+    }
+
     private Collection<PerformedPhotoquest> getPerformedPhotoquestsByUser(long userId, OffsetLimit offsetLimit) {
         getUserByIdOrThrow(userId);
         PerformedPhotoquest performedPhotoquest = new PerformedPhotoquest();
@@ -191,7 +197,7 @@ public class DatabaseManager {
                                                                 OffsetLimit offsetLimit) {
         Collection<PerformedPhotoquest> performedPhotoquests = getPerformedPhotoquestsByUser(userId, offsetLimit);
         Collection<Photoquest> result = new ArrayList<Photoquest>();
-        for(PerformedPhotoquest performedPhotoquest : performedPhotoquests){
+        for (PerformedPhotoquest performedPhotoquest : performedPhotoquests) {
             Photoquest photoquest = getPhotoQuestByIdOrThrow(performedPhotoquest.getPhotoquestId());
             result.add(photoquest);
         }
@@ -211,11 +217,15 @@ public class DatabaseManager {
         return getPhotoquestsCreatedByUser(getSignedInUserOrThrow(request).getId(), offsetLimit);
     }
 
+    public long getPhotoquestsCountCreatedBySignedInUser(HttpServletRequest request) {
+        return getPhotoquestsCountCreatedByUser(getSignedInUserOrThrow(request).getId());
+    }
+
     public void update(HttpServletRequest request, Object... objects) {
         makeAllPersistent(objects);
 
         for (Object object : objects) {
-            if(object instanceof WithAvatar){
+            if (object instanceof WithAvatar) {
                 WithAvatar withAvatar = (WithAvatar) object;
                 setAvatar(request, withAvatar);
             }
@@ -226,7 +236,7 @@ public class DatabaseManager {
         String login = user.getLogin();
         String password = user.getPassword();
 
-        if(getUserByLogin(login) != null){
+        if (getUserByLogin(login) != null) {
             throw new UserExistsRegisterException(login);
         }
 
@@ -247,7 +257,7 @@ public class DatabaseManager {
     public User registerUser(HttpServletRequest request, User user, byte[] avatar) {
         user = registerUser(user);
 
-        if(user.getLogin() == null){
+        if (user.getLogin() == null) {
             throw new RuntimeException("WTF?");
         }
 
@@ -260,7 +270,7 @@ public class DatabaseManager {
             photo = addPhoto(request, photo, avatar);
             user.setAvatarId(photo.getId());
 
-            if(user.getLogin() == null){
+            if (user.getLogin() == null) {
                 throw new RuntimeException("WTF?");
             }
 
@@ -276,6 +286,16 @@ public class DatabaseManager {
 
     public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request, OffsetLimit offsetLimit) {
         return getAllUsers(request, false, true, offsetLimit);
+    }
+
+    public long getAllUsersCount(HttpServletRequest request, boolean includeSignedInUser) {
+        long result = DBUtilities.getAllObjectsOfClassCount(persistenceManager,
+                User.class);
+        if(includeSignedInUser && getSignedInUser(request) != null){
+            result--;
+        }
+
+        return result;
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser,
@@ -486,6 +506,10 @@ public class DatabaseManager {
         return result;
     }
 
+    public long getPhotoQuestsCount() {
+        return DBUtilities.getAllObjectsOfClassCount(persistenceManager, Photoquest.class);
+    }
+
     public boolean hasFriendship(long user1Id, long user2Id) {
         return getFriendship(user1Id, user2Id) != null;
     }
@@ -544,6 +568,7 @@ public class DatabaseManager {
 
     public List<Long> getFriendsIdesOf(long userId, OffsetLimit offsetLimit) {
         Friendship friendshipPattern = new Friendship();
+        friendshipPattern.setUser1(userId);
         Collection<Friendship> friendships =
                 DBUtilities.queryByPattern(persistenceManager, friendshipPattern, offsetLimit);
         ArrayList<Long> result = new ArrayList<Long>(friendships.size());
@@ -580,6 +605,12 @@ public class DatabaseManager {
 
     public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit) {
         return getFriends(request, offsetLimit, true);
+    }
+
+    public long getFriendsCount(HttpServletRequest request) {
+        Friendship friendshipPattern = new Friendship();
+        friendshipPattern.setUser1(getSignedInUserOrThrow(request).getId());
+        return DBUtilities.queryCountByPattern(persistenceManager, friendshipPattern);
     }
 
     public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit, boolean fillFriendShipData) {

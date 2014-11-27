@@ -95,6 +95,16 @@ public class ApiHandler {
         return new UsersList(users);
     }
 
+    @RequestMapping("/getUsersCount")
+    public @ResponseBody Object getAllUsersCount() {
+        return new CountResponse(getDatabaseManager().getAllUsersCount(request, false));
+    }
+
+    @RequestMapping("/getFriendsCount")
+    public @ResponseBody Object getFriendsCount() {
+        return new CountResponse(getDatabaseManager().getFriendsCount(request));
+    }
+
     @RequestMapping("/friends")
     public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit);
@@ -177,6 +187,12 @@ public class ApiHandler {
     public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit);
         return new PhotoquestsList(photoquests);
+    }
+
+    @RequestMapping("/getPhotoquestsCount")
+    public @ResponseBody Object getPhotoquestsCount(){
+        long count = getDatabaseManager().getPhotoQuestsCount();
+        return new CountResponse(count);
     }
 
     @RequestMapping("/getMyPhotoquests")

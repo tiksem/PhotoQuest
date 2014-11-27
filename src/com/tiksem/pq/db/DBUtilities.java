@@ -96,10 +96,10 @@ public class DBUtilities {
         return result;
     }
 
-    private static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
-                                                              boolean asExcludePattern,
-                                                              boolean ignoreRelations,
-                                                              OffsetLimit offsetLimit) {
+    private static Query getQueryByPattern(PersistenceManager manager, Object pattern,
+                                           Map<String, Object> outArgs,
+                                           boolean asExcludePattern,
+                                           boolean ignoreRelations) {
         Class<?> patternClass = pattern.getClass();
         List<Class> relationsClasses = ignoreRelations ? Arrays.<Class>asList() : Arrays.<Class>asList(Relation.class);
         List<Field> fields =
@@ -108,7 +108,7 @@ public class DBUtilities {
 
         List<String> parameters = new ArrayList<String>(fields.size());
         List<String> filters = new ArrayList<String>();
-        Map<String, Object> args = new HashMap<String, Object>();
+        outArgs.clear();
 
         for(Field field : fields){
             Class type = field.getType();
@@ -124,7 +124,7 @@ public class DBUtilities {
             String filter = "this." + field.getName() + "==" + parameterName;
             filters.add(filter);
 
-            args.put(parameterName, value);
+            outArgs.put(parameterName, value);
         }
 
         String filtersString = Strings.join(" && ", filters).toString();
@@ -154,7 +154,7 @@ public class DBUtilities {
                         String parameterName = "a" + parameters.size();
                         String parameter = field.getType().getSimpleName() + " " + parameterName;
                         parameters.add(parameter);
-                        args.put(parameterName, value);
+                        outArgs.put(parameterName, value);
                         params[count++] = parameterName;
                     }
 
@@ -190,6 +190,45 @@ public class DBUtilities {
         Query query = manager.newQuery(patternClass);
         query.declareParameters(parametersString);
         query.setFilter(filtersString);
+
+        return query;
+    }
+
+    public static long queryCountByExcludePattern(PersistenceManager manager, Object pattern,
+                                            boolean ignoreRelations) {
+        return queryCountByPattern(manager, pattern, true, ignoreRelations);
+    }
+
+    public static long queryCountByExcludePattern(PersistenceManager manager, Object pattern) {
+        return queryCountByPattern(manager, pattern, true, false);
+    }
+
+    public static long queryCountByPattern(PersistenceManager manager, Object pattern,
+                                            boolean ignoreRelations) {
+        return queryCountByPattern(manager, pattern, false, ignoreRelations);
+    }
+
+    public static long queryCountByPattern(PersistenceManager manager, Object pattern) {
+        return queryCountByPattern(manager, pattern, false, false);
+    }
+
+    private static long queryCountByPattern(PersistenceManager manager, Object pattern,
+                                            boolean asExcludePattern,
+                                            boolean ignoreRelations) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations);
+        query.setResult("count(this)");
+
+        long result = (Long)query.executeWithMap(args);
+        return result;
+    }
+
+    private static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
+                                                              boolean asExcludePattern,
+                                                              boolean ignoreRelations,
+                                                              OffsetLimit offsetLimit) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations);
         offsetLimit.applyToQuery(query);
 
         Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));
@@ -217,6 +256,12 @@ public class DBUtilities {
         Collection<T> result = new ArrayList<T>((Collection < T >) query.execute());
         resetNotPersistentFields(result);
         return result;
+    }
+
+    public static long getAllObjectsOfClassCount(PersistenceManager manager, Class patternClass) {
+        Query query = manager.newQuery(patternClass);
+        query.setResult("count(this)");
+        return (Long)query.execute();
     }
 
     public static  <T> void deleteAllObjectsOfClass(PersistenceManager manager, Class<T> aClass) {

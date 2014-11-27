@@ -11,9 +11,7 @@ build/
 # Java class files
 
 # generated files
-out/production
-out/artifacts/com
-out/artifacts/unnamed/WEB-INF
+out/
 
 # IDEA files
 .idea/
