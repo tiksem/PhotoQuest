@@ -481,6 +481,12 @@ public class DatabaseManager {
 
     }
 
+    public long getPhotosOfPhotoquestCount(HttpServletRequest request, long photoQuestId) {
+        Photo photoPattern = new Photo();
+        photoPattern.setPhotoquestId(photoQuestId);
+        return DBUtilities.queryCountByPattern(persistenceManager, photoPattern);
+    }
+
     public String getDefaultAvatar(HttpServletRequest request) {
         return HttpUtilities.getBaseUrl(request) + "/" + DEFAULT_AVATAR_URL;
     }

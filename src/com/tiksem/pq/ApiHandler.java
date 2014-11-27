@@ -247,6 +247,13 @@ public class ApiHandler {
         return new PhotosList(photos);
     }
 
+    @RequestMapping("/getPhotosOfPhotoquestCount")
+    public @ResponseBody Object getPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
+        long count = getDatabaseManager().
+                getPhotosOfPhotoquestCount(request, photoquestId);
+        return new CountResponse(count);
+    }
+
     @RequestMapping("/addFriend")
     public @ResponseBody Object addFriend(@RequestParam("id") Long id){
         getDatabaseManager().addFriend(request, id);
