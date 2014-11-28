@@ -870,7 +870,8 @@ public class DatabaseManager {
 
         like = like(request, like);
 
-        incrementLikesCount(request, photo);
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+        incrementLikesCount(request, photo, photoquest);
 
         return like;
     }
@@ -888,14 +889,20 @@ public class DatabaseManager {
         return like;
     }
 
-    private void incrementLikesCount(HttpServletRequest request, Likable likable) {
-        likable.incrementLikesCount();
-        update(request, likable);
+    private void incrementLikesCount(HttpServletRequest request, Likable... likables) {
+        for (Likable likable : likables) {
+            likable.incrementLikesCount();
+        }
+
+        update(request, likables);
     }
 
-    private void decrementLikesCount(HttpServletRequest request, Likable likable) {
-        likable.decrementLikesCount();
-        update(request, likable);
+    private void decrementLikesCount(HttpServletRequest request, Likable... likables) {
+        for (Likable likable : likables) {
+            likable.decrementLikesCount();
+        }
+
+        update(request, likables);
     }
 
     private Like like(HttpServletRequest request, Like like) {
@@ -924,7 +931,8 @@ public class DatabaseManager {
             }
 
             Photo photo = getPhotoByIdOrThrow(photoId);
-            decrementLikesCount(request, photo);
+            Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+            decrementLikesCount(request, photo, photoquest);
 
         } else if(commentId != null) {
             Comment comment = getCommentByIdOrThrow(commentId);

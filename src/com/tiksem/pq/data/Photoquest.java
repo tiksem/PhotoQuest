@@ -13,7 +13,7 @@ import javax.persistence.Transient;
 
 @PersistenceCapable
 @PersistenceAware
-public class Photoquest implements WithAvatar {
+public class Photoquest implements WithAvatar, Likable {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
@@ -120,5 +120,23 @@ public class Photoquest implements WithAvatar {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    @Override
+    public void incrementLikesCount() {
+        if(likesCount == null){
+            likesCount = 1l;
+        } else {
+            likesCount++;
+        }
+    }
+
+    @Override
+    public void decrementLikesCount() {
+        if(likesCount == null){
+            likesCount = 0l;
+        } else {
+            likesCount--;
+        }
     }
 }
