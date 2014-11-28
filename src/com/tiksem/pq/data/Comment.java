@@ -1,5 +1,7 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.data.annotations.AddingDate;
+
 import javax.jdo.annotations.*;
 
 /**
@@ -30,6 +32,9 @@ public class Comment implements Likable {
 
     @NotPersistent
     private Like yourLike;
+
+    @AddingDate
+    private Long addingDate;
 
     public Long getId() {
         return id;
@@ -119,5 +124,13 @@ public class Comment implements Likable {
 
     public void setYourLike(Like yourLike) {
         this.yourLike = yourLike;
+    }
+
+    public Long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
     }
 }

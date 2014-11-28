@@ -27,10 +27,6 @@ public class Message {
     private String message;
 
     @Index
-    @AddingDate
-    private Long addingDate;
-
-    @Index
     private Boolean read;
 
     @Index
@@ -38,6 +34,9 @@ public class Message {
 
     @Index
     private Boolean deletedByReceiver;
+
+    @AddingDate
+    private Long addingDate;
 
     public Long getId() {
         return id;
@@ -115,4 +114,6 @@ public class Message {
             deletedBySender = false;
         }
     }
+
+
 }

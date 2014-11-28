@@ -1,6 +1,7 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.tiksem.pq.data.annotations.AddingDate;
 import com.tiksem.pq.data.annotations.OnPrepareForStorage;
 import com.tiksem.pq.data.annotations.Relation;
 

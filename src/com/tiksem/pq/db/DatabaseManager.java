@@ -783,8 +783,8 @@ public class DatabaseManager {
         Comment comment = getCommentByIdOrThrow(commentId);
         List<Object> deleteStack = new ArrayList<Object>();
         addCommentToDeleteStack(deleteStack, comment, offsetLimit);
+        deleteStack.add(comment);
         deleteAllPersistent(deleteStack);
-        deletePersistent(comment);
     }
 
     public Comment addComment(HttpServletRequest request,
@@ -840,8 +840,9 @@ public class DatabaseManager {
     public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId, OffsetLimit offsetLimit) {
         Comment commentPattern = new Comment();
         commentPattern.setPhotoId(photoId);
+
         Collection<Comment> comments =
-                DBUtilities.queryByPattern(persistenceManager, commentPattern, offsetLimit);
+                queryByAddingDate(commentPattern, offsetLimit);
 
         User signedInUser = getSignedInUser(request);
         if(signedInUser != null){
@@ -1014,6 +1015,13 @@ public class DatabaseManager {
         return DBUtilities.queryByPattern(persistenceManager, message, offsetLimit);
     }
 
+    private <T> Collection<T> queryByAddingDate(T pattern, OffsetLimit offsetLimit) {
+        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
+        params.ordering = "addingDate descending";
+        params.offsetLimit = offsetLimit;
+        return DBUtilities.queryByPattern(persistenceManager, pattern, params);
+    }
+
     public Collection<Message> getDialogMessages(HttpServletRequest request, long widthUserId,
                                                  OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
@@ -1021,7 +1029,7 @@ public class DatabaseManager {
         Message message = new Message();
         message.setFromUserId(widthUserId);
         message.setToUserId(signedInUser.getId());
-        return DBUtilities.queryByPattern(persistenceManager, message, offsetLimit);
+        return queryByAddingDate(message, offsetLimit);
     }
 
     public Message getMessageByIdAndUserId(long userId, long messageId) {
