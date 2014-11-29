@@ -884,6 +884,7 @@ public class DatabaseManager {
 
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
         incrementLikesCount(request, photo, photoquest);
+        updatePhotoquestAvatar(photoquest);
 
         return like;
     }
@@ -945,6 +946,7 @@ public class DatabaseManager {
             Photo photo = getPhotoByIdOrThrow(photoId);
             Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
             decrementLikesCount(request, photo, photoquest);
+            updatePhotoquestAvatar(photoquest);
 
         } else if(commentId != null) {
             Comment comment = getCommentByIdOrThrow(commentId);
