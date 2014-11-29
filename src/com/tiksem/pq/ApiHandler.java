@@ -135,19 +135,7 @@ public class ApiHandler {
                                                  @RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-
-        Photoquest photoquest = databaseManager.getPhotoQuestByIdOrThrow(id);
-
-        if (!file.isEmpty()) {
-            Photo photo = new Photo();
-            photo.setPhotoquestId(id);
-            byte[] bytes = file.getBytes();
-            databaseManager.addPhoto(request, photo, bytes);
-        } else {
-            throw new FileIsEmptyException();
-        }
-
-        return new Success();
+        return databaseManager.addPhotoToPhotoquest(request, id, file);
     }
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,

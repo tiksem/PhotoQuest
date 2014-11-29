@@ -12,7 +12,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.jdo.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.*;
 
@@ -24,6 +23,8 @@ public class DatabaseManager {
 
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
+
+    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount, addingDate";
 
     private final PersistenceManager persistenceManager;
 
@@ -366,7 +367,7 @@ public class DatabaseManager {
         return performedPhotoquest;
     }
 
-    public Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
+    private Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
         Long userId = photo.getUserId();
         if(userId == null){
             User user = getSignedInUserOrThrow(request);
@@ -381,6 +382,22 @@ public class DatabaseManager {
         makePersistent(getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId()));
 
         return photo;
+    }
+
+    public Photo addPhotoToPhotoquest(HttpServletRequest request,
+                                      long photoquestId, MultipartFile file) throws IOException {
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+
+        if (!file.isEmpty()) {
+            Photo photo = new Photo();
+            photo.setPhotoquestId(photoquestId);
+            byte[] bytes = file.getBytes();
+            addPhoto(request, photo, bytes);
+            updatePhotoquestAvatar(photoquest);
+            return photo;
+        } else {
+            throw new FileIsEmptyException();
+        }
     }
 
     public Photo getPhotoById(long id) {
@@ -1168,6 +1185,22 @@ public class DatabaseManager {
         }
 
         return result;
+    }
+
+    public Photo getMostRatedPhotoOfPhotoquest(long photoQuestId) {
+        Photo pattern = new Photo();
+        pattern.setPhotoquestId(photoQuestId);
+        return DBUtilities.getMaxByPattern(persistenceManager, pattern, MOST_RATED_PHOTO_MAX_ORDERING);
+    }
+
+    public void updatePhotoquestAvatar(Photoquest photoquest) {
+        Long avatarId = photoquest.getAvatarId();
+        Photo photo = getMostRatedPhotoOfPhotoquest(photoquest.getId());
+        Long photoId = photo.getId();
+        if(!photoId.equals(avatarId)){
+            photoquest.setAvatarId(photoId);
+            makePersistent(photoquest);
+        }
     }
 
     @Override

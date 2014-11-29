@@ -13,6 +13,7 @@ import javax.jdo.annotations.Index;
 import javax.jdo.annotations.NotPersistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -384,5 +385,36 @@ public class DBUtilities {
             throw new IllegalArgumentException("Class " + aClass.getCanonicalName() +
                     " hasn't " + fieldNameB + " field");
         }
+    }
+
+    private static String getMaxOrdering(String fields) {
+        String[] fieldArray = fields.split(", *");
+        int index = 0;
+        for(String field : fieldArray){
+            fieldArray[index++] = field + " descending";
+        }
+        return Strings.join(", ", fieldArray).toString();
+    }
+
+    public static  <T> T getMax(PersistenceManager manager, Class<T> aClass, String fieldName){
+        Collection<T> result = DBUtilities.getAllObjectsOfClass(manager, aClass, new OffsetLimit(0, 1),
+                getMaxOrdering(fieldName));
+        if(result.isEmpty()){
+            return null;
+        }
+
+        return result.iterator().next();
+    }
+
+    public static  <T> T getMaxByPattern(PersistenceManager manager, T pattern, String fieldName){
+        QueryParams params = new QueryParams();
+        params.offsetLimit = new OffsetLimit(0, 1);
+        params.ordering = getMaxOrdering(fieldName);
+        Collection<T> result = queryByPattern(manager, pattern, params);
+        if(result.isEmpty()){
+            return null;
+        }
+
+        return result.iterator().next();
     }
 }
