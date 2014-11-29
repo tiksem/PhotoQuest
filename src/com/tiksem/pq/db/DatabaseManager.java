@@ -27,6 +27,8 @@ public class DatabaseManager {
 
     private final PersistenceManager persistenceManager;
 
+    private ImageManager imageManager = new FileSystemImageManager("images");
+
     static {
         factory = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
     }
@@ -375,10 +377,8 @@ public class DatabaseManager {
         photo.setUserId(userId);
 
         photo = makePersistent(photo);
-        BitmapData data = new BitmapData();
-        data.setId(photo.getId());
-        data.setImage(bitmapData);
-        makeAllPersistent(data, getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId()));
+        imageManager.saveImage(photo.getId(), bitmapData);
+        makePersistent(getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId()));
 
         return photo;
     }
@@ -410,13 +410,7 @@ public class DatabaseManager {
     }
 
     public byte[] getBitmapDataByPhotoId(long id) {
-        BitmapData bitmapData =
-                DBUtilities.getObjectById(persistenceManager, BitmapData.class, id);
-        if(bitmapData == null){
-            return null;
-        }
-
-        return bitmapData.getImage();
+        return imageManager.getImageById(id);
     }
 
     public byte[] getBitmapDataByPhotoIdOrThrow(long id) {
