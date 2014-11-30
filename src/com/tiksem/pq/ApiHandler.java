@@ -210,9 +210,7 @@ public class ApiHandler {
     @RequestMapping("/getPhotoById")
     public @ResponseBody Object getPhotoById(@RequestParam("id") Long id){
         DatabaseManager databaseManager = getDatabaseManager();
-        Photo photo = databaseManager.getPhotoByIdOrThrow(id);
-        databaseManager.initYourLikeParameter(request, photo);
-        return photo;
+        return databaseManager.getPhotoAndFillInfo(request, id);
     }
 
     @RequestMapping("/getUserById")

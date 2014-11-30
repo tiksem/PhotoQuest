@@ -24,7 +24,8 @@ public class DatabaseManager {
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
 
-    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, addingDate descending";
+    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, addingDate descending, " +
+            "id descending";
 
     private final PersistenceManager persistenceManager;
 
@@ -103,10 +104,11 @@ public class DatabaseManager {
 
     public User loginOrThrow(HttpServletRequest request, String login, String password) {
         User user = login(request, login, password);
+        getPhotoInPhotoquestPosition(2);
         if (user == null) {
             throw new LoginFailedException();
         }
-        
+
         return user;
     }
 
@@ -521,15 +523,15 @@ public class DatabaseManager {
     }
 
     private String getRatingOrderingString(RatingOrder order) {
-        String orderString = " descending";
+        String orderString;
         switch (order) {
             case hottest:
                 throw new UnsupportedOperationException("hottest is not supported yet");
             case rated:
-                orderString = "likesCount" + orderString;
+                orderString = MOST_RATED_PHOTO_MAX_ORDERING;
                 break;
             default:
-                orderString = "addingDate" + orderString;
+                orderString = "addingDate descending";
                 break;
         }
 
@@ -1202,6 +1204,24 @@ public class DatabaseManager {
             photoquest.setAvatarId(photoId);
             makePersistent(photoquest);
         }
+    }
+
+    public long getPhotoInPhotoquestPosition(long photoId) {
+        Photo photo = getPhotoByIdOrThrow(photoId);
+        return getPhotoInPhotoquestPosition(photo);
+    }
+
+    private long getPhotoInPhotoquestPosition(Photo photo) {
+        Photo pattern = new Photo();
+        pattern.setPhotoquestId(photo.getPhotoquestId());
+        return DBUtilities.getPosition(persistenceManager, photo, MOST_RATED_PHOTO_MAX_ORDERING, pattern);
+    }
+
+    public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId) {
+        Photo photo = getPhotoByIdOrThrow(photoId);
+        initYourLikeParameter(request, photo);
+        photo.setPosition(getPhotoInPhotoquestPosition(photo));
+        return photo;
     }
 
     @Override

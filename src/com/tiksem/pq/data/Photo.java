@@ -35,6 +35,9 @@ public class Photo implements Likable, InstanceCallbacks {
     @NotPersistent
     private Like yourLike;
 
+    @NotPersistent
+    private Long position;
+
     @Index
     @AddingDate
     private Long addingDate;
@@ -133,5 +136,13 @@ public class Photo implements Likable, InstanceCallbacks {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    public Long getPosition() {
+        return position;
+    }
+
+    public void setPosition(Long position) {
+        this.position = position;
     }
 }

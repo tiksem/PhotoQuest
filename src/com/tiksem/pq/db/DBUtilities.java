@@ -89,19 +89,25 @@ public class DBUtilities {
         return result;
     }
 
-    private static Query getQueryByPattern(PersistenceManager manager, Object pattern,
+    private static Query getQueryByPattern(PersistenceManager manager,
+                                           Object pattern,
                                            Map<String, Object> outArgs,
                                            boolean asExcludePattern,
-                                           boolean ignoreRelations) {
+                                           boolean ignoreRelations,
+                                           List<String> outParameters,
+                                           StringBuilder outFilter) {
         Class<?> patternClass = pattern.getClass();
         List<Class> relationsClasses = ignoreRelations ? Arrays.<Class>asList() : Arrays.<Class>asList(Relation.class);
         List<Field> fields =
                 Reflection.getFieldsWithAndWithoutAnnotations(patternClass,
                         Arrays.asList(PrimaryKey.class, Index.class, Unique.class), relationsClasses);
 
-        List<String> parameters = new ArrayList<String>(fields.size());
+        List<String> parameters = outParameters;
+        if(parameters == null){
+            parameters = new ArrayList<String>(fields.size());
+        }
+
         List<String> filters = new ArrayList<String>();
-        outArgs.clear();
 
         for(Field field : fields){
             Class type = field.getType();
@@ -120,9 +126,16 @@ public class DBUtilities {
             outArgs.put(parameterName, value);
         }
 
-        String filtersString = Strings.join(" && ", filters).toString();
+        StringBuilder filtersString = outFilter;
+        if(filtersString == null){
+            filtersString = new StringBuilder();
+        }
+
+        Strings.join(" && ", filters, filtersString);
+
         if(asExcludePattern){
-            filtersString = "!(" + filtersString +")";
+            filtersString.insert(0, "!(");
+            filtersString.append(")");
         }
 
         if (!ignoreRelations) {
@@ -168,21 +181,30 @@ public class DBUtilities {
                     }
 
                     if(filter != null){
-                        if (!filtersString.isEmpty()) {
-                            filtersString = "(" + filtersString + ") && (" + filter + ")";
+                        if (filtersString.length() > 0) {
+                            filtersString.insert(0, "(");
+                            filtersString.append(") && (" + filter + ")");
                         } else {
-                            filtersString = filter;
+                            filtersString.append(filter);
                         }
                     }
                 }
             }
         }
 
-        String parametersString = Strings.join(",", parameters).toString();
+        if(outParameters != null && outFilter != null){
+            return null;
+        }
 
         Query query = manager.newQuery(patternClass);
-        query.declareParameters(parametersString);
-        query.setFilter(filtersString);
+        if (outParameters == null) {
+            String parametersString = Strings.join(",", parameters).toString();
+            query.declareParameters(parametersString);
+        }
+
+        if (outFilter == null) {
+            query.setFilter(filtersString.toString());
+        }
 
         return query;
     }
@@ -209,7 +231,7 @@ public class DBUtilities {
                                             boolean asExcludePattern,
                                             boolean ignoreRelations) {
         Map<String, Object> args = new HashMap<String, Object>();
-        Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations);
+        Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations, null, null);
         query.setResult("count(this)");
 
         long result = (Long)query.executeWithMap(args);
@@ -227,7 +249,7 @@ public class DBUtilities {
                                                               QueryParams queryParams) {
         Map<String, Object> args = new HashMap<String, Object>();
         Query query = getQueryByPattern(manager, pattern, args, queryParams.asExcludePattern,
-                queryParams.ignoreRelations);
+                queryParams.ignoreRelations, null, null);
         queryParams.offsetLimit.applyToQuery(query);
         if (queryParams.ordering != null) {
             query.setOrdering(queryParams.ordering);
@@ -467,14 +489,26 @@ public class DBUtilities {
         outResult.append(')');
     }
 
-    public static long getPosition(PersistenceManager manager, Object object, String orderingString) {
+    public static <T> long getPosition(PersistenceManager manager, T object, String orderingString, T pattern) {
         StringBuilder filter = new StringBuilder();
         Map<String, Object> args = new HashMap<String, Object>();
         List<String> declarations = new ArrayList<String>();
         generateFilterForPositionQuery(filter,0, parseOrdering(orderingString), declarations, args, object);
+
+        StringBuilder filterFromPattern = new StringBuilder();
+        if (pattern != null) {
+            getQueryByPattern(manager, pattern, args, false, false, declarations, filterFromPattern);
+        }
+        String filterResult;
+        if(filterFromPattern.length() > 0){
+            filterResult = "(" + filterFromPattern + ") && (" + filter + ")";
+        } else {
+            filterResult = filter.toString();
+        }
+
         Query query = manager.newQuery(object.getClass());
         query.setResult("count(this)");
-        query.setFilter(filter.toString());
+        query.setFilter(filterResult);
         query.declareParameters(Strings.join(", ", declarations).toString());
 
         return Long.valueOf(query.executeWithMap(args).toString());
