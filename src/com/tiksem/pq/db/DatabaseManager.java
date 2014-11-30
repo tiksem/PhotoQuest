@@ -24,7 +24,7 @@ public class DatabaseManager {
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
 
-    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount, addingDate";
+    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, addingDate descending";
 
     private final PersistenceManager persistenceManager;
 
@@ -92,7 +92,6 @@ public class DatabaseManager {
     }
 
     public User login(HttpServletRequest request, String login, String password) {
-        makePersistent(getOrCreatePerformedPhotoquest(2, 5));
         User user = getUserByLogin(login);
         if (user != null && user.getPassword().equals(password)) {
             setAvatar(request, user);
@@ -107,7 +106,7 @@ public class DatabaseManager {
         if (user == null) {
             throw new LoginFailedException();
         }
-
+        
         return user;
     }
 

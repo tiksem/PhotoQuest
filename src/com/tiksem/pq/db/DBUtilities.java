@@ -13,7 +13,6 @@ import javax.jdo.annotations.Index;
 import javax.jdo.annotations.NotPersistent;
 import javax.jdo.annotations.PrimaryKey;
 import javax.jdo.annotations.Unique;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -387,18 +386,9 @@ public class DBUtilities {
         }
     }
 
-    private static String getMaxOrdering(String fields) {
-        String[] fieldArray = fields.split(", *");
-        int index = 0;
-        for(String field : fieldArray){
-            fieldArray[index++] = field + " descending";
-        }
-        return Strings.join(", ", fieldArray).toString();
-    }
-
-    public static  <T> T getMax(PersistenceManager manager, Class<T> aClass, String fieldName){
+    public static  <T> T getMax(PersistenceManager manager, Class<T> aClass, String ordering){
         Collection<T> result = DBUtilities.getAllObjectsOfClass(manager, aClass, new OffsetLimit(0, 1),
-                getMaxOrdering(fieldName));
+                ordering);
         if(result.isEmpty()){
             return null;
         }
@@ -406,15 +396,93 @@ public class DBUtilities {
         return result.iterator().next();
     }
 
-    public static  <T> T getMaxByPattern(PersistenceManager manager, T pattern, String fieldName){
+    public static  <T> T getMaxByPattern(PersistenceManager manager, T pattern, String ordering){
         QueryParams params = new QueryParams();
         params.offsetLimit = new OffsetLimit(0, 1);
-        params.ordering = getMaxOrdering(fieldName);
+        params.ordering = ordering;
         Collection<T> result = queryByPattern(manager, pattern, params);
         if(result.isEmpty()){
             return null;
         }
 
         return result.iterator().next();
+    }
+
+    private static class Ordering {
+        OrderType type;
+        String fieldName;
+    }
+
+    private static List<Ordering> parseOrdering(String orderingString) {
+        String[] orderingArray = orderingString.split(", *");
+        List<Ordering> result = new ArrayList<Ordering>();
+
+        for(String order : orderingArray){
+            String[] splitOrder = order.split(" +");
+            if(splitOrder.length != 2){
+                throw new RuntimeException("Syntax error");
+            }
+
+            Ordering ordering = new Ordering();
+            ordering.type = OrderType.valueOf(splitOrder[1]);
+            ordering.fieldName = splitOrder[0];
+            result.add(ordering);
+        }
+
+        return result;
+    }
+
+    private static void generateFilterForPositionQuery(StringBuilder outResult,
+                                                int index,
+                                                List<Ordering> orderings,
+                                                List<String> outDeclarations,
+                                                Map<String, Object> args,
+                                                Object object) {
+        int length = orderings.size();
+        if(index >= length){
+            return;
+        }
+
+        Ordering ordering = orderings.get(index);
+
+        outResult.append('(');
+        String operator = ">";
+        if(ordering.type == OrderType.ascending){
+            operator = "<";
+        }
+
+        Field field = Reflection.getFieldByNameOrThrow(object, ordering.fieldName);
+        outDeclarations.add(field.getType().getSimpleName() + " " + ordering.fieldName);
+
+        args.put(ordering.fieldName, Reflection.getFieldValueUsingGetter(object, field));
+        outResult.append("this." + ordering.fieldName + operator + ordering.fieldName);
+
+        if(index < length - 1){
+            outResult.append(" || (");
+            outResult.append("this." + ordering.fieldName + "==" + ordering.fieldName + " && ");
+            generateFilterForPositionQuery(outResult, index + 1, orderings, outDeclarations, args, object);
+            outResult.append(")");
+        }
+
+        outResult.append(')');
+    }
+
+    public static long getPosition(PersistenceManager manager, Object object, String orderingString) {
+        StringBuilder filter = new StringBuilder();
+        Map<String, Object> args = new HashMap<String, Object>();
+        List<String> declarations = new ArrayList<String>();
+        generateFilterForPositionQuery(filter,0, parseOrdering(orderingString), declarations, args, object);
+        Query query = manager.newQuery(object.getClass());
+        query.setResult("count(this)");
+        query.setFilter(filter.toString());
+        query.declareParameters(Strings.join(", ", declarations).toString());
+
+        return Long.valueOf(query.executeWithMap(args).toString());
+    }
+
+    // method for debug
+    public static Object get(PersistenceManager manager) {
+        Query query = manager.newQuery();
+        return query.execute();
     }
 }
