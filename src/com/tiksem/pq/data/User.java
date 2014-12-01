@@ -50,7 +50,13 @@ public class User implements WithAvatar {
 
     @Index
     private Long receivedRequestsCount;
-    
+
+    @Index
+    private String location;
+
+    @Index
+    private String countryCode;
+
     @NotPersistent
     private String avatar;
 
@@ -266,5 +272,21 @@ public class User implements WithAvatar {
         if(receivedRequestsCount < 0){
             throw new RuntimeException("receivedRequestsCount < 0");
         }
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getCountryCode() {
+        return countryCode;
+    }
+
+    public void setCountryCode(String countryCode) {
+        this.countryCode = countryCode;
     }
 }

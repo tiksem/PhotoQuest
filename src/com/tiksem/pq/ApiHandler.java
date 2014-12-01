@@ -68,13 +68,15 @@ public class ApiHandler {
                                       @RequestParam(value="password", required=true) String password,
                                       @RequestParam(value="name", required=true) String name,
                                       @RequestParam(value="lastName", required=true) String lastName,
+                                      @RequestParam(value="location", required=true) String location,
                                       @RequestParam("file") MultipartFile avatar,
-                                      HttpServletResponse response) {
+                                      HttpServletResponse response) throws IOException {
         User user = new User();
         user.setLogin(login);
         user.setPassword(password);
         user.setName(name);
         user.setLastName(lastName);
+        user.setLocation(location);
 
         return getDatabaseManager().registerUser(request, user, avatar);
     }
@@ -275,6 +277,12 @@ public class ApiHandler {
     @RequestMapping("/getAllMessages")
     public @ResponseBody Object getAllMessages(OffsetLimit offsetLimit) {
         return getDatabaseManager().getMessagesOfSignedInUser(request, offsetLimit);
+    }
+
+    @RequestMapping("/getLocationSuggestions")
+    public @ResponseBody Object getLocationSuggestions(@RequestParam(
+            value = "query", required = true) String query) throws IOException {
+        return new LocationSuggestions(getDatabaseManager().getLocationSuggestions(query));
     }
 
     @RequestMapping("/messages")

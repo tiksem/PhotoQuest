@@ -4,6 +4,7 @@ import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
+import com.utils.framework.google.places.*;
 import com.utils.framework.io.Network;
 import com.utils.framework.randomuser.RandomUserGenerator;
 import com.utils.framework.randomuser.Response;
@@ -27,9 +28,12 @@ public class DatabaseManager {
     private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, addingDate descending, " +
             "id descending";
 
+    private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
+
     private final PersistenceManager persistenceManager;
 
     private ImageManager imageManager = new FileSystemImageManager("images");
+    private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
 
     static {
         factory = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
@@ -237,18 +241,64 @@ public class DatabaseManager {
         }
     }
 
-    private User registerUser(User user) {
+    private Location getLocationById(String id) {
+        Location location = new Location();
+        location.setId(id);
+        return DBUtilities.getObjectByPattern(persistenceManager, location);
+    }
+
+    private Location getLocationByIdOrThrow(String id) {
+        Location location = getLocationById(id);
+        if(location == null){
+            throw new LocationNotFoundException(id);
+        }
+
+        return location;
+    }
+
+    private Location addLocation(String placeId, City city) {
+        Location location = new Location();
+        location.setId(placeId);
+        LocationInfo locationInfo = new LocationInfo();
+        locationInfo.setCity(city.name);
+        locationInfo.setCountry(city.country);
+        location.setInfo(Language.en, locationInfo);
+        return makePersistent(location);
+    }
+
+    private User registerUser(User user) throws IOException {
         String login = user.getLogin();
-        String password = user.getPassword();
 
         if (getUserByLogin(login) != null) {
             throw new UserExistsRegisterException(login);
         }
 
+        String locationId = user.getLocation();
+        Location location = getLocationById(locationId);
+        if(location == null){
+            City city = getCityOrThrow(locationId);
+            location = addLocation(locationId, city);
+        }
+
+        user.setCountryCode(location.getCountryCode());
+
         return makePersistent(user);
     }
 
-    public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) {
+    public City getCityOrThrow(String location) throws IOException {
+        try {
+            City city = googlePlacesSearcher.getCityByPlaceId(location);
+            if(city == null){
+                throw new InvalidLocationException();
+            }
+
+            return city;
+        } catch (PlaceIsNotCityException e) {
+            throw new InvalidLocationException(e);
+        }
+    }
+
+    public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
         byte[] avatarBytes = null;
         try {
             avatarBytes = avatar.getBytes();
@@ -259,7 +309,7 @@ public class DatabaseManager {
         return registerUser(request, user, avatarBytes);
     }
 
-    public User registerUser(HttpServletRequest request, User user, byte[] avatar) {
+    public User registerUser(HttpServletRequest request, User user, byte[] avatar) throws IOException {
         user = registerUser(user);
 
         if (user.getLogin() == null) {
@@ -1222,6 +1272,10 @@ public class DatabaseManager {
         initYourLikeParameter(request, photo);
         photo.setPosition(getPhotoInPhotoquestPosition(photo));
         return photo;
+    }
+
+    public List<AutoCompleteResult> getLocationSuggestions(String query) throws IOException {
+        return googlePlacesSearcher.performAutoCompleteCitiesSearch(query);
     }
 
     @Override
