@@ -108,7 +108,6 @@ public class DatabaseManager {
 
     public User loginOrThrow(HttpServletRequest request, String login, String password) {
         User user = login(request, login, password);
-        getPhotoInPhotoquestPosition(2);
         if (user == null) {
             throw new LoginFailedException();
         }

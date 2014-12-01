@@ -39,4 +39,9 @@ public class HttpUtilities {
         cookie.setMaxAge(0);
         response.addCookie(cookie);
     }
+
+    public static Cookie createLocalhostUnexpiredCookie(String key, String value) {
+        Cookie cookie = new Cookie(key, value);
+        return cookie;
+    }
 }

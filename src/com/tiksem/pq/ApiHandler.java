@@ -51,8 +51,9 @@ public class ApiHandler {
                                       HttpServletResponse response){
         User user = getDatabaseManager().loginOrThrow(request, login, password);
 
-        response.addCookie(new Cookie("login", login));
-        response.addCookie(new Cookie("password", password));
+        response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("login", login));
+        response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("password", password));
+
         return user;
     }
 
@@ -221,6 +222,15 @@ public class ApiHandler {
         User user = databaseManager.getUserByIdOrThrow(id);
         databaseManager.setAvatar(request, user);
         return user;
+    }
+
+    @RequestMapping("/getUnreadMessagesCount")
+    public @ResponseBody Object getUnreadMessagesCount(@RequestParam("userId") Long id){
+        DatabaseManager databaseManager = getDatabaseManager();
+        final User user = databaseManager.getUserByIdOrThrow(id);
+        return new Object(){
+            public long result = user.getUnreadMessagesCount();
+        };
     }
 
     @ExceptionHandler(Throwable.class)
