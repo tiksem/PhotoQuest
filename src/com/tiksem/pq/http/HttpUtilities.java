@@ -42,6 +42,7 @@ public class HttpUtilities {
 
     public static Cookie createLocalhostUnexpiredCookie(String key, String value) {
         Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(3600);
         return cookie;
     }
 }

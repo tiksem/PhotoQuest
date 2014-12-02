@@ -258,6 +258,7 @@ public class DatabaseManager {
     private Location addLocation(String placeId, City city) {
         Location location = new Location();
         location.setId(placeId);
+        location.setCountryCode(city.countryCode);
         LocationInfo locationInfo = new LocationInfo();
         locationInfo.setCity(city.name);
         locationInfo.setCountry(city.country);
@@ -1230,6 +1231,10 @@ public class DatabaseManager {
             user.setLastName(userData.lastName);
             user.setLogin("user" + startId++);
             user.setPassword(password);
+            AutoCompleteResult location =
+                    googlePlacesSearcher.performAutoCompleteCitiesSearch(userData.city).get(0);
+            user.setLocation(location.placeId);
+
 
             byte[] avatar = Network.getBytesFromUrl(userData.largeAvatar);
             user = registerUser(request, user, avatar);
