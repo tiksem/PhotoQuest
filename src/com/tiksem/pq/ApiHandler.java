@@ -216,6 +216,14 @@ public class ApiHandler {
         return databaseManager.getPhotoAndFillInfo(request, id);
     }
 
+    @RequestMapping("/getPhotoPosition")
+    public @ResponseBody Object getPhotoPosition(@RequestParam("id") Long photoId,
+                                                 @RequestParam(value = "order", required = false,
+                                                         defaultValue = "newest") RatingOrder order){
+        DatabaseManager databaseManager = getDatabaseManager();
+        return new LongResult(databaseManager.getPhotoInPhotoquestPosition(photoId, order));
+    }
+
     @RequestMapping("/getUserById")
     public @ResponseBody Object getUserById(@RequestParam("id") Long id){
         DatabaseManager databaseManager = getDatabaseManager();

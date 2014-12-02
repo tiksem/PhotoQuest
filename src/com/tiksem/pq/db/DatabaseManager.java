@@ -28,6 +28,9 @@ public class DatabaseManager {
     private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, addingDate descending, " +
             "id descending";
 
+    private static final String NEWEST_PHOTO_MAX_ORDERING = "addingDate descending, likesCount descending, " +
+            "id descending";
+
     private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
 
     private final PersistenceManager persistenceManager;
@@ -581,7 +584,7 @@ public class DatabaseManager {
                 orderString = MOST_RATED_PHOTO_MAX_ORDERING;
                 break;
             default:
-                orderString = "addingDate descending";
+                orderString = NEWEST_PHOTO_MAX_ORDERING;
                 break;
         }
 
@@ -1260,21 +1263,21 @@ public class DatabaseManager {
         }
     }
 
-    public long getPhotoInPhotoquestPosition(long photoId) {
+    public long getPhotoInPhotoquestPosition(long photoId, RatingOrder order) {
         Photo photo = getPhotoByIdOrThrow(photoId);
-        return getPhotoInPhotoquestPosition(photo);
+        return getPhotoInPhotoquestPosition(photo, order);
     }
 
-    private long getPhotoInPhotoquestPosition(Photo photo) {
+    private long getPhotoInPhotoquestPosition(Photo photo, RatingOrder order) {
         Photo pattern = new Photo();
         pattern.setPhotoquestId(photo.getPhotoquestId());
-        return DBUtilities.getPosition(persistenceManager, photo, MOST_RATED_PHOTO_MAX_ORDERING, pattern);
+        return DBUtilities.getPosition(persistenceManager, photo, getRatingOrderingString(order), pattern);
     }
 
     public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId) {
         Photo photo = getPhotoByIdOrThrow(photoId);
         initYourLikeParameter(request, photo);
-        photo.setPosition(getPhotoInPhotoquestPosition(photo));
+        photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
         return photo;
     }
 
