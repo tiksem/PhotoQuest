@@ -32,6 +32,7 @@ public class DBUtilities {
         properties.setProperty("javax.jdo.option.ConnectionPassword","fightforme");
         properties.setProperty("datanucleus.schema.autoCreateTables", "true");
         properties.setProperty("datanucleus.schema.autoCreateColumns", "true");
+        properties.setProperty("datanucleus.schema.autoCreateAll", "true");
 
         return JDOHelper.getPersistenceManagerFactory(properties);
     }
