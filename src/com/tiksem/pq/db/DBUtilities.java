@@ -235,8 +235,12 @@ public class DBUtilities {
         Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations, null, null);
         query.setResult("count(this)");
 
-        long result = (Long)query.executeWithMap(args);
-        return result;
+        Long result = (Long)query.executeWithMap(args);
+        if(result != null){
+            return result;
+        }
+
+        return 0;
     }
 
     public static class QueryParams {
