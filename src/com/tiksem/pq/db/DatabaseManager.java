@@ -2,6 +2,7 @@ package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
+import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
@@ -869,10 +870,13 @@ public class DatabaseManager {
         setAvatar(request, signedInUser);
         comment.setUser(signedInUser);
 
+        long toUserId;
+        User toUser;
         if(toCommentId != null){
             Comment toComment = getCommentByIdOrThrow(toCommentId);
             comment.setToCommentId(toCommentId);
-            User toUser = getUserByIdOrThrow(toComment.getUserId());
+            toUserId = toComment.getUserId();
+            toUser = getUserByIdOrThrow(toUserId);
             comment.setToUserId(toUser.getId());
             setAvatar(request, toUser);
             comment.setToUser(toUser);
@@ -880,7 +884,8 @@ public class DatabaseManager {
             photoId = toComment.getPhotoId();
             getPhotoByIdOrThrow(photoId);
         } else {
-            getPhotoByIdOrThrow(photoId);
+            toUserId = getPhotoByIdOrThrow(photoId).getUserId();
+            toUser = getUserByIdOrThrow(toUserId);
         }
 
         comment.setPhotoId(photoId);
@@ -888,8 +893,10 @@ public class DatabaseManager {
         Reply reply = new Reply();
         reply.setId(comment.getId());
         reply.setType(Reply.COMMENT);
+        reply.setUserId(toUserId);
+        toUser.incrementUnreadRepliesCount();
 
-        return (Comment) makeAllPersistent(comment, reply)[0];
+        return (Comment) makeAllPersistent(comment, reply, toUser)[0];
     }
 
     private void removeComment(Comment comment) {
@@ -1180,20 +1187,17 @@ public class DatabaseManager {
         signedInUser.incrementSentRequestsCount();
         friend.incrementReceivedRequestsCount();
 
-        Reply reply = new Reply();
-        reply.setId(friendRequest.getId());
-        reply.setType(Reply.FRIEND_REQUEST);
-
-        return (FriendRequest) makeAllPersistent(friendRequest, signedInUser, friend, reply)[0];
+        return (FriendRequest) makeAllPersistent(friendRequest, signedInUser, friend)[0];
     }
 
-    private void deleteFriendRequest(HttpServletRequest request, User fromUser, User toUser) {
+    private FriendRequest deleteFriendRequest(HttpServletRequest request, User fromUser, User toUser) {
         FriendRequest friendRequest = getFriendRequestOrThrow(fromUser.getId(),
                 toUser.getId());
         deletePersistent(friendRequest);
         fromUser.decrementSentRequestsCount();
         toUser.decrementReceivedRequestsCount();
         update(request, fromUser, toUser);
+        return friendRequest;
     }
 
     private void cancelFriendRequest(HttpServletRequest request, long userId) {
@@ -1207,12 +1211,28 @@ public class DatabaseManager {
         User signedInUser = getSignedInUserOrThrow(request);
         deleteFriendRequest(request, friend, signedInUser);
         addFriendShip(friend, signedInUser);
+
+        Reply reply = new Reply();
+        reply.setId(signedInUser.getId());
+        reply.setType(Reply.FRIEND_REQUEST_ACCEPTED);
+        reply.setUserId(friend.getId());
+
+        friend.incrementUnreadRepliesCount();
+        update(request, friend);
     }
 
     private void declineFriendRequest(HttpServletRequest request, long userId) {
         User friend = getUserByIdOrThrow(userId);
         User signedInUser = getSignedInUserOrThrow(request);
         deleteFriendRequest(request, friend, signedInUser);
+
+        Reply reply = new Reply();
+        reply.setId(signedInUser.getId());
+        reply.setType(Reply.FRIEND_REQUEST_DECLINED);
+        reply.setUserId(friend.getId());
+
+        friend.incrementUnreadRepliesCount();
+        update(request, friend);
     }
 
     private Dialog getOrCreateDialog(long user1Id, long user2Id) {
@@ -1321,7 +1341,52 @@ public class DatabaseManager {
         UserStats stats = new UserStats();
         stats.setFriendRequestsCount(user.getReceivedRequestsCount());
         stats.setUnreadMessagesCount(user.getUnreadMessagesCount());
+        Long unreadRepliesCount = user.getUnreadRepliesCount();
+        stats.setUnreadRepliesCount(unreadRepliesCount == null ? 0 : unreadRepliesCount);
         return stats;
+    }
+
+    private Collection<Reply> getReplies(User user, HttpServletRequest request, OffsetLimit offsetLimit) {
+        Reply reply = new Reply();
+        reply.setUserId(user.getId());
+
+        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
+        params.ordering = "addingDate descending";
+        params.offsetLimit = offsetLimit;
+
+        return DBUtilities.queryByPattern(persistenceManager, reply, params);
+    }
+
+    public Collection<ReplyResponse> getRepliesWithFullInfo(HttpServletRequest request, OffsetLimit offsetLimit) {
+        User user = getSignedInUserOrThrow(request);
+        user.setUnreadRepliesCount(0l);
+        update(request, user);
+
+        Collection<Reply> replies = getReplies(user, request, offsetLimit);
+
+        Collection<ReplyResponse> replyResponses = new ArrayList<ReplyResponse>(replies.size());
+        for(Reply reply : replies){
+            ReplyResponse replyResponse = new ReplyResponse();
+            int type = reply.getType();
+            replyResponse.setType(type);
+
+            Object value;
+            Long id = reply.getId();
+            if(type == Reply.COMMENT){
+                value = getCommentByIdOrThrow(id);
+            } else if(type == Reply.FRIEND_REQUEST_ACCEPTED || type == Reply.FRIEND_REQUEST_DECLINED) {
+                User friend = getUserByIdOrThrow(id);
+                setAvatar(request, friend);
+                value = friend;
+            } else {
+                throw new RuntimeException("type is not supported, corrupted database");
+            }
+
+            replyResponse.setValue(value);
+            replyResponses.add(replyResponse);
+        }
+
+        return replyResponses;
     }
 
     @Override

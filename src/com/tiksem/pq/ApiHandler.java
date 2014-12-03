@@ -111,7 +111,7 @@ public class ApiHandler {
 
     @RequestMapping("/getFriendRequestsCount")
     public @ResponseBody Object getFriendRequestsCount() {
-        return new CountResponse(getDatabaseManager().getFriendRequestsCount(request));
+        return new CountResponse(getDatabaseManager().getSignedInUserOrThrow(request).getReceivedRequestsCount());
     }
 
     @RequestMapping("/friends")
@@ -389,5 +389,10 @@ public class ApiHandler {
     @RequestMapping("/getUserStats")
     public @ResponseBody Object getUserStats() {
         return getDatabaseManager().getUserStats(request);
+    }
+
+    @RequestMapping("/getReplies")
+    public @ResponseBody Object getReplies(OffsetLimit offsetLimit) {
+        return getDatabaseManager().getRepliesWithFullInfo(request, offsetLimit);
     }
 }

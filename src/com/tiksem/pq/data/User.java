@@ -2,6 +2,7 @@ package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tiksem.pq.data.annotations.*;
+import sun.util.resources.LocaleNames_mk;
 
 import javax.jdo.annotations.*;
 import java.sql.Date;
@@ -41,6 +42,9 @@ public class User implements WithAvatar {
 
     @Index
     private Long unreadMessagesCount;
+    
+    @Index
+    private Long unreadRepliesCount;
     
     @Index
     private Long sentRequestsCount;
@@ -157,6 +161,10 @@ public class User implements WithAvatar {
         if(sentRequestsCount == null){
             sentRequestsCount = 0l;
         }
+        
+        if(unreadRepliesCount == null){
+            unreadRepliesCount = 0l;
+        }
     }
 
     public Long getUnreadMessagesCount() {
@@ -242,6 +250,33 @@ public class User implements WithAvatar {
         if(receivedRequestsCount < 0){
             throw new RuntimeException("receivedRequestsCount < 0");
         }
+    }
+
+    public void incrementUnreadRepliesCount() {
+        if(unreadRepliesCount == null){
+            unreadRepliesCount = 0l;
+        }
+
+        unreadRepliesCount++;
+    }
+
+    public void decrementUnreadRepliesCount() {
+        if(unreadRepliesCount == null){
+            unreadRepliesCount = 0l;
+        }
+
+        unreadRepliesCount--;
+        if(unreadRepliesCount < 0){
+            throw new RuntimeException("unreadRepliesCount < 0");
+        }
+    }
+
+    public Long getUnreadRepliesCount() {
+        return unreadRepliesCount;
+    }
+
+    public void setUnreadRepliesCount(Long unreadRepliesCount) {
+        this.unreadRepliesCount = unreadRepliesCount;
     }
 
     public String getLocation() {

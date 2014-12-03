@@ -6,6 +6,7 @@ package com.tiksem.pq.data.response;
 public class UserStats {
     private long unreadMessagesCount = 0;
     private long friendRequestsCount = 0;
+    private long unreadRepliesCount = 0;
 
     public long getUnreadMessagesCount() {
         return unreadMessagesCount;
@@ -29,5 +30,13 @@ public class UserStats {
         }
 
         this.friendRequestsCount = friendRequestsCount;
+    }
+
+    public long getUnreadRepliesCount() {
+        return unreadRepliesCount;
+    }
+
+    public void setUnreadRepliesCount(long unreadRepliesCount) {
+        this.unreadRepliesCount = unreadRepliesCount;
     }
 }

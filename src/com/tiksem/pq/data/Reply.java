@@ -9,13 +9,17 @@ import javax.jdo.annotations.Index;
  * Created by CM on 12/3/2014.
  */
 public class Reply {
-    public static final int FRIEND_REQUEST = 0;
-    public static final int COMMENT = 0;
+    public static final int FRIEND_REQUEST_ACCEPTED = 0;
+    public static final int FRIEND_REQUEST_DECLINED = 1;
+    public static final int COMMENT = 2;
 
     @Index
     private Integer type;
     @Index
     private Long id;
+    @Index
+    private Long userId;
+
     @AddingDate
     @Index
     private Long addingDate;
@@ -34,5 +38,13 @@ public class Reply {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }
