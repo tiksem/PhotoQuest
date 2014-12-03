@@ -235,7 +235,12 @@ public class DBUtilities {
         Query query = getQueryByPattern(manager, pattern, args, asExcludePattern, ignoreRelations, null, null);
         query.setResult("count(this)");
 
-        Long result = (Long)query.executeWithMap(args);
+        Long result = null;
+        try {
+            result = (Long)query.executeWithMap(args);
+        } catch (NullPointerException e) {
+            return 0;
+        }
         if(result != null){
             return result;
         }
@@ -260,9 +265,13 @@ public class DBUtilities {
             query.setOrdering(queryParams.ordering);
         }
 
-        Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));
-        resetNotPersistentFields(result);
-        return result;
+        try {
+            Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));
+            resetNotPersistentFields(result);
+            return result;
+        } catch (NullPointerException e) {
+            return new ArrayList<T>();
+        }
     }
 
     public static <T> T getObjectByPattern(PersistenceManager manager, T pattern) {

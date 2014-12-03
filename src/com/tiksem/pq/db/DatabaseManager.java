@@ -1218,7 +1218,7 @@ public class DatabaseManager {
         reply.setUserId(friend.getId());
 
         friend.incrementUnreadRepliesCount();
-        update(request, friend);
+        update(request, friend, reply);
     }
 
     private void declineFriendRequest(HttpServletRequest request, long userId) {
@@ -1232,7 +1232,7 @@ public class DatabaseManager {
         reply.setUserId(friend.getId());
 
         friend.incrementUnreadRepliesCount();
-        update(request, friend);
+        update(request, friend, reply);
     }
 
     private Dialog getOrCreateDialog(long user1Id, long user2Id) {
@@ -1358,11 +1358,11 @@ public class DatabaseManager {
     }
 
     public Collection<ReplyResponse> getRepliesWithFullInfo(HttpServletRequest request, OffsetLimit offsetLimit) {
-        User user = getSignedInUserOrThrow(request);
-        user.setUnreadRepliesCount(0l);
-        update(request, user);
+        User signedInUser = getSignedInUserOrThrow(request);
+        signedInUser.setUnreadRepliesCount(0l);
+        update(request, signedInUser);
 
-        Collection<Reply> replies = getReplies(user, request, offsetLimit);
+        Collection<Reply> replies = getReplies(signedInUser, request, offsetLimit);
 
         Collection<ReplyResponse> replyResponses = new ArrayList<ReplyResponse>(replies.size());
         for(Reply reply : replies){
@@ -1370,23 +1370,33 @@ public class DatabaseManager {
             int type = reply.getType();
             replyResponse.setType(type);
 
-            Object value;
+            User user;
             Long id = reply.getId();
             if(type == Reply.COMMENT){
-                value = getCommentByIdOrThrow(id);
+                Comment comment = getCommentByIdOrThrow(id);
+                comment.setPhoto(HttpUtilities.getBaseUrl(request) +
+                        Photo.IMAGE_URL_PATH + comment.getPhotoId());
+                replyResponse.setComment(comment);
+                user = getUserByIdOrThrow(comment.getUserId());
             } else if(type == Reply.FRIEND_REQUEST_ACCEPTED || type == Reply.FRIEND_REQUEST_DECLINED) {
-                User friend = getUserByIdOrThrow(id);
-                setAvatar(request, friend);
-                value = friend;
+                user = getUserByIdOrThrow(id);
             } else {
                 throw new RuntimeException("type is not supported, corrupted database");
             }
 
-            replyResponse.setValue(value);
+            setAvatar(request, user);
+            replyResponse.setUser(user);
             replyResponses.add(replyResponse);
         }
 
         return replyResponses;
+    }
+
+    public long getRepliesCount(HttpServletRequest request) {
+        User user = getSignedInUserOrThrow(request);
+        Reply reply = new Reply();
+        reply.setUserId(user.getId());
+        return DBUtilities.queryCountByPattern(persistenceManager, reply);
     }
 
     @Override

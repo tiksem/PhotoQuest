@@ -33,6 +33,9 @@ public class Comment implements Likable {
     @NotPersistent
     private Like yourLike;
 
+    @NotPersistent
+    private String photo;
+
     @AddingDate
     private Long addingDate;
 
@@ -132,5 +135,13 @@ public class Comment implements Likable {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    public String getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(String photo) {
+        this.photo = photo;
     }
 }

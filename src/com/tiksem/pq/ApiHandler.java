@@ -393,6 +393,11 @@ public class ApiHandler {
 
     @RequestMapping("/getReplies")
     public @ResponseBody Object getReplies(OffsetLimit offsetLimit) {
-        return getDatabaseManager().getRepliesWithFullInfo(request, offsetLimit);
+        return new RepliesList(getDatabaseManager().getRepliesWithFullInfo(request, offsetLimit));
+    }
+
+    @RequestMapping("/getRepliesCount")
+    public @ResponseBody Object getRepliesCount() {
+        return new CountResponse(getDatabaseManager().getRepliesCount(request));
     }
 }

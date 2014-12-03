@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tiksem.pq.data.annotations.AddingDate;
 
 import javax.jdo.annotations.Index;
+import javax.jdo.annotations.PersistenceCapable;
 
 /**
  * Created by CM on 12/3/2014.
  */
+@PersistenceCapable
 public class Reply {
     public static final int FRIEND_REQUEST_ACCEPTED = 0;
     public static final int FRIEND_REQUEST_DECLINED = 1;
@@ -46,5 +48,13 @@ public class Reply {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public Long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
     }
 }

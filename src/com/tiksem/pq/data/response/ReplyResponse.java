@@ -1,16 +1,15 @@
 package com.tiksem.pq.data.response;
 
+import com.tiksem.pq.data.Comment;
+import com.tiksem.pq.data.User;
+
 /**
  * Created by CM on 12/3/2014.
  */
 public class ReplyResponse {
     private int type;
-    private Object value;
-
-    public ReplyResponse(int type, Object value) {
-        this.type = type;
-        this.value = value;
-    }
+    private Comment comment;
+    private User user;
 
     public ReplyResponse() {
     }
@@ -23,11 +22,19 @@ public class ReplyResponse {
         this.type = type;
     }
 
-    public Object getValue() {
-        return value;
+    public User getUser() {
+        return user;
     }
 
-    public void setValue(Object value) {
-        this.value = value;
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Comment getComment() {
+        return comment;
+    }
+
+    public void setComment(Comment comment) {
+        this.comment = comment;
     }
 }
