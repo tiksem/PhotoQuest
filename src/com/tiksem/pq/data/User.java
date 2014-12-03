@@ -41,9 +41,6 @@ public class User implements WithAvatar {
 
     @Index
     private Long unreadMessagesCount;
-
-    @Index
-    private Long friendsCount;
     
     @Index
     private Long sentRequestsCount;
@@ -160,10 +157,6 @@ public class User implements WithAvatar {
         if(sentRequestsCount == null){
             sentRequestsCount = 0l;
         }
-
-        if(friendsCount == null){
-            friendsCount = 0l;
-        }
     }
 
     public Long getUnreadMessagesCount() {
@@ -194,14 +187,6 @@ public class User implements WithAvatar {
         this.receivedRequestsCount = receivedRequestsCount;
     }
 
-    public Long getFriendsCount() {
-        return friendsCount;
-    }
-
-    public void setFriendsCount(Long friendsCount) {
-        this.friendsCount = friendsCount;
-    }
-
     public void incrementUnreadMessagesCount() {
         if(unreadMessagesCount == null){
             unreadMessagesCount = 0l;
@@ -218,25 +203,6 @@ public class User implements WithAvatar {
         unreadMessagesCount--;
         if(unreadMessagesCount < 0){
             throw new RuntimeException("unreadMessagesCount < 0");
-        }
-    }
-
-    public void incrementFriendsCount() {
-        if(friendsCount == null){
-            friendsCount = 0l;
-        }
-
-        friendsCount++;
-    }
-
-    public void decrementFriendsCount() {
-        if(friendsCount == null){
-            friendsCount = 0l;
-        }
-
-        friendsCount--;
-        if(friendsCount < 0){
-            throw new RuntimeException("friendsCount < 0");
         }
     }
 

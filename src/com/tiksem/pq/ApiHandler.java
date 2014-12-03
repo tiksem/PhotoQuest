@@ -109,6 +109,11 @@ public class ApiHandler {
         return new CountResponse(getDatabaseManager().getFriendsCount(request));
     }
 
+    @RequestMapping("/getFriendRequestsCount")
+    public @ResponseBody Object getFriendRequestsCount() {
+        return new CountResponse(getDatabaseManager().getFriendRequestsCount(request));
+    }
+
     @RequestMapping("/friends")
     public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit);
@@ -233,12 +238,10 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getUnreadMessagesCount")
-    public @ResponseBody Object getUnreadMessagesCount(@RequestParam("userId") Long id){
+    public @ResponseBody Object getUnreadMessagesCount(){
         DatabaseManager databaseManager = getDatabaseManager();
-        final User user = databaseManager.getUserByIdOrThrow(id);
-        return new Object(){
-            public long result = user.getUnreadMessagesCount();
-        };
+        final User user = databaseManager.getSignedInUserOrThrow(request);
+        return new CountResponse(user.getUnreadMessagesCount());
     }
 
     @ExceptionHandler(Throwable.class)
@@ -381,5 +384,10 @@ public class ApiHandler {
     public @ResponseBody Object refreshDatabase() {
         DBUtilities.enhanceClassesInPackage("com.tiksem.pq.data");
         return new Success();
+    }
+
+    @RequestMapping("/getUserStats")
+    public @ResponseBody Object getUserStats() {
+        return getDatabaseManager().getUserStats(request);
     }
 }

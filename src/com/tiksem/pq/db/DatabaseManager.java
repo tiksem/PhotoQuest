@@ -2,6 +2,7 @@ package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
+import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.google.places.*;
@@ -636,9 +637,7 @@ public class DatabaseManager {
 
     private void addFriendShip(User user1, User user2) {
         Friendship friendship = new Friendship(user1.getId(), user2.getId());
-        user1.incrementFriendsCount();
-        user2.incrementFriendsCount();
-        makeAllPersistent(friendship, user1, user2);
+        makePersistent(friendship);
     }
 
     public void addFriend(HttpServletRequest request, long userId) {
@@ -1307,6 +1306,24 @@ public class DatabaseManager {
 
     public List<AutoCompleteResult> getLocationSuggestions(String query) throws IOException {
         return googlePlacesSearcher.performAutoCompleteCitiesSearch(query);
+    }
+
+    public long getFriendRequestsCount(HttpServletRequest request) {
+        return getFriendRequestsCount(getSignedInUser(request).getId());
+    }
+
+    private long getFriendRequestsCount(long userId) {
+        FriendRequest friendRequest = new FriendRequest();
+        friendRequest.setToUserId(userId);
+        return DBUtilities.queryCountByPattern(persistenceManager, friendRequest);
+    }
+
+    public UserStats getUserStats(HttpServletRequest request) {
+        User user = getSignedInUserOrThrow(request);
+        UserStats stats = new UserStats();
+        stats.setFriendRequestsCount(getFriendRequestsCount(user.getId()));
+        stats.setUnreadMessagesCount(user.getUnreadMessagesCount());
+        return stats;
     }
 
     @Override
