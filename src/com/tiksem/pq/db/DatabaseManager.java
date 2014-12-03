@@ -891,12 +891,15 @@ public class DatabaseManager {
         comment.setPhotoId(photoId);
 
         Reply reply = new Reply();
-        reply.setId(comment.getId());
         reply.setType(Reply.COMMENT);
         reply.setUserId(toUserId);
         toUser.incrementUnreadRepliesCount();
 
-        return (Comment) makeAllPersistent(comment, reply, toUser)[0];
+        comment = (Comment) makeAllPersistent(comment, toUser)[0];
+        reply.setId(comment.getId());
+        makePersistent(reply);
+
+        return comment;
     }
 
     private void removeComment(Comment comment) {
