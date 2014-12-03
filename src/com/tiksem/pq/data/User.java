@@ -171,6 +171,10 @@ public class User implements WithAvatar {
     }
 
     public void setUnreadMessagesCount(Long unreadMessagesCount) {
+        if(unreadMessagesCount < 0){
+            unreadMessagesCount = 0l;
+        }
+
         this.unreadMessagesCount = unreadMessagesCount;
     }
 

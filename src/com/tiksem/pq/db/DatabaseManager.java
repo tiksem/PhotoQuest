@@ -54,6 +54,10 @@ public class DatabaseManager {
         return DBUtilities.makeAllPersistent(persistenceManager, objects);
     }
 
+    private <T> T[] makeAllPersistent(Collection<T> objects) {
+        return DBUtilities.makeAllPersistent(persistenceManager, objects);
+    }
+
     private void deletePersistent(Object object) {
         DBUtilities.deletePersistent(persistenceManager, object);
     }
@@ -233,6 +237,10 @@ public class DatabaseManager {
     }
 
     public void update(HttpServletRequest request, Object... objects) {
+        update(request, Arrays.asList(objects));
+    }
+
+    public void update(HttpServletRequest request, Collection<Object> objects) {
         makeAllPersistent(objects);
 
         for (Object object : objects) {
@@ -1093,10 +1101,26 @@ public class DatabaseManager {
                                                  OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
         getUserByIdOrThrow(widthUserId);
-        Message message = new Message();
-        message.setFromUserId(widthUserId);
-        message.setToUserId(signedInUser.getId());
-        return queryByAddingDate(message, offsetLimit);
+        Message pattern = new Message();
+        pattern.setFromUserId(widthUserId);
+        pattern.setToUserId(signedInUser.getId());
+        Collection<Message> messages = queryByAddingDate(pattern, offsetLimit);
+        List forUpdate = new ArrayList();
+
+        int readMessagesCount = 0;
+        for(Message message : messages){
+            if(!message.getRead() && message.getToUserId().equals(signedInUser.getId())){
+                readMessagesCount++;
+                message.setRead(true);
+                forUpdate.add(message);
+            }
+        }
+
+        signedInUser.setUnreadMessagesCount(signedInUser.getUnreadMessagesCount() - readMessagesCount);
+        forUpdate.add(signedInUser);
+        update(request, forUpdate);
+
+        return messages;
     }
 
     public Message getMessageByIdAndUserId(long userId, long messageId) {

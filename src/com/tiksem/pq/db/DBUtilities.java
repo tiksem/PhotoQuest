@@ -319,7 +319,11 @@ public class DBUtilities {
     }
 
     public static <T> T[] makeAllPersistent(PersistenceManager persistenceManager, T... objects) {
-        Object[] result = new Object[objects.length];
+        return makeAllPersistent(persistenceManager, Arrays.asList(objects));
+    }
+
+    public static <T> T[] makeAllPersistent(PersistenceManager persistenceManager, Collection<T> objects) {
+        Object[] result = new Object[objects.size()];
 
         Transaction transaction = persistenceManager.currentTransaction();
         transaction.begin();
