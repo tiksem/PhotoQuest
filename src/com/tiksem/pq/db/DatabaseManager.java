@@ -885,7 +885,11 @@ public class DatabaseManager {
 
         comment.setPhotoId(photoId);
 
-        return makePersistent(comment);
+        Reply reply = new Reply();
+        reply.setId(comment.getId());
+        reply.setType(Reply.COMMENT);
+
+        return (Comment) makeAllPersistent(comment, reply)[0];
     }
 
     private void removeComment(Comment comment) {
@@ -1176,7 +1180,11 @@ public class DatabaseManager {
         signedInUser.incrementSentRequestsCount();
         friend.incrementReceivedRequestsCount();
 
-        return (FriendRequest) makeAllPersistent(friendRequest, signedInUser, friend)[0];
+        Reply reply = new Reply();
+        reply.setId(friendRequest.getId());
+        reply.setType(Reply.FRIEND_REQUEST);
+
+        return (FriendRequest) makeAllPersistent(friendRequest, signedInUser, friend, reply)[0];
     }
 
     private void deleteFriendRequest(HttpServletRequest request, User fromUser, User toUser) {
@@ -1308,20 +1316,10 @@ public class DatabaseManager {
         return googlePlacesSearcher.performAutoCompleteCitiesSearch(query);
     }
 
-    public long getFriendRequestsCount(HttpServletRequest request) {
-        return getFriendRequestsCount(getSignedInUser(request).getId());
-    }
-
-    private long getFriendRequestsCount(long userId) {
-        FriendRequest friendRequest = new FriendRequest();
-        friendRequest.setToUserId(userId);
-        return DBUtilities.queryCountByPattern(persistenceManager, friendRequest);
-    }
-
     public UserStats getUserStats(HttpServletRequest request) {
         User user = getSignedInUserOrThrow(request);
         UserStats stats = new UserStats();
-        stats.setFriendRequestsCount(getFriendRequestsCount(user.getId()));
+        stats.setFriendRequestsCount(user.getReceivedRequestsCount());
         stats.setUnreadMessagesCount(user.getUnreadMessagesCount());
         return stats;
     }
