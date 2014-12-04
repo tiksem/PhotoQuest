@@ -33,6 +33,8 @@ public class DatabaseManager {
     private static final String NEWEST_PHOTO_MAX_ORDERING = "addingDate descending, likesCount descending, " +
             "id descending";
 
+    private static final String ADDING_DATE_ORDERING = "addingDate descending";
+
     private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
 
     private final PersistenceManager persistenceManager;
@@ -673,8 +675,10 @@ public class DatabaseManager {
     public List<Long> getFriendsIdesOf(long userId, OffsetLimit offsetLimit) {
         Friendship friendshipPattern = new Friendship();
         friendshipPattern.setUser1(userId);
+
+
         Collection<Friendship> friendships =
-                DBUtilities.queryByPattern(persistenceManager, friendshipPattern, offsetLimit);
+                DBUtilities.queryByPattern(persistenceManager, friendshipPattern, offsetLimit, ADDING_DATE_ORDERING);
         ArrayList<Long> result = new ArrayList<Long>(friendships.size());
 
         for(Friendship friendship : friendships){
@@ -1400,6 +1404,42 @@ public class DatabaseManager {
         Reply reply = new Reply();
         reply.setUserId(user.getId());
         return DBUtilities.queryCountByPattern(persistenceManager, reply);
+    }
+
+    private List<User> getFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit, boolean received) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        Long signedInUserId = signedInUser.getId();
+
+        FriendRequest pattern = new FriendRequest();
+        if (received) {
+            pattern.setToUserId(signedInUserId);
+        } else {
+            pattern.setFromUserId(signedInUserId);
+        }
+
+        Collection<FriendRequest> friendRequests = DBUtilities.queryByPattern(persistenceManager, pattern,
+                offsetLimit,
+                ADDING_DATE_ORDERING);
+        List<User> result = new ArrayList<User>(friendRequests.size());
+
+        for(FriendRequest friendRequest : friendRequests){
+            long friendId = received ? friendRequest.getFromUserId() : friendRequest.getToUserId();
+
+            User friend = getUserByIdOrThrow(friendId);
+            setAvatar(request, friend);
+            friend.setRelation(received ? RelationStatus.request_received : RelationStatus.request_sent);
+            result.add(friend);
+        }
+
+        return result;
+    }
+
+    public List<User> getReceivedFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return getFriendRequests(request, offsetLimit, true);
+    }
+
+    public List<User> getSentFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit) {
+        return getFriendRequests(request, offsetLimit, false);
     }
 
     @Override

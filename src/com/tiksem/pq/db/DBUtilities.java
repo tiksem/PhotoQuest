@@ -65,6 +65,14 @@ public class DBUtilities {
         return queryByPattern(manager, pattern, params);
     }
 
+    public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
+                                                   OffsetLimit offsetLimit, String ordering) {
+        QueryParams params = new QueryParams();
+        params.offsetLimit = offsetLimit;
+        params.ordering = ordering;
+        return queryByPattern(manager, pattern, params);
+    }
+
     public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern,
                                                           OffsetLimit offsetLimit) {
         QueryParams params = new QueryParams();

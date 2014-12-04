@@ -120,6 +120,18 @@ public class ApiHandler {
         return new UsersList(users);
     }
 
+    @RequestMapping("/getReceivedFriendRequests")
+    public @ResponseBody Object getReceivedFriendRequests(OffsetLimit offsetLimit) {
+        Collection<User> users = getDatabaseManager().getReceivedFriendRequests(request, offsetLimit);
+        return new UsersList(users);
+    }
+
+    @RequestMapping("/getSentFriendRequests")
+    public @ResponseBody Object getSentFriendRequests(OffsetLimit offsetLimit) {
+        Collection<User> users = getDatabaseManager().getSentFriendRequests(request, offsetLimit);
+        return new UsersList(users);
+    }
+
     @RequestMapping("/deleteAllUsers")
     public @ResponseBody Object deleteAllUsers(OffsetLimit offsetLimit) {
         getDatabaseManager().deleteAllUsers(request, offsetLimit);

@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.data.annotations.AddingDate;
 import com.tiksem.pq.data.annotations.Relation;
 
 import javax.jdo.annotations.Index;
@@ -18,6 +19,10 @@ public class Friendship {
     @Relation(relationName = "user")
     @Index
     private Long user2;
+
+    @AddingDate
+    @Index
+    private Long addingDate;
 
     public Friendship(Long user1, Long user2) {
         this.user1 = user1;
@@ -41,5 +46,13 @@ public class Friendship {
 
     public void setUser2(Long user2) {
         this.user2 = user2;
+    }
+
+    public Long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
     }
 }
