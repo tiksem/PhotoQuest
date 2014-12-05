@@ -64,6 +64,11 @@ public class User implements WithAvatar {
     @NotPersistent
     private RelationStatus relation;
 
+    @NotPersistent
+    private String country;
+    @NotPersistent
+    private String city;
+
     public User(String login, String password) {
         this.login = login;
         this.password = password;
@@ -293,5 +298,21 @@ public class User implements WithAvatar {
 
     public void setCountryCode(String countryCode) {
         this.countryCode = countryCode;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 }

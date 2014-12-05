@@ -391,7 +391,7 @@ public class DatabaseManager {
             }
         }
 
-        setAvatar(request, users);
+        setUsersInfo(request, users);
 
         if(fillRelationshipData && signedInUser != null){
             for(User user : users){
@@ -581,6 +581,20 @@ public class DatabaseManager {
         }
     }
 
+    public void setUserInfo(HttpServletRequest request, User user) {
+        Location location = getLocationByIdOrThrow(user.getLocation());
+        LocationInfo locationInfo = location.getInfo(Language.en);
+        user.setCountry(locationInfo.getCountry());
+        user.setCity(locationInfo.getCity());
+        setAvatar(request, user);
+    }
+
+    public void setUsersInfo(HttpServletRequest request, Iterable<User> users) {
+        for(User user : users){
+            setUserInfo(request, user);
+        }
+    }
+
     public void setAvatar(HttpServletRequest request, Iterable<? extends WithAvatar> withAvatars) {
         for(WithAvatar withAvatar : withAvatars){
             setAvatar(request, withAvatar);
@@ -732,6 +746,7 @@ public class DatabaseManager {
 
     public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit, boolean fillFriendShipData) {
         List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId(), offsetLimit);
+        setUsersInfo(request, friends);
         if (fillFriendShipData) {
             for(User friend : friends){
                 friend.setRelation(RelationStatus.friend);
