@@ -194,13 +194,19 @@ public class DatabaseManager {
         return makePersistent(photoquest);
     }
 
-    public Collection<Photoquest> getPhotoquestsCreatedByUser(long userId, OffsetLimit offsetLimit, RatingOrder order) {
-        Photoquest photoquest = new Photoquest();
-        photoquest.setUserId(userId);
-        return DBUtilities.queryByPattern(persistenceManager, photoquest, offsetLimit);
+    public Collection<Photoquest> getPhotoquestsCreatedByUser(
+            HttpServletRequest request,
+            long userId, OffsetLimit offsetLimit, RatingOrder order) {
+        Photoquest pattern = new Photoquest();
+        pattern.setUserId(userId);
+        Collection<Photoquest> photoquests =
+                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, getRatingOrderingString(order));
+        setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
+        setAvatar(request, photoquests);
+        return photoquests;
     }
 
-    public long getPhotoquestsCountCreatedByUser(long userId) {
+    public long getPhotoquestsCreatedByUserCount(long userId) {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
         return DBUtilities.queryCountByPattern(persistenceManager, photoquest);
@@ -235,11 +241,11 @@ public class DatabaseManager {
     public Collection<Photoquest> getPhotoquestsCreatedBySignedInUser(HttpServletRequest request,
                                                                       OffsetLimit offsetLimit,
                                                                       RatingOrder order) {
-        return getPhotoquestsCreatedByUser(getSignedInUserOrThrow(request).getId(), offsetLimit, order);
+        return getPhotoquestsCreatedByUser(request, getSignedInUserOrThrow(request).getId(), offsetLimit, order);
     }
 
-    public long getPhotoquestsCountCreatedBySignedInUser(HttpServletRequest request) {
-        return getPhotoquestsCountCreatedByUser(getSignedInUserOrThrow(request).getId());
+    public long getPhotoquestsCreatedBySignedInUserCount(HttpServletRequest request) {
+        return getPhotoquestsCreatedByUserCount(getSignedInUserOrThrow(request).getId());
     }
 
     public void update(HttpServletRequest request, Object... objects) {
@@ -619,6 +625,27 @@ public class DatabaseManager {
         return orderString;
     }
 
+    private void setPhotoquestFollowingParam(HttpServletRequest request, Photoquest photoquest, long signedInUserId) {
+        boolean isFollowing = getFollowingPhotoquest(signedInUserId, photoquest.getId()) != null;
+        photoquest.setIsFollowing(isFollowing);
+    }
+
+    private void setPhotoquestsFollowingParam(HttpServletRequest request,
+                                              Iterable<Photoquest> photoquests,
+                                              long signedInUserId) {
+        for(Photoquest photoquest : photoquests){
+            setPhotoquestFollowingParam(request, photoquest, signedInUserId);
+        }
+    }
+
+    private void setPhotoquestsFollowingParamIfSignedIn(HttpServletRequest request,
+                                              Iterable<Photoquest> photoquests) {
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser != null){
+            setPhotoquestsFollowingParam(request, photoquests, signedInUser.getId());
+        }
+    }
+
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
                                                  RatingOrder order) {
         String orderString = getRatingOrderingString(order);
@@ -628,13 +655,7 @@ public class DatabaseManager {
                         offsetLimit, orderString);
         setAvatar(request, result);
 
-        User signedInUser = getSignedInUser(request);
-        if(signedInUser != null){
-            for(Photoquest photoquest : result){
-                boolean isFollowing = getFollowingPhotoquest(signedInUser.getId(), photoquest.getId()) != null;
-                photoquest.setIsFollowing(isFollowing);
-            }
-        }
+        setPhotoquestsFollowingParamIfSignedIn(request, result);
 
         return result;
     }

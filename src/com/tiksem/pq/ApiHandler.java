@@ -207,12 +207,25 @@ public class ApiHandler {
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests;
         if(userId != null){
-            photoquests = getDatabaseManager().getPhotoquestsCreatedByUser(userId, offsetLimit, order);
+            photoquests = getDatabaseManager().getPhotoquestsCreatedByUser(request, userId, offsetLimit, order);
         } else {
             photoquests = getDatabaseManager().getPhotoquestsCreatedBySignedInUser(request, offsetLimit, order);
         }
 
         return new PhotoquestsList(photoquests);
+    }
+
+    @RequestMapping("/getCreatedPhotoquestsCount")
+    public @ResponseBody Object getCreatedPhotoquestsCount(
+            @RequestParam(value = "userId", required = false) Long userId){
+        long count;
+        if(userId != null){
+            count = getDatabaseManager().getPhotoquestsCreatedByUserCount(userId);
+        } else {
+            count = getDatabaseManager().getPhotoquestsCreatedBySignedInUserCount(request);
+        }
+
+        return new CountResponse(count);
     }
 
     @RequestMapping("/getFollowingPhotoquests")
