@@ -1,6 +1,7 @@
 package com.tiksem.pq.db;
 
 import javax.jdo.Query;
+import java.util.Map;
 
 /**
  * Created by CM on 11/14/2014.
@@ -49,5 +50,10 @@ public class OffsetLimit {
 
     public void applyToQuery(Query query) {
         query.setRange(offset, offset + limit);
+    }
+
+    public void addToMap(Map map) {
+        map.put("offset", offset);
+        map.put("limit", limit);
     }
 }

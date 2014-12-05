@@ -200,9 +200,27 @@ public class ApiHandler {
         return new PhotoquestsList(photoquests);
     }
 
+    @RequestMapping("/getCreatedPhotoquests")
+    public @ResponseBody Object getCreatedPhotoquests(
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+            OffsetLimit offsetLimit){
+        Collection<Photoquest> photoquests;
+        if(userId != null){
+            photoquests = getDatabaseManager().getPhotoquestsCreatedByUser(userId, offsetLimit, order);
+        } else {
+            photoquests = getDatabaseManager().getPhotoquestsCreatedBySignedInUser(request, offsetLimit, order);
+        }
+
+        return new PhotoquestsList(photoquests);
+    }
+
     @RequestMapping("/getFollowingPhotoquests")
-    public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = getDatabaseManager().getFollowingPhotoquests(request, offsetLimit);
+    public @ResponseBody Object getFollowingPhotoquests(
+            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+            OffsetLimit offsetLimit){
+        final Collection<Photoquest> photoquests =
+                getDatabaseManager().getFollowingPhotoquests(request, offsetLimit, order);
         return new PhotoquestsList(photoquests);
     }
 

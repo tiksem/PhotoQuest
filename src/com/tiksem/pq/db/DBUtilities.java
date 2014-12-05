@@ -540,6 +540,17 @@ public class DBUtilities {
         return Long.valueOf(query.executeWithMap(args).toString());
     }
 
+    public static Object executeSQL(PersistenceManager persistenceManager,
+                                    String sql,
+                                    Map<String, Object> params,
+                                    Class resultClass) {
+        Query query = persistenceManager.newQuery("javax.jdo.query.SQL", sql);
+        if (resultClass != null) {
+            query.setClass(resultClass);
+        }
+        return query.executeWithMap(params);
+    }
+
     // method for debug
     public static Object get(PersistenceManager manager) {
         Query query = manager.newQuery();

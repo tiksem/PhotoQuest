@@ -41,6 +41,7 @@ public class DatabaseManager {
 
     private ImageManager imageManager = new FileSystemImageManager("images");
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
+    private AdvancedRequestsManager advancedRequestsManager;
 
     static {
         factory = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
@@ -48,6 +49,7 @@ public class DatabaseManager {
 
     public DatabaseManager() {
         persistenceManager = factory.getPersistenceManager();
+        advancedRequestsManager = new AdvancedRequestsManager(persistenceManager);
     }
 
     private <T> T makePersistent(T object) {
@@ -1516,20 +1518,14 @@ public class DatabaseManager {
         deletePersistent(followingPhotoquest);
     }
 
-    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit) {
+    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit,
+                                                          RatingOrder order) {
         User signedInUser = getSignedInUserOrThrow(request);
-
-        FollowingPhotoquest pattern = new FollowingPhotoquest();
-        pattern.setUserId(signedInUser.getId());
-        Collection<FollowingPhotoquest> followingPhotoquests =
-                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, ADDING_DATE_ORDERING);
-
-        Collection<Photoquest> result = new ArrayList<Photoquest>();
-        for(FollowingPhotoquest followingPhotoquest : followingPhotoquests){
-            Photoquest photoquest = getPhotoQuestByIdOrThrow(followingPhotoquest.getPhotoquestId());
+        Collection<Photoquest> result =
+                advancedRequestsManager.getFollowingPhotoquests(signedInUser.getId(), order, offsetLimit);
+        for(Photoquest photoquest : result){
             photoquest.setIsFollowing(true);
             setAvatar(request, photoquest);
-            result.add(photoquest);
         }
 
         return result;
