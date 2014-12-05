@@ -38,6 +38,9 @@ public class Photoquest implements WithAvatar, Likable {
     @NotPersistent
     private String avatar;
 
+    @NotPersistent
+    private Boolean isFollowing;
+
     public static Photoquest withZeroViewsAndLikes(String name) {
         Photoquest photoquest = new Photoquest();
         photoquest.likesCount = 0l;
@@ -138,5 +141,13 @@ public class Photoquest implements WithAvatar, Likable {
         } else {
             likesCount--;
         }
+    }
+
+    public Boolean getIsFollowing() {
+        return isFollowing;
+    }
+
+    public void setIsFollowing(Boolean isFollowing) {
+        this.isFollowing = isFollowing;
     }
 }

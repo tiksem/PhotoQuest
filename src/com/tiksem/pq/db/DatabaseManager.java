@@ -611,6 +611,15 @@ public class DatabaseManager {
                 DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class,
                         offsetLimit, orderString);
         setAvatar(request, result);
+
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser != null){
+            for(Photoquest photoquest : result){
+                boolean isFollowing = getFollowingPhotoquest(signedInUser.getId(), photoquest.getId()) != null;
+                photoquest.setIsFollowing(isFollowing);
+            }
+        }
+
         return result;
     }
 
@@ -1283,7 +1292,11 @@ public class DatabaseManager {
 
     public List<User> registerRandomUsers(HttpServletRequest request, int startId, int count, String password)
             throws IOException {
-        List<Response> data = RandomUserGenerator.generate(count);
+        List<Response> data = new ArrayList<Response>();
+        while (data.size() < count){
+            data.addAll(RandomUserGenerator.generate(count - data.size()));
+        }
+
         List<User> result = new ArrayList<User>(count);
 
         for(Response userData : data){
@@ -1442,9 +1455,83 @@ public class DatabaseManager {
         return getFriendRequests(request, offsetLimit, false);
     }
 
+    public Collection<User> searchUsers(User pattern, OffsetLimit offsetLimit) {
+        return DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit,
+                ADDING_DATE_ORDERING);
+    }
+
+    private FollowingPhotoquest getFollowingPhotoquest(long userId, long photoquestId) {
+        FollowingPhotoquest pattern = new FollowingPhotoquest();
+        pattern.setUserId(userId);
+        pattern.setPhotoquestId(photoquestId);
+        return DBUtilities.getObjectByPattern(persistenceManager, pattern);
+    }
+
+    private FollowingPhotoquest getFollowingPhotoquestOrThrow(long userId, long photoquestId) {
+        FollowingPhotoquest result = getFollowingPhotoquest(userId, photoquestId);
+        if(result == null){
+            throw new PhotoquestIsNotFollowingException(userId, photoquestId);
+        }
+
+        return result;
+    }
+
+    public FollowingPhotoquest followPhotoquest(HttpServletRequest request, long photoquestId) {
+        getPhotoQuestByIdOrThrow(photoquestId);
+        User signedInUser = getSignedInUserOrThrow(request);
+        Long signedInUserId = signedInUser.getId();
+
+        FollowingPhotoquest followingPhotoquest = getFollowingPhotoquest(signedInUserId, photoquestId);
+        if(followingPhotoquest != null){
+            throw new PhotoquestIsFollowingException();
+        }
+
+        followingPhotoquest = new FollowingPhotoquest();
+        followingPhotoquest.setUserId(signedInUserId);
+        followingPhotoquest.setPhotoquestId(photoquestId);
+
+        return makePersistent(followingPhotoquest);
+    }
+
+    public void unfollowPhotoquest(HttpServletRequest request, long photoquestId) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        Long signedInUserId = signedInUser.getId();
+
+        FollowingPhotoquest followingPhotoquest = getFollowingPhotoquestOrThrow(signedInUserId, photoquestId);
+        deletePersistent(followingPhotoquest);
+    }
+
+    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow(request);
+
+        FollowingPhotoquest pattern = new FollowingPhotoquest();
+        pattern.setUserId(signedInUser.getId());
+        Collection<FollowingPhotoquest> followingPhotoquests =
+                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, ADDING_DATE_ORDERING);
+
+        Collection<Photoquest> result = new ArrayList<Photoquest>();
+        for(FollowingPhotoquest followingPhotoquest : followingPhotoquests){
+            Photoquest photoquest = getPhotoQuestByIdOrThrow(followingPhotoquest.getPhotoquestId());
+            photoquest.setIsFollowing(true);
+            setAvatar(request, photoquest);
+            result.add(photoquest);
+        }
+
+        return result;
+    }
+
+    public long getFollowingPhotoquestsCount(HttpServletRequest request) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        FollowingPhotoquest pattern = new FollowingPhotoquest();
+        pattern.setUserId(signedInUser.getId());
+
+        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+    }
+
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
         persistenceManager.close();
+
     }
 }

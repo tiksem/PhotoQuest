@@ -200,6 +200,30 @@ public class ApiHandler {
         return new PhotoquestsList(photoquests);
     }
 
+    @RequestMapping("/getFollowingPhotoquests")
+    public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit){
+        final Collection<Photoquest> photoquests = getDatabaseManager().getFollowingPhotoquests(request, offsetLimit);
+        return new PhotoquestsList(photoquests);
+    }
+
+    @RequestMapping("/getFollowingPhotoquestsCount")
+    public @ResponseBody Object getFollowingPhotoquestsCount(){
+        long count = getDatabaseManager().getFollowingPhotoquestsCount(request);
+        return new CountResponse(count);
+    }
+
+    @RequestMapping("/followQuest")
+    public @ResponseBody Object followQuest(@RequestParam("questId") Long questId){
+        getDatabaseManager().followPhotoquest(request, questId);
+        return new Success();
+    }
+
+    @RequestMapping("/unfollowQuest")
+    public @ResponseBody Object unfollowQuest(@RequestParam("questId") Long questId){
+        getDatabaseManager().unfollowPhotoquest(request, questId);
+        return new Success();
+    }
+
     @RequestMapping("/getPhotoquestsCount")
     public @ResponseBody Object getPhotoquestsCount(){
         long count = getDatabaseManager().getPhotoQuestsCount();
