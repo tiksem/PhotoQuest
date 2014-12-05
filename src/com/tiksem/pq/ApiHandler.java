@@ -120,6 +120,18 @@ public class ApiHandler {
         return new UsersList(users);
     }
 
+    @RequestMapping("/followers")
+    public @ResponseBody Object getFollowers(OffsetLimit offsetLimit) {
+        Collection<User> users = getDatabaseManager().getFollowers(request, offsetLimit);
+        return new UsersList(users);
+    }
+
+    @RequestMapping("/getFollowingUsers")
+    public @ResponseBody Object getFollowingUsers(OffsetLimit offsetLimit) {
+        Collection<User> users = getDatabaseManager().getFollowingUsers(request, offsetLimit);
+        return new UsersList(users);
+    }
+
     @RequestMapping("/getReceivedFriendRequests")
     public @ResponseBody Object getReceivedFriendRequests(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getReceivedFriendRequests(request, offsetLimit);

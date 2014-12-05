@@ -2,21 +2,24 @@ package com.tiksem.pq.data;
 
 import com.tiksem.pq.data.annotations.AddingDate;
 
-import javax.jdo.annotations.*;
+import javax.jdo.annotations.Index;
+import javax.jdo.annotations.PersistenceCapable;
 
 /**
- * Created by CM on 11/15/2014.
+ * Created by CM on 12/5/2014.
  */
 @PersistenceCapable
-@PersistenceAware
-public class FriendRequest {
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
-    private Long id;
+public class Relationship {
+    public static final int FRIENDSHIP = 0;
+    public static final int FRIEND_REQUEST = 1;
+    public static final int FOLLOWS = 2;
+
     @Index
     private Long fromUserId;
     @Index
     private Long toUserId;
+    @Index
+    private Integer type;
     @AddingDate
     @Index
     private Long addingDate;
@@ -37,19 +40,19 @@ public class FriendRequest {
         this.toUserId = toUserId;
     }
 
+    public Integer getType() {
+        return type;
+    }
+
+    public void setType(Integer type) {
+        this.type = type;
+    }
+
     public Long getAddingDate() {
         return addingDate;
     }
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 }
