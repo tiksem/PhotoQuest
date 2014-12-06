@@ -193,11 +193,13 @@ public class DatabaseManager {
         Long userId = user.getId();
         photoquest.setUserId(userId);
 
+        photoquest = makePersistent(photoquest);
         Action action = new Action();
         action.setPhotoquestId(photoquest.getId());
         action.setUserId(userId);
+        makePersistent(action);
 
-        return (Photoquest) makeAllPersistent(photoquest, action)[0];
+        return photoquest;
     }
 
     public Collection<Photoquest> getPhotoquestsCreatedByUser(
@@ -1694,9 +1696,12 @@ public class DatabaseManager {
         Feed feed = new Feed();
         feed.setAddingDate(action.getAddingDate());
 
-        Photo photo = getPhotoByIdOrThrow(action.getPhotoId());
-        initPhotoUrl(photo, request);
-        feed.setPhoto(photo);
+        Long photoId = action.getPhotoId();
+        if (photoId != null) {
+            Photo photo = getPhotoByIdOrThrow(photoId);
+            initPhotoUrl(photo, request);
+            feed.setPhoto(photo);
+        }
 
         Photoquest photoquest = getPhotoQuestByIdOrThrow(action.getPhotoquestId());
         feed.setPhotoquest(photoquest);
