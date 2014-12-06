@@ -6,6 +6,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.net.URLConnection;
 
 /**
@@ -19,5 +20,9 @@ public class MimeTypeUtils {
 
     public static MediaType getMediaTypeFromByteArray(byte[] bytes) throws IOException {
         return MediaType.valueOf(getMimeTypeFromByteArray(bytes));
+    }
+
+    public static MediaType getMediaTypeFromInputStream(InputStream inputStream) throws IOException {
+        return MediaType.valueOf(URLConnection.guessContentTypeFromStream(inputStream));
     }
 }

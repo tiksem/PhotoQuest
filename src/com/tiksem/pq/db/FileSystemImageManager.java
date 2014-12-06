@@ -1,10 +1,10 @@
 package com.tiksem.pq.db;
 
+import com.utils.framework.io.IOUtilities;
 import com.utils.framework.strings.Strings;
+import org.apache.commons.io.IOUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -32,21 +32,21 @@ public class FileSystemImageManager implements ImageManager {
     }
 
     @Override
-    public byte[] getImageById(long id) {
+    public InputStream getImageById(long id) {
         String path = generateImagePath(id);
         try {
-            return Files.readAllBytes(Paths.get(path));
-        } catch (IOException e) {
+            return new FileInputStream(path);
+        } catch (FileNotFoundException e) {
             return null;
         }
     }
 
     @Override
-    public void saveImage(long id, byte[] value) {
+    public void saveImage(long id, InputStream inputStream) {
         String path = generateImagePath(id);
         new File(path).getParentFile().mkdirs();
         try {
-            Files.write(Paths.get(path), value);
+            IOUtils.copy(inputStream, new FileOutputStream(path));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

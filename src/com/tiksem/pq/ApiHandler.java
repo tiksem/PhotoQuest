@@ -10,6 +10,7 @@ import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import net.coobird.thumbnailator.Thumbnails;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -171,34 +172,16 @@ public class ApiHandler {
     }
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
-            produces = MediaType.IMAGE_JPEG_VALUE)
-    public @ResponseBody Object
+            headers = "Accept=image/jpeg, image/jpg, image/png, image/gif")
+    public void
     getImageById(@PathVariable Long id,
                  @RequestParam(value = "width", required = false) Integer width,
-                 @RequestParam(value = "height", required = false) Integer height)
+                 @RequestParam(value = "height", required = false) Integer height,
+                 OutputStream outputStream)
             throws IOException {
         try {
-            byte[] image = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
-
-            InputStream in = new ByteArrayInputStream(image);
-            BufferedImage bufferedImage = ImageIO.read(in);
-
-            if(width == null){
-                width = bufferedImage.getWidth();
-            }
-            if(height == null) {
-                height = bufferedImage.getHeight();
-            }
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(Thumbnails.of(bufferedImage).size(width, height).asBufferedImage(), "png", baos);
-            image = baos.toByteArray();
-
-            HttpHeaders headers = new HttpHeaders();
-            MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
-            headers.setContentType(mediaType);
-            headers.setContentLength(image.length);
-            return new HttpEntity<byte[]>(image, headers);
+            InputStream inputStream = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
+            IOUtils.copy(inputStream, outputStream);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

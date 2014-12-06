@@ -1,8 +1,13 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.BitmapData;
+import com.utils.framework.io.IOUtilities;
+import org.apache.commons.io.IOUtils;
 
 import javax.jdo.PersistenceManager;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Created by CM on 11/29/2014.
@@ -15,21 +20,25 @@ public class DatabaseImageManager implements ImageManager {
     }
 
     @Override
-    public byte[] getImageById(long id) {
+    public InputStream getImageById(long id) {
         BitmapData bitmapData =
                 DBUtilities.getObjectById(persistenceManager, BitmapData.class, id);
         if(bitmapData == null){
             return null;
         }
 
-        return bitmapData.getImage();
+        return new ByteArrayInputStream(bitmapData.getImage());
     }
 
     @Override
-    public void saveImage(long id, byte[] value) {
+    public void saveImage(long id, InputStream inputStream) {
         BitmapData data = new BitmapData();
         data.setId(id);
-        data.setImage(value);
+        try {
+            data.setImage(IOUtils.toByteArray(inputStream));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         DBUtilities.makePersistent(persistenceManager, data);
     }
 }

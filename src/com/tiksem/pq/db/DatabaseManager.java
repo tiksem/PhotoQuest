@@ -8,15 +8,18 @@ import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.google.places.*;
+import com.utils.framework.io.IOUtilities;
 import com.utils.framework.io.Network;
 import com.utils.framework.randomuser.RandomUserGenerator;
 import com.utils.framework.randomuser.Response;
+import org.apache.commons.io.IOUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.jdo.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -330,17 +333,17 @@ public class DatabaseManager {
     }
 
     public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
-        byte[] avatarBytes = null;
+        InputStream avatarInputStream = null;
         try {
-            avatarBytes = avatar.getBytes();
+            avatarInputStream = avatar.getInputStream();
         } catch (IOException e) {
 
         }
 
-        return registerUser(request, user, avatarBytes);
+        return registerUser(request, user, avatarInputStream);
     }
 
-    public User registerUser(HttpServletRequest request, User user, byte[] avatar) throws IOException {
+    public User registerUser(HttpServletRequest request, User user, InputStream avatar) throws IOException {
         user = registerUser(user);
 
         if (user.getLogin() == null) {
@@ -471,7 +474,7 @@ public class DatabaseManager {
         return performedPhotoquest;
     }
 
-    private Photo addPhoto(HttpServletRequest request, Photo photo, byte[] bitmapData) {
+    private Photo addPhoto(HttpServletRequest request, Photo photo, InputStream bitmapData) {
         Long userId = photo.getUserId();
         if(userId == null){
             User user = getSignedInUserOrThrow(request);
@@ -505,8 +508,8 @@ public class DatabaseManager {
         if (!file.isEmpty()) {
             Photo photo = new Photo();
             photo.setPhotoquestId(photoquestId);
-            byte[] bytes = file.getBytes();
-            photo = addPhoto(request, photo, bytes);
+            InputStream inputStream = file.getInputStream();
+            photo = addPhoto(request, photo, inputStream);
             updatePhotoquestAvatar(photoquest);
             return photo;
         } else {
@@ -540,12 +543,12 @@ public class DatabaseManager {
         return message;
     }
 
-    public byte[] getBitmapDataByPhotoId(long id) {
+    public InputStream getBitmapDataByPhotoId(long id) {
         return imageManager.getImageById(id);
     }
 
-    public byte[] getBitmapDataByPhotoIdOrThrow(long id) {
-        byte[] result = getBitmapDataByPhotoId(id);
+    public InputStream getBitmapDataByPhotoIdOrThrow(long id) {
+        InputStream result = getBitmapDataByPhotoId(id);
         if(result == null){
             throw new ResourceNotFoundException();
         }
@@ -1416,7 +1419,7 @@ public class DatabaseManager {
             user.setLocation(location.placeId);
 
 
-            byte[] avatar = Network.getBytesFromUrl(userData.largeAvatar);
+            InputStream avatar = IOUtilities.getBufferedInputStreamFromUrl(userData.largeAvatar);
             user = registerUser(request, user, avatar);
             result.add(user);
         }
