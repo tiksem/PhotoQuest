@@ -479,4 +479,31 @@ public class ApiHandler {
     public @ResponseBody Object getRepliesCount() {
         return new CountResponse(getDatabaseManager().getRepliesCount(request));
     }
+
+    @RequestMapping("/getNews")
+    public @ResponseBody Object getNews(
+            @RequestParam(value = "userId", required = false) Long userId,
+            OffsetLimit offsetLimit) {
+        Collection<Feed> news;
+        if(userId == null){
+            news = getDatabaseManager().getNews(request, offsetLimit);
+        } else {
+            news = getDatabaseManager().getUserNews(request, userId, offsetLimit);
+        }
+
+        return new FeedList(news);
+    }
+
+    @RequestMapping("/getNewsCount")
+    public @ResponseBody Object getNewsCount(
+            @RequestParam(value = "userId", required = false) Long userId) {
+        long count;
+        if(userId == null){
+            count = getDatabaseManager().getNewsCount(request);
+        } else {
+            count = getDatabaseManager().getUserNewsCount(userId);
+        }
+
+        return new CountResponse(count);
+    }
 }

@@ -2,6 +2,7 @@ package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
+import com.tiksem.pq.data.response.Feed;
 import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.db.exceptions.*;
@@ -189,9 +190,14 @@ public class DatabaseManager {
         }
 
         photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
-        photoquest.setUserId(user.getId());
+        Long userId = user.getId();
+        photoquest.setUserId(userId);
 
-        return makePersistent(photoquest);
+        Action action = new Action();
+        action.setPhotoquestId(photoquest.getId());
+        action.setUserId(userId);
+
+        return (Photoquest) makeAllPersistent(photoquest, action)[0];
     }
 
     public Collection<Photoquest> getPhotoquestsCreatedByUser(
@@ -477,7 +483,17 @@ public class DatabaseManager {
         imageManager.saveImage(photo.getId(), bitmapData);
         makePersistent(getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId()));
 
+        commitAddPhotoAction(photo);
+
         return photo;
+    }
+
+    private void commitAddPhotoAction(Photo photo) {
+        Action action = new Action();
+        action.setPhotoquestId(photo.getPhotoquestId());
+        action.setPhotoId(photo.getId());
+        action.setUserId(photo.getUserId());
+        makePersistent(action);
     }
 
     public Photo addPhotoToPhotoquest(HttpServletRequest request,
@@ -488,7 +504,7 @@ public class DatabaseManager {
             Photo photo = new Photo();
             photo.setPhotoquestId(photoquestId);
             byte[] bytes = file.getBytes();
-            addPhoto(request, photo, bytes);
+            photo = addPhoto(request, photo, bytes);
             updatePhotoquestAvatar(photoquest);
             return photo;
         } else {
@@ -1672,6 +1688,61 @@ public class DatabaseManager {
     public void unfollowUser(HttpServletRequest request, long toUserId) {
         Long fromUserId = getSignedInUserOrThrow(request).getId();
         unfollowUser(fromUserId, toUserId);
+    }
+
+    private Feed createFeedFromAction(HttpServletRequest request, Action action, boolean includeUser) {
+        Feed feed = new Feed();
+        feed.setAddingDate(action.getAddingDate());
+
+        Photo photo = getPhotoByIdOrThrow(action.getPhotoId());
+        initPhotoUrl(photo, request);
+        feed.setPhoto(photo);
+
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(action.getPhotoquestId());
+        feed.setPhotoquest(photoquest);
+
+        if (includeUser) {
+            User user = getUserByIdOrThrow(action.getUserId());
+            feed.setUser(user);
+            setAvatar(request, user);
+        }
+
+        return feed;
+    }
+
+    private List<Feed> actionsToFeeds(HttpServletRequest request,
+                                      Iterable<Action> actions, boolean includeUser) {
+        List<Feed> feeds = new ArrayList<Feed>();
+        for(Action action : actions){
+            feeds.add(createFeedFromAction(request, action, includeUser));
+        }
+
+        return feeds;
+    }
+
+    public List<Feed> getNews(HttpServletRequest request, OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        Collection<Action> actions = advancedRequestsManager.getNews(signedInUser.getId(), offsetLimit);
+        return actionsToFeeds(request, actions, true);
+    }
+
+    public long getNewsCount(HttpServletRequest request) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        return advancedRequestsManager.getNewsCount(signedInUser.getId());
+    }
+
+    public List<Feed> getUserNews(HttpServletRequest request, long userId, OffsetLimit offsetLimit) {
+        Action pattern = new Action();
+        pattern.setUserId(userId);
+        Collection<Action> actions = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit,
+                ADDING_DATE_ORDERING);
+        return actionsToFeeds(request, actions, false);
+    }
+
+    public long getUserNewsCount(long userId) {
+        Action pattern = new Action();
+        pattern.setUserId(userId);
+        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
     }
 
     @Override
