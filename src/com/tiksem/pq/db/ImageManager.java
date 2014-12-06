@@ -7,5 +7,6 @@ import java.io.InputStream;
  */
 public interface ImageManager {
     InputStream getImageById(long id);
+    InputStream getThumbnailOfImage(long id, int size);
     void saveImage(long id, InputStream inputStream);
 }

@@ -1,7 +1,6 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.BitmapData;
-import com.utils.framework.io.IOUtilities;
 import org.apache.commons.io.IOUtils;
 
 import javax.jdo.PersistenceManager;
@@ -40,5 +39,10 @@ public class DatabaseImageManager implements ImageManager {
             throw new RuntimeException(e);
         }
         DBUtilities.makePersistent(persistenceManager, data);
+    }
+
+    @Override
+    public InputStream getThumbnailOfImage(long id, int size) {
+        return getImageById(id);
     }
 }

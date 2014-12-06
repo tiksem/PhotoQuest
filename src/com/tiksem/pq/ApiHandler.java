@@ -9,6 +9,7 @@ import com.tiksem.pq.db.RatingOrder;
 import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
+import com.utils.framework.io.Network;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -173,15 +174,25 @@ public class ApiHandler {
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
             headers = "Accept=image/jpeg, image/jpg, image/png, image/gif")
-    public void
+    public @ResponseBody Object
     getImageById(@PathVariable Long id,
-                 @RequestParam(value = "width", required = false) Integer width,
-                 @RequestParam(value = "height", required = false) Integer height,
+                 @RequestParam(value = "size", required = false) Integer size,
                  OutputStream outputStream)
             throws IOException {
         try {
-            InputStream inputStream = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
-            IOUtils.copy(inputStream, outputStream);
+            InputStream inputStream = null;
+            if (size == null) {
+                inputStream = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
+            } else {
+                inputStream = getDatabaseManager().getThumbnailByPhotoIdOrThrow(id, size);
+            }
+
+            byte[] image = Network.getBytesFromStream(inputStream);
+            HttpHeaders headers = new HttpHeaders();
+            MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
+            headers.setContentType(mediaType);
+            headers.setContentLength(image.length);
+            return new HttpEntity<byte[]>(image, headers);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

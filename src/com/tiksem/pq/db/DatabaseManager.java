@@ -43,7 +43,7 @@ public class DatabaseManager {
 
     private final PersistenceManager persistenceManager;
 
-    private ImageManager imageManager = new FileSystemImageManager("images");
+    private ImageManager imageManager = new FileSystemImageManager("images", "magic");
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
 
@@ -549,6 +549,19 @@ public class DatabaseManager {
 
     public InputStream getBitmapDataByPhotoIdOrThrow(long id) {
         InputStream result = getBitmapDataByPhotoId(id);
+        if(result == null){
+            throw new ResourceNotFoundException();
+        }
+
+        return result;
+    }
+
+    public InputStream getThumbnailByPhotoId(long id, int size) {
+        return imageManager.getThumbnailOfImage(id, size);
+    }
+
+    public InputStream getThumbnailByPhotoIdOrThrow(long id, int size) {
+        InputStream result = getThumbnailByPhotoId(id, size);
         if(result == null){
             throw new ResourceNotFoundException();
         }
