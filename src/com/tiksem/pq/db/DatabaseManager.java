@@ -358,6 +358,7 @@ public class DatabaseManager {
             photo.setUserId(user.getId());
             photo = addPhoto(request, photo, avatar);
             user.setAvatarId(photo.getId());
+            updatePhotoquestAvatar(avatarPhotoQuest);
 
             if (user.getLogin() == null) {
                 throw new RuntimeException("WTF?");
