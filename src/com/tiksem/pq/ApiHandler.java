@@ -26,8 +26,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Created by CM on 10/24/2014.
@@ -35,6 +38,8 @@ import java.util.List;
 @Controller
 @RequestMapping("/")
 public class ApiHandler {
+    private static final Pattern TAG_PATTERN = Pattern.compile("\\w{3,20}", Pattern.UNICODE_CHARACTER_CLASS);
+
     @Autowired
     private HttpServletRequest request;
 
@@ -160,8 +165,16 @@ public class ApiHandler {
 
     @RequestMapping("/createPhotoquest")
     public @ResponseBody Object createPhotoquest(
-            @RequestParam(value = "name", required = true) String name) {
-        return getDatabaseManager().createPhotoQuest(request, name);
+            @RequestParam(value = "name", required = true) String name,
+            @RequestParam(value = "tags", required = false, defaultValue = "") String tagsString) {
+        tagsString = tagsString.toLowerCase();
+        List<String> tags = Arrays.asList(tagsString.split(" +"));
+        for(String tag : tags){
+            if(!TAG_PATTERN.matcher(tag).matches()){
+                throw new IllegalArgumentException("Wrong tag, should match [A-Za-z]{3,20} pattern");
+            }
+        }
+        return getDatabaseManager().createPhotoQuest(request, name, tags);
     }
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
@@ -201,8 +214,14 @@ public class ApiHandler {
     @RequestMapping("/getPhotoquests")
     public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit,
                                                @RequestParam(value = "order", required = false, defaultValue = "newest")
-                                               RatingOrder order){
-        final Collection<Photoquest> photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit, order);
+                                               RatingOrder order,
+                                               @RequestParam(value = "filter", required = false) String filter){
+        final Collection<Photoquest> photoquests;
+        if(filter == null){
+            photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit, order);
+        } else {
+            photoquests = getDatabaseManager().searchPhotoquests(request, filter, offsetLimit);
+        }
         return new PhotoquestsList(photoquests);
     }
 
@@ -456,6 +475,12 @@ public class ApiHandler {
     @RequestMapping("/refreshDatabase")
     public @ResponseBody Object refreshDatabase() {
         DBUtilities.enhanceClassesInPackage("com.tiksem.pq.data");
+        return new Success();
+    }
+
+    @RequestMapping("/initDatabase")
+    public @ResponseBody Object initDatabase() {
+        getDatabaseManager().initDatabase();
         return new Success();
     }
 

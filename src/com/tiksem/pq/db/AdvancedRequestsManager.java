@@ -2,11 +2,11 @@ package com.tiksem.pq.db;
 
 import com.tiksem.pq.data.Action;
 import com.tiksem.pq.data.Photoquest;
+import com.utils.framework.CollectionUtils;
+import com.utils.framework.collections.iterator.AbstractIterator;
 
 import javax.jdo.PersistenceManager;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by CM on 12/5/2014.
@@ -33,6 +33,31 @@ public class AdvancedRequestsManager {
             " order by addingDate desc LIMIT :offset, :limit";
 
     private static final String NEWS_COUNT_SQL = "select count(*)" + NEWS_SQL;
+
+    public static final String CREATE_PHOTOQUEST_SEARCH_INDEX = "create fulltext index keyword " +
+            "on PhotoquestSearch(keywords)";
+    public static final String PHOTOQUEST_SEARCH_SQL = "SELECT photoquestId, MATCH (keywords) AGAINST " +
+            "(:str IN NATURAL LANGUAGE MODE) as relevance FROM photoquestsearch\n" +
+            "    WHERE MATCH (keywords)\n" +
+            "    AGAINST (:str IN NATURAL LANGUAGE MODE) and photoquestId <> :exclude order by relevance desc " +
+            "LIMIT :offset, :limit";
+
+    public static final String PHOTOQUEST_SEARCH_SQL_WITHOUT_EXCLUDE_ID = "SELECT photoquestId, MATCH (keywords) AGAINST " +
+            "(:str IN NATURAL LANGUAGE MODE) as relevance FROM photoquestsearch\n" +
+            "    WHERE MATCH (keywords)\n" +
+            "    AGAINST (:str IN NATURAL LANGUAGE MODE) order by relevance desc " +
+            "LIMIT :offset, :limit";
+
+    public static final String CREATE_PHOTOQUEST_SEARCH_TABLE = "" +
+            "create table if not exists photoquestsearch\n" +
+            "(\n" +
+            "photoquestId bigint not null,\n" +
+            "keywords varchar(255) not null,\n" +
+            "fulltext index(keywords)\n" +
+            ");";
+
+    public static final String INSERT_INTO_PHOTOQUEST_SEARCH = "INSERT INTO photoquestsearch " +
+            "(photoquestId, keywords) values(:photoquestId, ':keywords')";
 
     private PersistenceManager persistenceManager;
 
@@ -75,6 +100,40 @@ public class AdvancedRequestsManager {
         }
 
         return (Long) result.iterator().next();
+    }
+
+    public List<Long> getPhotoquestsByQuery(String query, Long excludePhotoQuestId, OffsetLimit offsetLimit) {
+        String sql = PHOTOQUEST_SEARCH_SQL_WITHOUT_EXCLUDE_ID;
+        Map<String, Object> args = new HashMap<String, Object>();
+        offsetLimit.addToMap(args);
+        args.put("str", query);
+        if (excludePhotoQuestId != null) {
+            args.put("exclude", excludePhotoQuestId);
+            sql = PHOTOQUEST_SEARCH_SQL;
+        }
+
+        final Collection<Object[]> result = (Collection<Object[]>)
+                DBUtilities.executeSQL(persistenceManager, sql, args, null);
+
+        return CollectionUtils.transform(result,
+                new CollectionUtils.Transformer<Object[], Long>() {
+            @Override
+            public Long get(Object[] objects) {
+                return (Long) objects[0];
+            }
+        });
+    }
+
+    public void initDatabase() {
+        DBUtilities.executeNotSelectSQL(persistenceManager,
+                CREATE_PHOTOQUEST_SEARCH_TABLE);
+    }
+
+    public void insertPhotoquestSearch(long photoquestId, String keywords) {
+        String sql = INSERT_INTO_PHOTOQUEST_SEARCH;
+        sql = sql.replaceFirst(":photoquestId", String.valueOf(photoquestId));
+        sql = sql.replaceFirst(":keywords", keywords);
+        DBUtilities.executeNotSelectSQL(persistenceManager, sql);
     }
 
     public AdvancedRequestsManager(PersistenceManager persistenceManager) {

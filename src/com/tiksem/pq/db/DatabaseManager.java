@@ -7,12 +7,12 @@ import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.db.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
+import com.utils.framework.CollectionUtils;
 import com.utils.framework.google.places.*;
 import com.utils.framework.io.IOUtilities;
-import com.utils.framework.io.Network;
 import com.utils.framework.randomuser.RandomUserGenerator;
 import com.utils.framework.randomuser.Response;
-import org.apache.commons.io.IOUtils;
+import com.utils.framework.strings.Strings;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.jdo.*;
@@ -40,6 +40,8 @@ public class DatabaseManager {
     private static final String ADDING_DATE_ORDERING = "addingDate descending";
 
     private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
+
+    private static final int MAX_KEYWORDS_COUNT = 7;
 
     private final PersistenceManager persistenceManager;
 
@@ -182,10 +184,25 @@ public class DatabaseManager {
 
     public Photoquest createSystemPhotoquest(String photoquestName) {
         Photoquest photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
-        return makePersistent(photoquest);
+        photoquest = makePersistent(photoquest);
+        setPhotoquestKeywords(photoquest, Collections.<String>emptyList());
+        return photoquest;
     }
 
-    public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName) {
+    private void setPhotoquestKeywords(long photoquestId, String keywords) {
+        advancedRequestsManager.insertPhotoquestSearch(photoquestId, keywords);
+    }
+
+    private void setPhotoquestKeywords(Photoquest photoquest, List<String> keywords) {
+        String keywordConcat = photoquest.getName() + " " + Strings.join(" ", keywords);
+        setPhotoquestKeywords(photoquest.getId(), keywordConcat);
+    }
+
+    public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName, List<String> keywords) {
+        if(keywords.size() > MAX_KEYWORDS_COUNT){
+            throw new IllegalArgumentException("Too much tags, only " + MAX_KEYWORDS_COUNT + " are allowed");
+        }
+
         User user = getSignedInUserOrThrow(request);
         Photoquest photoquest = getPhotoQuestByName(photoquestName);
         if (photoquest != null) {
@@ -201,6 +218,7 @@ public class DatabaseManager {
         action.setPhotoquestId(photoquest.getId());
         action.setUserId(userId);
         makePersistent(action);
+        setPhotoquestKeywords(photoquest, keywords);
 
         return photoquest;
     }
@@ -221,6 +239,36 @@ public class DatabaseManager {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
         return DBUtilities.queryCountByPattern(persistenceManager, photoquest);
+    }
+
+    public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
+        setAvatar(request, photoquests);
+        setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
+    }
+
+    public Collection<Photoquest> searchPhotoquests(final HttpServletRequest request, String query, OffsetLimit offsetLimit) {
+        Photoquest photoquestByName = getPhotoQuestByName(query);
+        Long excludeId = null;
+        Collection<Photoquest> result = new ArrayList<Photoquest>();
+        if(photoquestByName != null){
+            excludeId = photoquestByName.getId();
+            if(offsetLimit.getOffset() == 0){
+                offsetLimit.setLimit(offsetLimit.getLimit() - 1);
+            }
+            result.add(photoquestByName);
+        }
+
+        List<Long> ides = advancedRequestsManager.getPhotoquestsByQuery(query, excludeId, offsetLimit);
+        result.addAll(CollectionUtils.transform(ides,
+                new CollectionUtils.Transformer<Long, Photoquest>() {
+                    @Override
+                    public Photoquest get(Long id) {
+                        return getPhotoQuestByIdOrThrow(id);
+                    }
+                }));
+
+        initPhotoquestsInfo(request, result);
+        return result;
     }
 
     private Collection<PerformedPhotoquest> getPerformedPhotoquestsByUser(long userId, OffsetLimit offsetLimit) {
@@ -710,9 +758,7 @@ public class DatabaseManager {
         Collection<Photoquest> result =
                 DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class,
                         offsetLimit, orderString);
-        setAvatar(request, result);
-
-        setPhotoquestsFollowingParamIfSignedIn(request, result);
+        initPhotoquestsInfo(request, result);
 
         return result;
     }
@@ -1765,6 +1811,10 @@ public class DatabaseManager {
         Action pattern = new Action();
         pattern.setUserId(userId);
         return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+    }
+
+    public void initDatabase() {
+        advancedRequestsManager.initDatabase();
     }
 
     @Override

@@ -9,11 +9,13 @@ import com.utils.framework.collections.map.SetValuesHashMultiMap;
 import com.utils.framework.strings.Strings;
 
 import javax.jdo.*;
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Unique;
+import javax.jdo.Query;
+import javax.jdo.annotations.*;
+import javax.jdo.datastore.JDOConnection;
 import java.lang.reflect.Field;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 
 /**
@@ -33,6 +35,7 @@ public class DBUtilities {
         properties.setProperty("datanucleus.schema.autoCreateTables", "true");
         properties.setProperty("datanucleus.schema.autoCreateColumns", "true");
         properties.setProperty("datanucleus.schema.autoCreateAll", "true");
+        properties.setProperty("datanucleus.schema.validateTables", "false");
 
         return JDOHelper.getPersistenceManagerFactory(properties);
     }
@@ -540,6 +543,23 @@ public class DBUtilities {
         return Long.valueOf(query.executeWithMap(args).toString());
     }
 
+    public static void executeNotSelectSQL(PersistenceManager persistenceManager, String sql) {
+        JDOConnection dataStoreConnection =
+                persistenceManager.getDataStoreConnection();
+        Object nativeConnection = dataStoreConnection.getNativeConnection();
+
+        Connection connection = (Connection) nativeConnection;
+        try {
+            Statement statement = connection.createStatement();
+            statement.execute(sql);
+            statement.close();
+            connection.commit();
+            connection.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Object executeSQL(PersistenceManager persistenceManager,
                                     String sql,
                                     Map<String, Object> params,
@@ -549,6 +569,10 @@ public class DBUtilities {
             query.setClass(resultClass);
         }
         return query.executeWithMap(params);
+    }
+
+    public enum IndexType {
+        FULLTEXT
     }
 
     // method for debug
