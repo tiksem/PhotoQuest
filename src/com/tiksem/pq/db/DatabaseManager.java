@@ -1778,8 +1778,14 @@ public class DatabaseManager {
         followingPhotoquest.setUserId(signedInUserId);
         followingPhotoquest.setPhotoquestId(photoquestId);
 
-        User user = getUserByIdOrThrow(photoquest.getUserId());
-        user.incrementRating();
+        Long photoquestUserId = photoquest.getUserId();
+        User user = null;
+        if (photoquestUserId != null) {
+            user = getUserByIdOrThrow(photoquestUserId);
+            user.incrementRating();
+        } else {
+            return makePersistent(followingPhotoquest);
+        }
 
         return (FollowingPhotoquest) makeAllPersistent(followingPhotoquest, user)[0];
     }
@@ -1792,7 +1798,10 @@ public class DatabaseManager {
         deletePersistent(followingPhotoquest);
 
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
-        decrementRating(photoquest.getUserId());
+        Long photoquestUserId = photoquest.getUserId();
+        if (photoquestUserId != null) {
+            decrementRating(photoquestUserId);
+        }
     }
 
     public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit,
