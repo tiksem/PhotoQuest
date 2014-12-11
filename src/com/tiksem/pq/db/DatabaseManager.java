@@ -436,6 +436,46 @@ public class DatabaseManager {
         return result;
     }
 
+    private void setRelationStatus(User signedInUser, Collection<User> users) {
+        Long signedInUserId = signedInUser.getId();
+
+        for(User user : users){
+            Long userId = user.getId();
+            Relationship pattern = new Relationship();
+            pattern.setFromUserId(signedInUserId);
+            pattern.setToUserId(userId);
+
+            Relationship relationship = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+            if (relationship != null) {
+                Integer type = relationship.getType();
+                if(type == Relationship.FRIENDSHIP){
+                    user.setRelation(RelationStatus.friend);
+                } else if(type == Relationship.FOLLOWS){
+                    user.setRelation(RelationStatus.follows);
+                } else if(type == Relationship.FRIEND_REQUEST) {
+                    user.setRelation(RelationStatus.request_sent);
+                } else {
+                    throw new RuntimeException("Unexpected WTF");
+                }
+            } else {
+                pattern.setFromUserId(userId);
+                pattern.setToUserId(signedInUserId);
+
+                relationship = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+                if(relationship != null){
+                    Integer type = relationship.getType();
+                    if(type == Relationship.FOLLOWS){
+                        user.setRelation(RelationStatus.followed);
+                    } else if(type == Relationship.FRIEND_REQUEST) {
+                        user.setRelation(RelationStatus.request_received);
+                    } else {
+                        throw new RuntimeException("Unexpected WTF");
+                    }
+                }
+            }
+        }
+    }
+
     public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser,
                                         boolean fillRelationshipData, OffsetLimit offsetLimit) {
         Collection<User> users = null;
@@ -462,41 +502,42 @@ public class DatabaseManager {
         setUsersInfo(request, users);
 
         if(fillRelationshipData && signedInUser != null){
-            for(User user : users){
-                Long userId = user.getId();
-                Relationship pattern = new Relationship();
-                pattern.setFromUserId(signedInUserId);
-                pattern.setToUserId(userId);
+            setRelationStatus(signedInUser, users);
+        }
 
-                Relationship relationship = DBUtilities.getObjectByPattern(persistenceManager, pattern);
-                if (relationship != null) {
-                    Integer type = relationship.getType();
-                    if(type == Relationship.FRIENDSHIP){
-                        user.setRelation(RelationStatus.friend);
-                    } else if(type == Relationship.FOLLOWS){
-                        user.setRelation(RelationStatus.follows);
-                    } else if(type == Relationship.FRIEND_REQUEST) {
-                        user.setRelation(RelationStatus.request_sent);
-                    } else {
-                        throw new RuntimeException("Unexpected WTF");
-                    }
-                } else {
-                    pattern.setFromUserId(userId);
-                    pattern.setToUserId(signedInUserId);
+        return users;
+    }
 
-                    relationship = DBUtilities.getObjectByPattern(persistenceManager, pattern);
-                    if(relationship != null){
-                        Integer type = relationship.getType();
-                        if(type == Relationship.FOLLOWS){
-                            user.setRelation(RelationStatus.followed);
-                        } else if(type == Relationship.FRIEND_REQUEST) {
-                            user.setRelation(RelationStatus.request_received);
-                        } else {
-                            throw new RuntimeException("Unexpected WTF");
-                        }
-                    }
-                }
-            }
+    public Collection<User> searchUsers(HttpServletRequest request, String queryString, OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUser(request);
+        User pattern = new User();
+        String[] queryParts = queryString.split(" +");
+        Query query = persistenceManager.newQuery(User.class);
+        String filter;
+        String parametersString;
+        Map<String, Object> args = new HashMap<String, Object>();
+        if(queryParts.length == 1){
+            filter = "this.name == query || this.lastName == query";
+            args.put("query", queryParts[0]);
+            parametersString = "String query";
+        } else if(queryParts.length >= 2) {
+            filter = "(this.name == query1 && this.lastName == query2) || " +
+                    "(this.name == query2 && this.lastName == query1)";
+            args.put("query1", queryParts[0]);
+            args.put("query2", queryParts[1]);
+            parametersString = "String query1, String query2";
+        } else {
+            throw new IllegalArgumentException("empty query");
+        }
+
+        query.setFilter(filter);
+        query.declareParameters(parametersString);
+        offsetLimit.applyToQuery(query);
+
+        Collection<User> users = (Collection<User>) query.executeWithMap(args);
+        setUsersInfo(request, users);
+        if (signedInUser != null) {
+            setRelationStatus(signedInUser, users);
         }
 
         return users;
@@ -1623,11 +1664,6 @@ public class DatabaseManager {
 
     public List<User> getSentFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit) {
         return getFriendRequests(request, offsetLimit, false);
-    }
-
-    public Collection<User> searchUsers(User pattern, OffsetLimit offsetLimit) {
-        return DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit,
-                ADDING_DATE_ORDERING);
     }
 
     private FollowingPhotoquest getFollowingPhotoquest(long userId, long photoquestId) {

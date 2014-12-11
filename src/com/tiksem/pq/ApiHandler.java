@@ -10,6 +10,7 @@ import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import com.utils.framework.io.Network;
+import com.utils.framework.strings.Strings;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,9 +101,17 @@ public class ApiHandler {
     }
 
     @RequestMapping("/users")
-    public @ResponseBody Object getAllUsers(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().
-                getAllUsersWithCheckingRelationShip(request, offsetLimit);
+    public @ResponseBody Object getAllUsers(
+            @RequestParam(value = "filter", required = false) String filter,
+            OffsetLimit offsetLimit) {
+        Collection<User> users;
+        if(Strings.isEmpty(filter)){
+            users = getDatabaseManager().
+                    getAllUsersWithCheckingRelationShip(request, offsetLimit);
+        } else {
+            users = getDatabaseManager().searchUsers(request, filter, offsetLimit);
+        }
+
         return new UsersList(users);
     }
 
@@ -217,7 +226,7 @@ public class ApiHandler {
                                                RatingOrder order,
                                                @RequestParam(value = "filter", required = false) String filter){
         final Collection<Photoquest> photoquests;
-        if(filter == null){
+        if(Strings.isEmpty(filter)){
             photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit, order);
         } else {
             photoquests = getDatabaseManager().searchPhotoquests(request, filter, offsetLimit);
