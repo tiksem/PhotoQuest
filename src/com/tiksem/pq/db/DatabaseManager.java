@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.jdo.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
@@ -508,39 +509,78 @@ public class DatabaseManager {
         return users;
     }
 
-    public Collection<User> searchUsers(HttpServletRequest request, String queryString, OffsetLimit offsetLimit) {
-        User signedInUser = getSignedInUser(request);
+    public Collection<User> getUsersByLocation(HttpServletRequest request, String location, OffsetLimit offsetLimit) {
         User pattern = new User();
+        pattern.setLocation(location);
+        Collection<User> users = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit);
+        setUsersInfoAndRelationStatus(request, users);
+        return users;
+    }
+
+    public void setUsersInfoAndRelationStatus(HttpServletRequest request, Collection<User> users) {
+        User signedInUser = getSignedInUser(request);
+        setUsersInfo(request, users);
+        if (signedInUser != null) {
+            setRelationStatus(signedInUser, users);
+        }
+    }
+
+    public long getUsersByLocationCount(String location) {
+        User pattern = new User();
+        pattern.setLocation(location);
+        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+    }
+
+    private Query searchUsersQuery(String queryString, String location,
+                                   Map<String, Object> outArgs) {
         String[] queryParts = queryString.split(" +");
         Query query = persistenceManager.newQuery(User.class);
         String filter;
         String parametersString;
-        Map<String, Object> args = new HashMap<String, Object>();
+
         if(queryParts.length == 1){
             filter = "this.name == query || this.lastName == query";
-            args.put("query", queryParts[0]);
+            outArgs.put("query", queryParts[0]);
             parametersString = "String query";
         } else if(queryParts.length >= 2) {
             filter = "(this.name == query1 && this.lastName == query2) || " +
                     "(this.name == query2 && this.lastName == query1)";
-            args.put("query1", queryParts[0]);
-            args.put("query2", queryParts[1]);
+            outArgs.put("query1", queryParts[0]);
+            outArgs.put("query2", queryParts[1]);
             parametersString = "String query1, String query2";
         } else {
             throw new IllegalArgumentException("empty query");
         }
 
+        if(!Strings.isEmpty(location)){
+            outArgs.put("location", location);
+            parametersString += ", String location";
+            filter = "(" + filter + ") && (this.location == location)";
+        }
+
         query.setFilter(filter);
         query.declareParameters(parametersString);
+
+        return query;
+    }
+
+    public Collection<User> searchUsers(HttpServletRequest request, String queryString, String location,
+                                        OffsetLimit offsetLimit) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        Query query = searchUsersQuery(queryString, location, args);
         offsetLimit.applyToQuery(query);
 
         Collection<User> users = (Collection<User>) query.executeWithMap(args);
-        setUsersInfo(request, users);
-        if (signedInUser != null) {
-            setRelationStatus(signedInUser, users);
-        }
+        setUsersInfoAndRelationStatus(request, users);
 
         return users;
+    }
+
+    public long getSearchUsersCount(String queryString, String location) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        Query query = searchUsersQuery(queryString, location, args);
+        query.setResult("count(this)");
+        return (Long)query.executeWithMap(args);
     }
 
     public void deleteAllUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
@@ -549,7 +589,7 @@ public class DatabaseManager {
 
     public void deleteAllPhotos() {
         DBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
-        DBUtilities.deleteAllObjectsOfClass(persistenceManager, BitmapData.class);
+        new File("images").delete();
     }
 
     public PerformedPhotoquest getOrCreatePerformedPhotoquest(long userId, long photoquestId) {

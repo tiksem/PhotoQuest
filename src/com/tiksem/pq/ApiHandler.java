@@ -6,13 +6,10 @@ import com.tiksem.pq.db.DBUtilities;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.OffsetLimit;
 import com.tiksem.pq.db.RatingOrder;
-import com.tiksem.pq.db.exceptions.FileIsEmptyException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import com.utils.framework.io.Network;
 import com.utils.framework.strings.Strings;
-import net.coobird.thumbnailator.Thumbnails;
-import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -21,13 +18,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.awt.image.BufferedImage;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -103,21 +96,38 @@ public class ApiHandler {
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers(
             @RequestParam(value = "filter", required = false) String filter,
+            @RequestParam(value = "location", required = false) String location,
             OffsetLimit offsetLimit) {
         Collection<User> users;
         if(Strings.isEmpty(filter)){
             users = getDatabaseManager().
                     getAllUsersWithCheckingRelationShip(request, offsetLimit);
+
+            if (!Strings.isEmpty(location)) {
+                users = getDatabaseManager().getUsersByLocation(request, location, offsetLimit);
+            }
         } else {
-            users = getDatabaseManager().searchUsers(request, filter, offsetLimit);
+            users = getDatabaseManager().searchUsers(request, filter, location, offsetLimit);
         }
 
         return new UsersList(users);
     }
 
     @RequestMapping("/getUsersCount")
-    public @ResponseBody Object getAllUsersCount() {
-        return new CountResponse(getDatabaseManager().getAllUsersCount(request, false));
+    public @ResponseBody Object getAllUsersCount(@RequestParam(value = "filter", required = false) String filter,
+                                                 @RequestParam(value = "location", required = false) String location) {
+        long count = 0;
+        if (Strings.isEmpty(filter)) {
+            count = getDatabaseManager().getAllUsersCount(request, false);
+
+            if (!Strings.isEmpty(location)) {
+                count = getDatabaseManager().getUsersByLocationCount(location);
+            }
+        } else {
+            count = getDatabaseManager().getSearchUsersCount(filter, location);
+        }
+
+        return new CountResponse(count);
     }
 
     @RequestMapping("/getFriendsCount")
