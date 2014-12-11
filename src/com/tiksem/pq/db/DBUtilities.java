@@ -77,10 +77,11 @@ public class DBUtilities {
     }
 
     public static <T> Collection<T> queryByExcludePattern(PersistenceManager manager, T pattern,
-                                                          OffsetLimit offsetLimit) {
+                                                          OffsetLimit offsetLimit, String orderingString) {
         QueryParams params = new QueryParams();
         params.offsetLimit = offsetLimit;
         params.asExcludePattern = true;
+        params.ordering = orderingString;
         return queryByPattern(manager, pattern, params);
     }
 

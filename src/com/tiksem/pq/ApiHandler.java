@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 @Controller
 @RequestMapping("/")
 public class ApiHandler {
-    private static final Pattern TAG_PATTERN = Pattern.compile("\\w{3,20}", Pattern.UNICODE_CHARACTER_CLASS);
+    private static final Pattern TAG_PATTERN = Pattern.compile("[\\d\\w]{3,20}", Pattern.UNICODE_CHARACTER_CLASS);
 
     @Autowired
     private HttpServletRequest request;
@@ -97,17 +97,19 @@ public class ApiHandler {
     public @ResponseBody Object getAllUsers(
             @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "location", required = false) String location,
-            OffsetLimit offsetLimit) {
+            OffsetLimit offsetLimit,
+            @RequestParam(value = "order", required = false, defaultValue = "newest")
+            RatingOrder order) {
         Collection<User> users;
         if(Strings.isEmpty(filter)){
             users = getDatabaseManager().
-                    getAllUsersWithCheckingRelationShip(request, offsetLimit);
+                    getAllUsersWithCheckingRelationShip(request, offsetLimit, order);
 
             if (!Strings.isEmpty(location)) {
-                users = getDatabaseManager().getUsersByLocation(request, location, offsetLimit);
+                users = getDatabaseManager().getUsersByLocation(request, location, offsetLimit, order);
             }
         } else {
-            users = getDatabaseManager().searchUsers(request, filter, location, offsetLimit);
+            users = getDatabaseManager().searchUsers(request, filter, location, offsetLimit, order);
         }
 
         return new UsersList(users);
@@ -168,12 +170,6 @@ public class ApiHandler {
     public @ResponseBody Object getSentFriendRequests(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getSentFriendRequests(request, offsetLimit);
         return new UsersList(users);
-    }
-
-    @RequestMapping("/deleteAllUsers")
-    public @ResponseBody Object deleteAllUsers(OffsetLimit offsetLimit) {
-        getDatabaseManager().deleteAllUsers(request, offsetLimit);
-        return new Success();
     }
 
     @RequestMapping("/deleteAllPhotos")

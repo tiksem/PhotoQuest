@@ -58,6 +58,9 @@ public class User implements WithAvatar {
     @Index
     private String countryCode;
 
+    @Index
+    private Long rating;
+
     @NotPersistent
     private String avatar;
 
@@ -170,6 +173,10 @@ public class User implements WithAvatar {
         if(unreadRepliesCount == null){
             unreadRepliesCount = 0l;
         }
+
+        if(rating == null){
+            rating = 0l;
+        }
     }
 
     public Long getUnreadMessagesCount() {
@@ -276,6 +283,25 @@ public class User implements WithAvatar {
         }
     }
 
+    public void incrementRating() {
+        if(rating == null){
+            rating = 0l;
+        }
+
+        rating++;
+    }
+
+    public void decrementRating() {
+        if(rating == null){
+            rating = 0l;
+        }
+
+        rating--;
+        if(rating < 0){
+            throw new RuntimeException("rating < 0");
+        }
+    }
+
     public Long getUnreadRepliesCount() {
         return unreadRepliesCount;
     }
@@ -314,5 +340,13 @@ public class User implements WithAvatar {
 
     public void setCountry(String country) {
         this.country = country;
+    }
+
+    public Long getRating() {
+        return rating;
+    }
+
+    public void setRating(Long rating) {
+        this.rating = rating;
     }
 }

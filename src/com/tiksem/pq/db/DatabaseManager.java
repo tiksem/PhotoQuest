@@ -38,6 +38,9 @@ public class DatabaseManager {
     private static final String NEWEST_PHOTO_MAX_ORDERING = "addingDate descending, likesCount descending, " +
             "id descending";
 
+    private static final String RATING_PEOPLE_ORDERING = "rating descending";
+
+
     private static final String ADDING_DATE_ORDERING = "addingDate descending";
 
     private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
@@ -419,12 +422,14 @@ public class DatabaseManager {
         return user;
     }
 
-    public Collection<User> getAllUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return getAllUsers(request, true, false, offsetLimit);
+    public Collection<User> getAllUsers(HttpServletRequest request, OffsetLimit offsetLimit, RatingOrder order) {
+        return getAllUsers(request, true, false, offsetLimit, order);
     }
 
-    public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return getAllUsers(request, false, true, offsetLimit);
+    public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request,
+                                                                OffsetLimit offsetLimit,
+                                                                RatingOrder order) {
+        return getAllUsers(request, false, true, offsetLimit, order);
     }
 
     public long getAllUsersCount(HttpServletRequest request, boolean includeSignedInUser) {
@@ -478,25 +483,27 @@ public class DatabaseManager {
     }
 
     public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser,
-                                        boolean fillRelationshipData, OffsetLimit offsetLimit) {
+                                        boolean fillRelationshipData, OffsetLimit offsetLimit,
+                                        RatingOrder order) {
         Collection<User> users = null;
         User signedInUser = null;
 
         long signedInUserId = 0;
+        String orderingString = getPeopleOrderingString(order);
 
         if (includeSignedInUser) {
             users = DBUtilities.getAllObjectsOfClass(persistenceManager,
-                    User.class, offsetLimit);
+                    User.class, offsetLimit, orderingString);
         } else {
             signedInUser = getSignedInUser(request);
             if(signedInUser == null){
                 users = DBUtilities.getAllObjectsOfClass(persistenceManager,
-                        User.class, offsetLimit);
+                        User.class, offsetLimit, orderingString);
             } else {
                 signedInUserId = signedInUser.getId();
                 User user = new User();
                 user.setId(signedInUserId);
-                users = DBUtilities.queryByExcludePattern(persistenceManager, user, offsetLimit);
+                users = DBUtilities.queryByExcludePattern(persistenceManager, user, offsetLimit, orderingString);
             }
         }
 
@@ -509,10 +516,13 @@ public class DatabaseManager {
         return users;
     }
 
-    public Collection<User> getUsersByLocation(HttpServletRequest request, String location, OffsetLimit offsetLimit) {
+    public Collection<User> getUsersByLocation(HttpServletRequest request, String location,
+                                               OffsetLimit offsetLimit,
+                                               RatingOrder order) {
         User pattern = new User();
         pattern.setLocation(location);
-        Collection<User> users = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit);
+        String orderingString = getPeopleOrderingString(order);
+        Collection<User> users = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, orderingString);
         setUsersInfoAndRelationStatus(request, users);
         return users;
     }
@@ -532,7 +542,8 @@ public class DatabaseManager {
     }
 
     private Query searchUsersQuery(String queryString, String location,
-                                   Map<String, Object> outArgs) {
+                                   Map<String, Object> outArgs,
+                                   RatingOrder order) {
         String[] queryParts = queryString.split(" +");
         Query query = persistenceManager.newQuery(User.class);
         String filter;
@@ -560,14 +571,17 @@ public class DatabaseManager {
 
         query.setFilter(filter);
         query.declareParameters(parametersString);
+        if (order != null) {
+            query.setOrdering(getPeopleOrderingString(order));
+        }
 
         return query;
     }
 
     public Collection<User> searchUsers(HttpServletRequest request, String queryString, String location,
-                                        OffsetLimit offsetLimit) {
+                                        OffsetLimit offsetLimit, RatingOrder order) {
         Map<String, Object> args = new HashMap<String, Object>();
-        Query query = searchUsersQuery(queryString, location, args);
+        Query query = searchUsersQuery(queryString, location, args, order);
         offsetLimit.applyToQuery(query);
 
         Collection<User> users = (Collection<User>) query.executeWithMap(args);
@@ -578,13 +592,9 @@ public class DatabaseManager {
 
     public long getSearchUsersCount(String queryString, String location) {
         Map<String, Object> args = new HashMap<String, Object>();
-        Query query = searchUsersQuery(queryString, location, args);
+        Query query = searchUsersQuery(queryString, location, args, null);
         query.setResult("count(this)");
         return (Long)query.executeWithMap(args);
-    }
-
-    public void deleteAllUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
-        deleteAllPersistent(getAllUsers(request, offsetLimit));
     }
 
     public void deleteAllPhotos() {
@@ -811,6 +821,22 @@ public class DatabaseManager {
         return orderString;
     }
 
+    private String getPeopleOrderingString(RatingOrder order) {
+        String orderString;
+        switch (order) {
+            case hottest:
+                throw new UnsupportedOperationException("hottest is not supported yet");
+            case rated:
+                orderString = RATING_PEOPLE_ORDERING;
+                break;
+            default:
+                orderString = ADDING_DATE_ORDERING;
+                break;
+        }
+
+        return orderString;
+    }
+
     private void setPhotoquestFollowingParam(HttpServletRequest request, Photoquest photoquest, long signedInUserId) {
         boolean isFollowing = getFollowingPhotoquest(signedInUserId, photoquest.getId()) != null;
         photoquest.setIsFollowing(isFollowing);
@@ -883,12 +909,26 @@ public class DatabaseManager {
         makeAllPersistent(friendship1, friendship2);
     }
 
+    private void incrementRating(long userId) {
+        User user = getUserByIdOrThrow(userId);
+        user.incrementRating();
+        makePersistent(user);
+    }
+
+    private void decrementRating(long userId) {
+        User user = getUserByIdOrThrow(userId);
+        user.decrementRating();
+        makePersistent(user);
+    }
+
     public void addFriend(HttpServletRequest request, long userId) {
         try {
             acceptFriendRequest(request, userId);
         } catch (RelationNotFoundException e) {
             sendFriendRequest(request, userId);
         }
+
+        incrementRating(userId);
     }
 
     public void removeFriend(HttpServletRequest request, long userId) {
@@ -901,6 +941,8 @@ public class DatabaseManager {
                 removeFriendShip(request, userId);
             }
         }
+
+        decrementRating(userId);
     }
 
     private void removeFriendShip(HttpServletRequest request, long userId) {
@@ -1723,7 +1765,7 @@ public class DatabaseManager {
     }
 
     public FollowingPhotoquest followPhotoquest(HttpServletRequest request, long photoquestId) {
-        getPhotoQuestByIdOrThrow(photoquestId);
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
         User signedInUser = getSignedInUserOrThrow(request);
         Long signedInUserId = signedInUser.getId();
 
@@ -1736,7 +1778,10 @@ public class DatabaseManager {
         followingPhotoquest.setUserId(signedInUserId);
         followingPhotoquest.setPhotoquestId(photoquestId);
 
-        return makePersistent(followingPhotoquest);
+        User user = getUserByIdOrThrow(photoquest.getUserId());
+        user.incrementRating();
+
+        return (FollowingPhotoquest) makeAllPersistent(followingPhotoquest, user)[0];
     }
 
     public void unfollowPhotoquest(HttpServletRequest request, long photoquestId) {
@@ -1745,6 +1790,9 @@ public class DatabaseManager {
 
         FollowingPhotoquest followingPhotoquest = getFollowingPhotoquestOrThrow(signedInUserId, photoquestId);
         deletePersistent(followingPhotoquest);
+
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+        decrementRating(photoquest.getUserId());
     }
 
     public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit,
@@ -1897,6 +1945,5 @@ public class DatabaseManager {
     protected void finalize() throws Throwable {
         super.finalize();
         persistenceManager.close();
-
     }
 }
