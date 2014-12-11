@@ -545,6 +545,10 @@ public class DatabaseManager {
                                    Map<String, Object> outArgs,
                                    RatingOrder order) {
         String[] queryParts = queryString.split(" +");
+        for (int i = 0; i < queryParts.length; i++) {
+            queryParts[i] = Strings.capitalizeAndCopy(queryParts[i].toLowerCase());
+        }
+
         Query query = persistenceManager.newQuery(User.class);
         String filter;
         String parametersString;
