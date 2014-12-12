@@ -10,6 +10,7 @@ import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.google.places.*;
 import com.utils.framework.io.IOUtilities;
+import com.utils.framework.randomuser.Gender;
 import com.utils.framework.randomuser.RandomUserGenerator;
 import com.utils.framework.randomuser.Response;
 import com.utils.framework.strings.Strings;
@@ -1602,6 +1603,8 @@ public class DatabaseManager {
             user.setLastName(userData.lastName);
             user.setLogin("user" + startId++);
             user.setPassword(password);
+            user.setGender(userData.gender == Gender.male);
+
             AutoCompleteResult location =
                     googlePlacesSearcher.performAutoCompleteCitiesSearch(userData.city).get(0);
             user.setLocation(location.placeId);
