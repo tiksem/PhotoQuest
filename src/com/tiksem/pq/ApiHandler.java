@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -340,7 +341,7 @@ public class ApiHandler {
     public @ResponseBody Object getUserById(@RequestParam("id") Long id){
         DatabaseManager databaseManager = getDatabaseManager();
         User user = databaseManager.getUserByIdOrThrow(id);
-        databaseManager.setAvatar(request, user);
+        databaseManager.setUsersInfoAndRelationStatus(request, Collections.singletonList(user));
         return user;
     }
 
