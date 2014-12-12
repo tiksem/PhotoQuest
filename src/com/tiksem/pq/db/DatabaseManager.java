@@ -385,7 +385,8 @@ public class DatabaseManager {
     }
 
     public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
-        InputStream avatarInputStream = null;
+        InputStream avatarInputStream = null
+                ;
         try {
             avatarInputStream = avatar.getInputStream();
         } catch (IOException e) {

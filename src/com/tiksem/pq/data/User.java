@@ -61,6 +61,9 @@ public class User implements WithAvatar {
     @Index
     private Long rating;
 
+    @Persistent
+    private Boolean gender;
+
     @NotPersistent
     private String avatar;
 
@@ -348,5 +351,13 @@ public class User implements WithAvatar {
 
     public void setRating(Long rating) {
         this.rating = rating;
+    }
+
+    public Boolean getGender() {
+        return gender;
+    }
+
+    public void setGender(Boolean gender) {
+        this.gender = gender;
     }
 }

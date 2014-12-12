@@ -72,6 +72,7 @@ public class ApiHandler {
                                       @RequestParam(value="name", required=true) String name,
                                       @RequestParam(value="lastName", required=true) String lastName,
                                       @RequestParam(value="location", required=true) String location,
+                                      @RequestParam(value="gender", required=true) boolean gender,
                                       @RequestParam("file") MultipartFile avatar,
                                       HttpServletResponse response) throws IOException {
         User user = new User();
@@ -80,6 +81,7 @@ public class ApiHandler {
         user.setName(name);
         user.setLastName(lastName);
         user.setLocation(location);
+        user.setGender(gender);
 
         return getDatabaseManager().registerUser(request, user, avatar);
     }
