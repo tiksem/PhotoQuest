@@ -25,7 +25,6 @@ public class User implements WithAvatar {
     @Password
     private String password;
 
-    @JsonIgnore
     @Index
     private Long avatarId;
 
