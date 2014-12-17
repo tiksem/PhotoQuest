@@ -48,6 +48,8 @@ public class DatabaseManager {
 
     private static final int MAX_KEYWORDS_COUNT = 7;
 
+    private static final long PHOTOQUEST_VIEW_PERIOD = 30 * 60 * 1000;
+
     private final PersistenceManager persistenceManager;
 
     private ImageManager imageManager = new FileSystemImageManager("images", "magic");
@@ -751,15 +753,38 @@ public class DatabaseManager {
         return photos;
     }
 
+    private void addPhotoquestViewIfNeed(HttpServletRequest request, Photoquest photoquest) {
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser == null){
+            return;
+        }
+
+        PhotoquestView pattern = new PhotoquestView();
+        pattern.setPhotoquestId(photoquest.getId());
+        pattern.setUserId(signedInUser.getId());
+        PhotoquestView photoquestView = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+        if(photoquestView == null){
+            photoquestView = pattern;
+        }
+
+        long currentTimeMillis = System.currentTimeMillis();
+        if(photoquestView == pattern || currentTimeMillis -
+                photoquestView.getAddingDate() >= PHOTOQUEST_VIEW_PERIOD){
+            photoquestView.setAddingDate(currentTimeMillis);
+            photoquest.incrementViewsCount();
+            makeAllPersistent(photoquest, photoquestView);
+        }
+    }
+
     public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId,
                                                    OffsetLimit offsetLimit, RatingOrder order) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
-        photoquest.incrementViewsCount();
-        update(request, photoquest);
+        addPhotoquestViewIfNeed(request, photoquest);
 
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
         String orderString = getRatingOrderingString(order);
+
         DBUtilities.QueryParams params = new DBUtilities.QueryParams();
         params.offsetLimit = offsetLimit;
         params.ordering = orderString;
@@ -767,6 +792,7 @@ public class DatabaseManager {
         initPhotosUrl(photos, request);
 
         initYourLikeParameter(request, photos);
+        addPhotoquestViewIfNeed(request, photoquest);
 
         return photos;
 
