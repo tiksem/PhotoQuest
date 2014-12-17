@@ -10,6 +10,7 @@ import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import com.utils.framework.io.Network;
 import com.utils.framework.strings.Strings;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -205,7 +206,7 @@ public class ApiHandler {
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
             headers = "Accept=image/jpeg, image/jpg, image/png, image/gif")
-    public @ResponseBody Object
+    public void
     getImageById(@PathVariable Long id,
                  @RequestParam(value = "size", required = false) Integer size,
                  OutputStream outputStream)
@@ -218,12 +219,7 @@ public class ApiHandler {
                 inputStream = getDatabaseManager().getThumbnailByPhotoIdOrThrow(id, size);
             }
 
-            byte[] image = Network.getBytesFromStream(inputStream);
-            HttpHeaders headers = new HttpHeaders();
-            MediaType mediaType = MimeTypeUtils.getMediaTypeFromByteArray(image);
-            headers.setContentType(mediaType);
-            headers.setContentLength(image.length);
-            return new HttpEntity<byte[]>(image, headers);
+            IOUtils.copyLarge(inputStream, outputStream, new byte[1024 * 64]);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
