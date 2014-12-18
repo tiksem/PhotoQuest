@@ -775,8 +775,8 @@ public class DatabaseManager {
         }
     }
 
-    public void initYourLikeParameter(HttpServletRequest request, Photo photos) {
-        initYourLikeParameter(request, Collections.singletonList(photos));
+    public void initYourLikeParameter(HttpServletRequest request, Photo photo) {
+        initYourLikeParameter(request, Collections.singletonList(photo));
     }
 
     public Collection<Photo> getAllPhotos(HttpServletRequest request, OffsetLimit offsetLimit) {
@@ -1979,6 +1979,7 @@ public class DatabaseManager {
         if (photoId != null) {
             Photo photo = getPhotoByIdOrThrow(photoId);
             initPhotoUrl(photo, request);
+            initYourLikeParameter(request, photo);
             feed.setPhoto(photo);
         }
 
