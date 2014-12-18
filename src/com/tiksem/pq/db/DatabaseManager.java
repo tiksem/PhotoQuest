@@ -1279,7 +1279,7 @@ public class DatabaseManager {
         Like like = new Like();
         like.setPhotoId(photoId);
 
-        like = like(request, like);
+        like = like(request, like, photo.getUserId());
 
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
         incrementLikesCount(request, photo, photoquest);
@@ -1294,7 +1294,7 @@ public class DatabaseManager {
         Like like = new Like();
         like.setCommentId(commentId);
 
-        like = like(request, like);
+        like = like(request, like, comment.getUserId());
 
         incrementLikesCount(request, comment);
 
@@ -1317,7 +1317,7 @@ public class DatabaseManager {
         update(request, likables);
     }
 
-    private Like like(HttpServletRequest request, Like like) {
+    private Like like(HttpServletRequest request, Like like, long toUserId) {
         User signedInUser = getSignedInUserOrThrow(request);
         like.setUserId(signedInUser.getId());
 
@@ -1326,6 +1326,16 @@ public class DatabaseManager {
         }
 
         like = makePersistent(like);
+
+        Reply reply = new Reply();
+        reply.setId(like.getId());
+        reply.setUserId(toUserId);
+        reply.setType(Reply.LIKE);
+
+        User toUser = getUserByIdOrThrow(toUserId);
+        toUser.incrementUnreadRepliesCount();
+        makeAllPersistent(reply, toUser);
+
         like.setUser(signedInUser);
 
         return like;
@@ -1743,6 +1753,14 @@ public class DatabaseManager {
         return DBUtilities.queryByPattern(persistenceManager, reply, params);
     }
 
+    private void setPhoto(HttpServletRequest request, WithPhoto withPhoto) {
+        Long photoId = withPhoto.getPhotoId();
+        if (photoId != null) {
+            withPhoto.setPhoto(HttpUtilities.getBaseUrl(request) +
+                    Photo.IMAGE_URL_PATH + photoId);
+        }
+    }
+
     public Collection<ReplyResponse> getRepliesWithFullInfo(HttpServletRequest request, OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
         signedInUser.setUnreadRepliesCount(0l);
@@ -1754,7 +1772,6 @@ public class DatabaseManager {
         for(Reply reply : replies){
             ReplyResponse replyResponse = new ReplyResponse();
             int type = reply.getType();
-            replyResponse.setType(type);
 
             User user;
             Long id = reply.getId();
@@ -1764,12 +1781,19 @@ public class DatabaseManager {
                         Photo.IMAGE_URL_PATH + comment.getPhotoId());
                 replyResponse.setComment(comment);
                 user = getUserByIdOrThrow(comment.getUserId());
+                setPhoto(request, comment);
             } else if(type == Reply.FRIEND_REQUEST_ACCEPTED || type == Reply.FRIEND_REQUEST_DECLINED) {
                 user = getUserByIdOrThrow(id);
+            } else if(type == Reply.LIKE) {
+                Like like = getLikeByIdOrThrow(id);
+                setPhoto(request, like);
+                replyResponse.setLike(like);
+                user = getUserByIdOrThrow(like.getUserId());
             } else {
                 throw new RuntimeException("type is not supported, corrupted database");
             }
 
+            replyResponse.setType(type);
             setAvatar(request, user);
             replyResponse.setUser(user);
             replyResponses.add(replyResponse);

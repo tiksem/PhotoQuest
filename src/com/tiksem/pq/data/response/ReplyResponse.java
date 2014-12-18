@@ -1,6 +1,7 @@
 package com.tiksem.pq.data.response;
 
 import com.tiksem.pq.data.Comment;
+import com.tiksem.pq.data.Like;
 import com.tiksem.pq.data.User;
 
 /**
@@ -10,16 +11,9 @@ public class ReplyResponse {
     private int type;
     private Comment comment;
     private User user;
+    private Like like;
 
     public ReplyResponse() {
-    }
-
-    public int getType() {
-        return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
     }
 
     public User getUser() {
@@ -36,5 +30,21 @@ public class ReplyResponse {
 
     public void setComment(Comment comment) {
         this.comment = comment;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        this.type = type;
+    }
+
+    public Like getLike() {
+        return like;
+    }
+
+    public void setLike(Like like) {
+        this.like = like;
     }
 }

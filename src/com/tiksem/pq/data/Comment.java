@@ -9,7 +9,7 @@ import javax.jdo.annotations.*;
  */
 @PersistenceCapable
 @PersistenceAware
-public class Comment implements Likable {
+public class Comment implements Likable, WithPhoto {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;

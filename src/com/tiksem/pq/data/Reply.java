@@ -14,6 +14,7 @@ public class Reply {
     public static final int FRIEND_REQUEST_ACCEPTED = 0;
     public static final int FRIEND_REQUEST_DECLINED = 1;
     public static final int COMMENT = 2;
+    public static final int LIKE = 3;
 
     @Index
     private Integer type;

@@ -7,7 +7,7 @@ import javax.jdo.annotations.*;
  */
 @PersistenceCapable
 @PersistenceAware
-public class Like {
+public class Like implements WithPhoto {
     @PrimaryKey
     @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
@@ -21,6 +21,9 @@ public class Like {
 
     @NotPersistent
     private User user;
+
+    @NotPersistent
+    private String photo;
 
     public Long getId() {
         return id;
@@ -60,5 +63,13 @@ public class Like {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(String photo) {
+        this.photo = photo;
     }
 }
