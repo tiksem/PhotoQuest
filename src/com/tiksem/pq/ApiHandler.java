@@ -336,11 +336,9 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getUserById")
-    public @ResponseBody Object getUserById(@RequestParam("id") Long id){
+    public @ResponseBody Object getUserById(@RequestParam("id") long id){
         DatabaseManager databaseManager = getDatabaseManager();
-        User user = databaseManager.getUserByIdOrThrow(id);
-        databaseManager.setUsersInfoAndRelationStatus(request, Collections.singletonList(user));
-        return user;
+        return databaseManager.requestUserProfileData(request, id);
     }
 
     @RequestMapping("/getUnreadMessagesCount")

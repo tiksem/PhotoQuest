@@ -49,6 +49,7 @@ public class DatabaseManager {
     private static final int MAX_KEYWORDS_COUNT = 7;
 
     private static final long PHOTOQUEST_VIEW_PERIOD = 30 * 60 * 1000;
+    private static final long PROFILE_VIEW_PERIOD = 30 * 60 * 1000;
 
     private final PersistenceManager persistenceManager;
 
@@ -94,6 +95,33 @@ public class DatabaseManager {
         if (user == null) {
             throw new UnknownUserException(String.valueOf(id));
         }
+
+        return user;
+    }
+
+    public User requestUserProfileData(HttpServletRequest request, long id) {
+        User user = getUserByIdOrThrow(id);
+
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser != null && signedInUser.getId() != id){
+            ProfileView pattern = new ProfileView();
+            pattern.setVisitorId(signedInUser.getId());
+            pattern.setUserId(id);
+            ProfileView profileView = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+            if(profileView == null){
+                profileView = pattern;
+            }
+
+            long currentTimeMillis = System.currentTimeMillis();
+            if(profileView == pattern || currentTimeMillis -
+                    profileView.getAddingDate() >= PROFILE_VIEW_PERIOD){
+                profileView.setAddingDate(currentTimeMillis);
+                user.incrementRating();
+                makeAllPersistent(user, profileView);
+            }
+        }
+
+        setUsersInfoAndRelationStatus(request, Collections.singletonList(user));
 
         return user;
     }
@@ -941,12 +969,6 @@ public class DatabaseManager {
         makeAllPersistent(friendship1, friendship2);
     }
 
-    private void incrementRating(long userId) {
-        User user = getUserByIdOrThrow(userId);
-        user.incrementRating();
-        makePersistent(user);
-    }
-
     private void decrementRating(long userId) {
         User user = getUserByIdOrThrow(userId);
         user.decrementRating();
@@ -959,8 +981,6 @@ public class DatabaseManager {
         } catch (RelationNotFoundException e) {
             sendFriendRequest(request, userId);
         }
-
-        incrementRating(userId);
     }
 
     public void removeFriend(HttpServletRequest request, long userId) {
@@ -1812,16 +1832,7 @@ public class DatabaseManager {
         followingPhotoquest.setUserId(signedInUserId);
         followingPhotoquest.setPhotoquestId(photoquestId);
 
-        Long photoquestUserId = photoquest.getUserId();
-        User user = null;
-        if (photoquestUserId != null) {
-            user = getUserByIdOrThrow(photoquestUserId);
-            user.incrementRating();
-        } else {
-            return makePersistent(followingPhotoquest);
-        }
-
-        return (FollowingPhotoquest) makeAllPersistent(followingPhotoquest, user)[0];
+        return makePersistent(followingPhotoquest);
     }
 
     public void unfollowPhotoquest(HttpServletRequest request, long photoquestId) {
