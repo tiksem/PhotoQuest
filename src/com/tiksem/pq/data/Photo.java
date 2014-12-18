@@ -42,6 +42,9 @@ public class Photo implements Likable, InstanceCallbacks {
     @AddingDate
     private Long addingDate;
 
+    @Index
+    private Long viewsCount;
+
     public Long getLikesCount() {
         return likesCount;
     }
@@ -144,5 +147,21 @@ public class Photo implements Likable, InstanceCallbacks {
 
     public void setPosition(Long position) {
         this.position = position;
+    }
+
+    public Long getViewsCount() {
+        return viewsCount;
+    }
+
+    public void setViewsCount(Long viewsCount) {
+        this.viewsCount = viewsCount;
+    }
+
+    public void incrementViewsCount() {
+        if(viewsCount == null){
+            viewsCount = 1l;
+        } else {
+            viewsCount++;
+        }
     }
 }

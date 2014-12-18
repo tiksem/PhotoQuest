@@ -33,11 +33,14 @@ public class DatabaseManager {
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
 
-    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, addingDate descending, " +
-            "id descending";
+    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, viewsCount descending, " +
+            "addingDate descending";
 
     private static final String NEWEST_PHOTO_MAX_ORDERING = "addingDate descending, likesCount descending, " +
-            "id descending";
+            "viewsCount descending";
+
+    private static final String HOTTEST_PHOTO_MAX_ORDERING = "viewsCount descending, likesCount descending, " +
+            "addingDate descending";
 
     private static final String RATING_PEOPLE_ORDERING = "rating descending";
 
@@ -50,6 +53,7 @@ public class DatabaseManager {
 
     private static final long PHOTOQUEST_VIEW_PERIOD = 30 * 60 * 1000;
     private static final long PROFILE_VIEW_PERIOD = 30 * 60 * 1000;
+    private static final long PHOTO_VIEW_PERIOD = 30 * 60 * 1000;
 
     private final PersistenceManager persistenceManager;
 
@@ -264,7 +268,7 @@ public class DatabaseManager {
         Photoquest pattern = new Photoquest();
         pattern.setUserId(userId);
         Collection<Photoquest> photoquests =
-                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, getRatingOrderingString(order));
+                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, getPhotoRatingOrderingString(order));
         setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
         setAvatar(request, photoquests);
         return photoquests;
@@ -811,7 +815,7 @@ public class DatabaseManager {
 
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
-        String orderString = getRatingOrderingString(order);
+        String orderString = getPhotoRatingOrderingString(order);
 
         DBUtilities.QueryParams params = new DBUtilities.QueryParams();
         params.offsetLimit = offsetLimit;
@@ -865,11 +869,12 @@ public class DatabaseManager {
         }
     }
 
-    private String getRatingOrderingString(RatingOrder order) {
+    private String getPhotoRatingOrderingString(RatingOrder order) {
         String orderString;
         switch (order) {
             case hottest:
-                throw new UnsupportedOperationException("hottest is not supported yet");
+                orderString = HOTTEST_PHOTO_MAX_ORDERING;
+                break;
             case rated:
                 orderString = MOST_RATED_PHOTO_MAX_ORDERING;
                 break;
@@ -920,7 +925,7 @@ public class DatabaseManager {
 
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
                                                  RatingOrder order) {
-        String orderString = getRatingOrderingString(order);
+        String orderString = getPhotoRatingOrderingString(order);
 
         Collection<Photoquest> result =
                 DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class,
@@ -1688,11 +1693,31 @@ public class DatabaseManager {
     private long getPhotoInPhotoquestPosition(Photo photo, RatingOrder order) {
         Photo pattern = new Photo();
         pattern.setPhotoquestId(photo.getPhotoquestId());
-        return DBUtilities.getPosition(persistenceManager, photo, getRatingOrderingString(order), pattern);
+        return DBUtilities.getPosition(persistenceManager, photo, getPhotoRatingOrderingString(order), pattern);
     }
 
     public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId) {
         Photo photo = getPhotoByIdOrThrow(photoId);
+
+        User signedInUser = getSignedInUser(request);
+        if(signedInUser != null){
+            PhotoView pattern = new PhotoView();
+            pattern.setPhotoId(photoId);
+            pattern.setUserId(signedInUser.getId());
+            PhotoView photoView = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+            if(photoView == null){
+                photoView = pattern;
+            }
+
+            long currentTimeMillis = System.currentTimeMillis();
+            if(photoView == pattern || currentTimeMillis -
+                    photoView.getAddingDate() >= PHOTO_VIEW_PERIOD){
+                photoView.setAddingDate(currentTimeMillis);
+                photo.incrementViewsCount();
+                makeAllPersistent(photo, photoView);
+            }
+        }
+
         initYourLikeParameter(request, photo);
         photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
         return photo;
