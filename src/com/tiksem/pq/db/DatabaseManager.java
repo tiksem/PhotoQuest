@@ -1333,6 +1333,9 @@ public class DatabaseManager {
 
     public void unlike(HttpServletRequest request, long likeId) {
         Like like = getLikeByIdOrThrow(likeId);
+        if(!like.getUserId().equals(getSignedInUserOrThrow(request).getId())){
+            throw new PermissionDeniedException("Unable to unlike like owned by another user");
+        }
 
         Long photoId = like.getPhotoId();
         Long commentId = like.getCommentId();
