@@ -974,12 +974,6 @@ public class DatabaseManager {
         makeAllPersistent(friendship1, friendship2);
     }
 
-    private void decrementRating(long userId) {
-        User user = getUserByIdOrThrow(userId);
-        user.decrementRating();
-        makePersistent(user);
-    }
-
     public void addFriend(HttpServletRequest request, long userId) {
         try {
             acceptFriendRequest(request, userId);
@@ -998,8 +992,6 @@ public class DatabaseManager {
                 removeFriendShip(request, userId);
             }
         }
-
-        decrementRating(userId);
     }
 
     private void removeFriendShip(HttpServletRequest request, long userId) {
@@ -1866,12 +1858,6 @@ public class DatabaseManager {
 
         FollowingPhotoquest followingPhotoquest = getFollowingPhotoquestOrThrow(signedInUserId, photoquestId);
         deletePersistent(followingPhotoquest);
-
-        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
-        Long photoquestUserId = photoquest.getUserId();
-        if (photoquestUserId != null) {
-            decrementRating(photoquestUserId);
-        }
     }
 
     public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit,
