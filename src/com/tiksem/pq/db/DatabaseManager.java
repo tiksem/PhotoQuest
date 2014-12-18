@@ -51,9 +51,9 @@ public class DatabaseManager {
 
     private static final int MAX_KEYWORDS_COUNT = 7;
 
-    private static final long PHOTOQUEST_VIEW_PERIOD = 30 * 60 * 1000;
-    private static final long PROFILE_VIEW_PERIOD = 30 * 60 * 1000;
-    private static final long PHOTO_VIEW_PERIOD = 30 * 60 * 1000;
+    private static final long PHOTOQUEST_VIEW_PERIOD = 30 * 1000;
+    private static final long PROFILE_VIEW_PERIOD = 30 * 1000;
+    private static final long PHOTO_VIEW_PERIOD = 30 * 1000;
 
     private final PersistenceManager persistenceManager;
 
@@ -585,7 +585,7 @@ public class DatabaseManager {
             queryParts[i] = Strings.capitalizeAndCopy(queryParts[i].toLowerCase());
         }
 
-        Query query = persistenceManager.newQuery(User.class);
+        Query query = DBUtilities.createQuery(persistenceManager, User.class);
         String filter;
         String parametersString;
 
@@ -2000,6 +2000,10 @@ public class DatabaseManager {
         Action pattern = new Action();
         pattern.setUserId(userId);
         return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+    }
+
+    public void clearRatingAndViews() {
+        advancedRequestsManager.clearRatingAndViews();
     }
 
     public void initDatabase() {

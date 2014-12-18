@@ -36,12 +36,13 @@ public class DBUtilities {
         properties.setProperty("datanucleus.schema.autoCreateColumns", "true");
         properties.setProperty("datanucleus.schema.autoCreateAll", "true");
         properties.setProperty("datanucleus.schema.validateTables", "false");
+        properties.setProperty("datanucleus.cache.level2.type", "none");
 
         return JDOHelper.getPersistenceManagerFactory(properties);
     }
 
     public static <T> T getObjectById(PersistenceManager manager, Class<T> aClass, long id) {
-        Query query = manager.newQuery(aClass);
+        Query query = createQuery(manager, aClass);
         query.setFilter("this.id==" + id);
         Collection<T> collection = (Collection<T>)query.execute();
         if(collection.size() <= 0){
@@ -209,7 +210,7 @@ public class DBUtilities {
             return null;
         }
 
-        Query query = manager.newQuery(patternClass);
+        Query query = createQuery(manager, patternClass);
         if (outParameters == null) {
             String parametersString = Strings.join(",", parameters).toString();
             query.declareParameters(parametersString);
@@ -302,7 +303,7 @@ public class DBUtilities {
 
     public static <T> Collection<T> getAllObjectsOfClass(PersistenceManager manager, Class<T> patternClass,
                                                          OffsetLimit offsetLimit, String ordering) {
-        Query query = manager.newQuery(patternClass);
+        Query query = createQuery(manager, patternClass);
         offsetLimit.applyToQuery(query);
 
         if(ordering != null){
@@ -315,7 +316,7 @@ public class DBUtilities {
     }
 
     public static long getAllObjectsOfClassCount(PersistenceManager manager, Class patternClass) {
-        Query query = manager.newQuery(patternClass);
+        Query query = createQuery(manager, patternClass);
         query.setResult("count(this)");
         return (Long)query.execute();
     }
@@ -536,7 +537,7 @@ public class DBUtilities {
             filterResult = filter.toString();
         }
 
-        Query query = manager.newQuery(object.getClass());
+        Query query = createQuery(manager, object.getClass());
         query.setResult("count(this)");
         query.setFilter(filterResult);
         query.declareParameters(Strings.join(", ", declarations).toString());
@@ -544,7 +545,11 @@ public class DBUtilities {
         return Long.valueOf(query.executeWithMap(args).toString());
     }
 
-    public static void executeNotSelectSQL(PersistenceManager persistenceManager, String sql) {
+    public static void executeNotSelectSQL(PersistenceManager persistenceManager, String... sqls) {
+        executeNotSelectSQL(persistenceManager, Arrays.asList(sqls));
+    }
+
+    public static void executeNotSelectSQL(PersistenceManager persistenceManager, Iterable<String> sqls) {
         JDOConnection dataStoreConnection =
                 persistenceManager.getDataStoreConnection();
         Object nativeConnection = dataStoreConnection.getNativeConnection();
@@ -552,7 +557,9 @@ public class DBUtilities {
         Connection connection = (Connection) nativeConnection;
         try {
             Statement statement = connection.createStatement();
-            statement.execute(sql);
+            for (String sql : sqls) {
+                statement.execute(sql);
+            }
             statement.close();
             connection.commit();
             connection.close();
@@ -565,11 +572,27 @@ public class DBUtilities {
                                     String sql,
                                     Map<String, Object> params,
                                     Class resultClass) {
-        Query query = persistenceManager.newQuery("javax.jdo.query.SQL", sql);
+        Query query = createSQLQuery(persistenceManager, sql);
         if (resultClass != null) {
             query.setClass(resultClass);
         }
         return query.executeWithMap(params);
+    }
+
+    private static void initQuery(Query query) {
+        query.addExtension("datanucleus.query.results.cached", "false");
+    }
+
+    public static Query createQuery(PersistenceManager persistenceManager, Class aClass) {
+        Query query = persistenceManager.newQuery(aClass);
+        initQuery(query);
+        return query;
+    }
+
+    public static Query createSQLQuery(PersistenceManager persistenceManager, String sql) {
+        Query query = persistenceManager.newQuery("javax.jdo.query.SQL", sql);
+        initQuery(query);
+        return query;
     }
 
     public enum IndexType {

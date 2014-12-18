@@ -59,6 +59,10 @@ public class AdvancedRequestsManager {
     public static final String INSERT_INTO_PHOTOQUEST_SEARCH = "INSERT INTO photoquestsearch " +
             "(photoquestId, keywords) values(:photoquestId, ':keywords')";
 
+    public static final String CLEAR_USERS_RATING = "update user set rating = 0";
+    public static final String CLEAR_PHOTOQUESTS_VIEWS = "update photoquest set viewsCount = 0";
+    public static final String CLEAR_PHOTOS_VIEWS = "update photo set viewsCount = 0";
+
     private PersistenceManager persistenceManager;
 
     public Collection<Photoquest> getFollowingPhotoquests(long userId, RatingOrder order,
@@ -134,6 +138,11 @@ public class AdvancedRequestsManager {
         sql = sql.replaceFirst(":photoquestId", String.valueOf(photoquestId));
         sql = sql.replaceFirst(":keywords", keywords);
         DBUtilities.executeNotSelectSQL(persistenceManager, sql);
+    }
+
+    public void clearRatingAndViews() {
+        DBUtilities.executeNotSelectSQL(persistenceManager, CLEAR_PHOTOQUESTS_VIEWS,
+                CLEAR_PHOTOS_VIEWS, CLEAR_USERS_RATING);
     }
 
     public AdvancedRequestsManager(PersistenceManager persistenceManager) {
