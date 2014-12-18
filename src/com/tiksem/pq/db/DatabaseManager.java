@@ -1349,6 +1349,7 @@ public class DatabaseManager {
 
         Long photoId = like.getPhotoId();
         Long commentId = like.getCommentId();
+        long replyUserId;
 
         if(photoId != null){
             if(commentId != null){
@@ -1359,15 +1360,29 @@ public class DatabaseManager {
             Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
             decrementLikesCount(request, photo, photoquest);
             updatePhotoquestAvatar(photoquest);
+            replyUserId = photo.getUserId();
 
         } else if(commentId != null) {
             Comment comment = getCommentByIdOrThrow(commentId);
             decrementLikesCount(request, comment);
+            replyUserId = comment.getUserId();
         } else {
             throw new RuntimeException("WTF?");
         }
 
-        deletePersistent(like);
+        Reply reply = new Reply();
+        reply.setType(Reply.LIKE);
+        reply.setUserId(replyUserId);
+        reply.setId(likeId);
+        reply = DBUtilities.getObjectByPattern(persistenceManager, reply);
+
+        List<Object> forDel = new ArrayList<Object>();
+        forDel.add(like);
+        if(reply != null){
+            forDel.add(reply);
+        }
+
+        deleteAllPersistent(forDel);
     }
 
     public Collection<Like> getAllLikes(HttpServletRequest request, OffsetLimit offsetLimit) {
