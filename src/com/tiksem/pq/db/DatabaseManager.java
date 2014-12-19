@@ -70,7 +70,7 @@ public class DatabaseManager {
         advancedRequestsManager = new AdvancedRequestsManager(persistenceManager);
     }
 
-    private <T> T makePersistent(T object) {
+    public <T> T makePersistent(T object) {
         return DBUtilities.makePersistent(persistenceManager, object);
     }
 
@@ -157,7 +157,7 @@ public class DatabaseManager {
     public User login(HttpServletRequest request, String login, String password) {
         User user = getUserByLogin(login);
         if (user != null && user.getPassword().equals(password)) {
-            setAvatar(request, user);
+            setUserInfo(request, user);
             return user;
         }
 
@@ -387,13 +387,7 @@ public class DatabaseManager {
         return makePersistent(location);
     }
 
-    private User registerUser(User user) throws IOException {
-        String login = user.getLogin();
-
-        if (getUserByLogin(login) != null) {
-            throw new UserExistsRegisterException(login);
-        }
-
+    public void updateLocation(User user) throws IOException {
         String locationId = user.getLocation();
         Location location = getLocationById(locationId);
         if(location == null){
@@ -402,6 +396,16 @@ public class DatabaseManager {
         }
 
         user.setCountryCode(location.getCountryCode());
+    }
+
+    private User registerUser(User user) throws IOException {
+        String login = user.getLogin();
+
+        if (getUserByLogin(login) != null) {
+            throw new UserExistsRegisterException(login);
+        }
+
+        updateLocation(user);
 
         return makePersistent(user);
     }

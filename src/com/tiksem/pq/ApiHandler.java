@@ -6,6 +6,7 @@ import com.tiksem.pq.db.DBUtilities;
 import com.tiksem.pq.db.DatabaseManager;
 import com.tiksem.pq.db.OffsetLimit;
 import com.tiksem.pq.db.RatingOrder;
+import com.tiksem.pq.db.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import com.utils.framework.io.Network;
@@ -85,6 +86,46 @@ public class ApiHandler {
         user.setGender(gender);
 
         return getDatabaseManager().registerUser(request, user, avatar);
+    }
+
+    @RequestMapping(value = "/editProfile", method = RequestMethod.GET)
+    public @ResponseBody Object editProfile(
+                                         @RequestParam(value="name", required=false) String name,
+                                         @RequestParam(value="lastName", required=false) String lastName,
+                                         @RequestParam(value="location", required=false) String location)
+            throws IOException {
+        DatabaseManager databaseManager = getDatabaseManager();
+        User user = databaseManager.getSignedInUserOrThrow(request);
+
+        if (name != null) {
+            user.setName(name);
+        }
+        if (lastName != null) {
+            user.setLastName(lastName);
+        }
+        if (location != null) {
+            user.setLocation(location);
+        }
+        databaseManager.updateLocation(user);
+        databaseManager.setUserInfo(request, user);
+
+        return databaseManager.makePersistent(user);
+    }
+
+    @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
+    public @ResponseBody Object changePassword(
+            @RequestParam(value="old", required=true) String oldPassword,
+            @RequestParam(value="new", required=true) String newPassword)
+            throws IOException {
+        DatabaseManager databaseManager = getDatabaseManager();
+        User user = databaseManager.getSignedInUserOrThrow(request);
+        if(!user.getPassword().equals(oldPassword)){
+            throw new PermissionDeniedException("Invalid password!");
+        }
+        user.setPassword(newPassword);
+
+        databaseManager.makePersistent(user);
+        return new Success();
     }
 
     @RequestMapping(value = "/registerRandom", method = RequestMethod.GET)
