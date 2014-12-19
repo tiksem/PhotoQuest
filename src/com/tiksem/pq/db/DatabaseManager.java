@@ -1164,22 +1164,30 @@ public class DatabaseManager {
         return DBUtilities.queryByPattern(persistenceManager, comment, offsetLimit);
     }
 
-    private void addCommentToDeleteStack(List<Object> deleteStack, Comment comment, OffsetLimit offsetLimit) {
+    private Reply getReplyByLikeId(long likeId) {
+        Reply reply = new Reply();
+        reply.setType(Reply.LIKE);
+        reply.setId(likeId);
+        return DBUtilities.getObjectByPattern(persistenceManager, reply);
+    }
+
+    private void addLikesAndRepliesToDeleteStack(List<Object> deleteStack, Comment comment, OffsetLimit offsetLimit) {
         Long commentId = comment.getId();
         Collection<Like> likes = getCommentLikes(commentId, offsetLimit);
-        deleteStack.addAll(likes);
-        Collection<Comment> comments = getCommentsOnComment(commentId, offsetLimit);
-        deleteStack.addAll(comments);
-
-        for(Comment innerComment: comments){
-            addCommentToDeleteStack(deleteStack, innerComment, offsetLimit);
+        for(Like like : likes){
+            Reply reply = getReplyByLikeId(like.getId());
+            if(reply != null){
+                deleteStack.add(reply);
+            }
         }
+
+        deleteStack.addAll(likes);
     }
 
     public void deleteComment(HttpServletRequest request, long commentId, OffsetLimit offsetLimit) {
         Comment comment = getCommentByIdOrThrow(commentId);
         List<Object> deleteStack = new ArrayList<Object>();
-        addCommentToDeleteStack(deleteStack, comment, offsetLimit);
+        addLikesAndRepliesToDeleteStack(deleteStack, comment, offsetLimit);
         deleteStack.add(comment);
         deleteAllPersistent(deleteStack);
     }
@@ -1247,12 +1255,20 @@ public class DatabaseManager {
         removeComment(comment);
     }
 
-    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId, OffsetLimit offsetLimit) {
+    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId,
+                                                  Long startingDate,
+                                                  OffsetLimit offsetLimit) {
         Comment commentPattern = new Comment();
         commentPattern.setPhotoId(photoId);
 
-        Collection<Comment> comments =
-                queryByAddingDate(commentPattern, offsetLimit);
+        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
+        params.ordering = ADDING_DATE_ORDERING;
+        if (startingDate != null) {
+            params.additionalFilter = "this.addingDate > " + startingDate;
+        }
+        params.offsetLimit = offsetLimit;
+
+        Collection<Comment> comments = DBUtilities.queryByPattern(persistenceManager, commentPattern, params);
 
         User signedInUser = getSignedInUser(request);
         if(signedInUser != null){
@@ -1267,8 +1283,9 @@ public class DatabaseManager {
     }
 
     public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId,
+                                                             Long startingDate,
                                                              OffsetLimit offsetLimit) {
-        Collection<Comment> comments = getCommentsOnPhoto(request, photoId, offsetLimit);
+        Collection<Comment> comments = getCommentsOnPhoto(request, photoId, startingDate, offsetLimit);
         fillCommentsData(request, comments);
         return comments;
     }
@@ -1370,11 +1387,7 @@ public class DatabaseManager {
             throw new RuntimeException("WTF?");
         }
 
-        Reply reply = new Reply();
-        reply.setType(Reply.LIKE);
-        reply.setUserId(replyUserId);
-        reply.setId(likeId);
-        reply = DBUtilities.getObjectByPattern(persistenceManager, reply);
+        Reply reply = getReplyByLikeId(likeId);
 
         List<Object> forDel = new ArrayList<Object>();
         forDel.add(like);

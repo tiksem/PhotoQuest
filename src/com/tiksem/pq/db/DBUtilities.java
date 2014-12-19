@@ -103,7 +103,7 @@ public class DBUtilities {
         return result;
     }
 
-    private static Query getQueryByPattern(PersistenceManager manager,
+    public static Query getQueryByPattern(PersistenceManager manager,
                                            Object pattern,
                                            Map<String, Object> outArgs,
                                            boolean asExcludePattern,
@@ -265,18 +265,27 @@ public class DBUtilities {
         public boolean asExcludePattern = false;
         public boolean ignoreRelations = false;
         public OffsetLimit offsetLimit = new OffsetLimit();
+        public String additionalFilter;
         public String ordering;
     }
 
     public static <T> Collection<T> queryByPattern(PersistenceManager manager, T pattern,
                                                               QueryParams queryParams) {
         Map<String, Object> args = new HashMap<String, Object>();
+        StringBuilder outFilter = new StringBuilder();
         Query query = getQueryByPattern(manager, pattern, args, queryParams.asExcludePattern,
-                queryParams.ignoreRelations, null, null);
+                queryParams.ignoreRelations, null, outFilter);
         queryParams.offsetLimit.applyToQuery(query);
         if (queryParams.ordering != null) {
             query.setOrdering(queryParams.ordering);
         }
+        String filter;
+        if(queryParams.additionalFilter != null){
+            filter = "(" + outFilter + ") && (" + queryParams.additionalFilter + ")";
+        } else {
+            filter = outFilter.toString();
+        }
+        query.setFilter(filter);
 
         try {
             Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));

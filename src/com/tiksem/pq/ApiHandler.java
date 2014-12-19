@@ -438,9 +438,12 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getCommentsOnPhoto")
-    public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId, OffsetLimit offsetLimit){
+    public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId,
+                                                   @RequestParam(value = "startingDate", required = false)
+                                                   Long startingDate,
+                                                   OffsetLimit offsetLimit){
         Collection<Comment> comments = getDatabaseManager().
-                getCommentsOnPhotoAndFillData(request, photoId, offsetLimit);
+                getCommentsOnPhotoAndFillData(request, photoId, startingDate, offsetLimit);
         return new CommentsList(comments);
     }
 
