@@ -1938,11 +1938,10 @@ public class DatabaseManager {
         deletePersistent(followingPhotoquest);
     }
 
-    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, OffsetLimit offsetLimit,
+    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, long userId, OffsetLimit offsetLimit,
                                                           RatingOrder order) {
-        User signedInUser = getSignedInUserOrThrow(request);
         Collection<Photoquest> result =
-                advancedRequestsManager.getFollowingPhotoquests(signedInUser.getId(), order, offsetLimit);
+                advancedRequestsManager.getFollowingPhotoquests(userId, order, offsetLimit);
         for(Photoquest photoquest : result){
             photoquest.setIsFollowing(true);
             setAvatar(request, photoquest);
@@ -1951,10 +1950,9 @@ public class DatabaseManager {
         return result;
     }
 
-    public long getFollowingPhotoquestsCount(HttpServletRequest request) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public long getFollowingPhotoquestsCount(long userId) {
         FollowingPhotoquest pattern = new FollowingPhotoquest();
-        pattern.setUserId(signedInUser.getId());
+        pattern.setUserId(userId);
 
         return DBUtilities.queryCountByPattern(persistenceManager, pattern);
     }

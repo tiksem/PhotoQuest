@@ -282,44 +282,36 @@ public class ApiHandler {
 
     @RequestMapping("/getCreatedPhotoquests")
     public @ResponseBody Object getCreatedPhotoquests(
-            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "userId", required = true) Long userId,
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
-        Collection<Photoquest> photoquests;
-        if(userId != null){
-            photoquests = getDatabaseManager().getPhotoquestsCreatedByUser(request, userId, offsetLimit, order);
-        } else {
-            photoquests = getDatabaseManager().getPhotoquestsCreatedBySignedInUser(request, offsetLimit, order);
-        }
+        Collection<Photoquest> photoquests =
+                getDatabaseManager().getPhotoquestsCreatedByUser(request, userId, offsetLimit, order);
 
         return new PhotoquestsList(photoquests);
     }
 
     @RequestMapping("/getCreatedPhotoquestsCount")
     public @ResponseBody Object getCreatedPhotoquestsCount(
-            @RequestParam(value = "userId", required = false) Long userId){
-        long count;
-        if(userId != null){
-            count = getDatabaseManager().getPhotoquestsCreatedByUserCount(userId);
-        } else {
-            count = getDatabaseManager().getPhotoquestsCreatedBySignedInUserCount(request);
-        }
-
+            @RequestParam(value = "userId", required = true) Long userId){
+        long count = getDatabaseManager().getPhotoquestsCreatedByUserCount(userId);
         return new CountResponse(count);
     }
 
     @RequestMapping("/getFollowingPhotoquests")
     public @ResponseBody Object getFollowingPhotoquests(
+            @RequestParam(value = "userId", required = true) Long userId,
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests =
-                getDatabaseManager().getFollowingPhotoquests(request, offsetLimit, order);
+                getDatabaseManager().getFollowingPhotoquests(request, userId, offsetLimit, order);
         return new PhotoquestsList(photoquests);
     }
 
     @RequestMapping("/getFollowingPhotoquestsCount")
-    public @ResponseBody Object getFollowingPhotoquestsCount(){
-        long count = getDatabaseManager().getFollowingPhotoquestsCount(request);
+    public @ResponseBody Object getFollowingPhotoquestsCount(
+            @RequestParam(value = "userId", required = true) Long userId){
+        long count = getDatabaseManager().getFollowingPhotoquestsCount(userId);
         return new CountResponse(count);
     }
 
