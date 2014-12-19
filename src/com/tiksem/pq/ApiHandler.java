@@ -412,6 +412,24 @@ public class ApiHandler {
         return new CountResponse(count);
     }
 
+    @RequestMapping("/getPhotosOfUser")
+    public @ResponseBody Object getPhotosOfUser(@RequestParam("userId") Long userId,
+                                                      @RequestParam(value = "order", required = false,
+                                                              defaultValue = "newest")
+                                                      RatingOrder order,
+                                                      OffsetLimit offsetLimit){
+        Collection<Photo> photos = getDatabaseManager().
+                getPhotosOfUser(request, userId, offsetLimit, order);
+        return new PhotosList(photos);
+    }
+
+    @RequestMapping("/getPhotosOfUserCount")
+    public @ResponseBody Object getPhotosOfUserCount(@RequestParam("userId") Long userId){
+        long count = getDatabaseManager().
+                getPhotosOfUserCount(userId);
+        return new CountResponse(count);
+    }
+
     @RequestMapping("/addFriend")
     public @ResponseBody Object addFriend(@RequestParam("id") Long id){
         getDatabaseManager().addFriend(request, id);

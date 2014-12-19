@@ -834,6 +834,25 @@ public class DatabaseManager {
 
     }
 
+    public Collection<Photo> getPhotosOfUser(HttpServletRequest request, long userId,
+                                             OffsetLimit offsetLimit, RatingOrder order) {
+        Photo pattern = new Photo();
+        pattern.setUserId(userId);
+        String ordering = getPhotoRatingOrderingString(order);
+        Collection<Photo> photos =
+                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, ordering);
+        initPhotosUrl(photos, request);
+        initYourLikeParameter(request, photos);
+
+        return photos;
+    }
+
+    public long getPhotosOfUserCount(long userId) {
+        Photo pattern = new Photo();
+        pattern.setUserId(userId);
+        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+    }
+
     public long getPhotosOfPhotoquestCount(HttpServletRequest request, long photoQuestId) {
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
