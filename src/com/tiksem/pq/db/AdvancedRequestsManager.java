@@ -20,6 +20,10 @@ public class AdvancedRequestsManager {
             "SELECT * FROM photoquest WHERE photoquest.id in\n" +
                     "(SELECT photoquestId FROM FollowingPhotoquest WHERE userId = :userId) " +
                     "ORDER BY likesCount DESC LIMIT :offset, :limit";
+    private static final String FOLLOWING_HOTTEST_QUEST_SQL =
+            "SELECT * FROM photoquest WHERE photoquest.id in\n" +
+                    "(SELECT photoquestId FROM FollowingPhotoquest WHERE userId = :userId) " +
+                    "ORDER BY viewsCount DESC LIMIT :offset, :limit";
 
     private static final String NEWS_SQL = " from `action` where (photoquestId in\n" +
             "(\n" +
@@ -72,6 +76,8 @@ public class AdvancedRequestsManager {
             sql = FOLLOWING_RATED_QUEST_SQL;
         } else if(order == RatingOrder.rated) {
             sql = FOLLOWING_ADDING_DATE_QUEST_SQL;
+        } else if(order == RatingOrder.hottest) {
+            sql = FOLLOWING_HOTTEST_QUEST_SQL;
         } else {
             throw new UnsupportedOperationException();
         }
