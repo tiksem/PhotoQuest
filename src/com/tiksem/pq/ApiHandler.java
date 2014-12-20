@@ -298,6 +298,24 @@ public class ApiHandler {
         return new CountResponse(count);
     }
 
+    @RequestMapping("/getPerformedPhotoquests")
+    public @ResponseBody Object getPerformedPhotoquests(
+            @RequestParam(value = "userId", required = true) Long userId,
+            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+            OffsetLimit offsetLimit){
+        Collection<Photoquest> photoquests =
+                getDatabaseManager().getPerformedPhotoquests(request, userId, offsetLimit, order);
+
+        return new PhotoquestsList(photoquests);
+    }
+
+    @RequestMapping("/getPerformedPhotoquestsCount")
+    public @ResponseBody Object getPerformedPhotoquestsCount(
+            @RequestParam(value = "userId", required = true) Long userId){
+        long count = getDatabaseManager().getPerformedPhotoquestsCount(userId);
+        return new CountResponse(count);
+    }
+
     @RequestMapping("/getFollowingPhotoquests")
     public @ResponseBody Object getFollowingPhotoquests(
             @RequestParam(value = "userId", required = true) Long userId,
@@ -331,22 +349,6 @@ public class ApiHandler {
     public @ResponseBody Object getPhotoquestsCount(){
         long count = getDatabaseManager().getPhotoQuestsCount();
         return new CountResponse(count);
-    }
-
-    @RequestMapping("/getMyPhotoquests")
-    public @ResponseBody Object getMyPhotoquests(
-            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
-                                                 OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = getDatabaseManager().
-                getPhotoquestsCreatedBySignedInUser(request, offsetLimit, order);
-        return new PhotoquestsList(photoquests);
-    }
-
-    @RequestMapping("/getMyPerformedPhotoquests")
-    public @ResponseBody Object getMyPerformedPhotoquests(OffsetLimit offsetLimit){
-        final Collection<Photoquest> photoquests = getDatabaseManager().
-                getPhotoquestsPerformedBySignedInUser(request, offsetLimit);
-        return new PhotoquestsList(photoquests);
     }
 
     @RequestMapping("/getPhotoquestById")

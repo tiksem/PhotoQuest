@@ -25,6 +25,19 @@ public class AdvancedRequestsManager {
                     "(SELECT photoquestId FROM FollowingPhotoquest WHERE userId = :userId) " +
                     "ORDER BY viewsCount DESC LIMIT :offset, :limit";
 
+    private static final String PERFORMED_ADDING_DATE_QUEST_SQL =
+            "SELECT * FROM photoquest WHERE photoquest.id in\n" +
+                    "(SELECT photoquestId FROM PerformedPhotoquest WHERE userId = :userId ORDER BY addingDate DESC) " +
+                    "LIMIT :offset, :limit";
+    private static final String PERFORMED_RATED_QUEST_SQL =
+            "SELECT * FROM photoquest WHERE photoquest.id in\n" +
+                    "(SELECT photoquestId FROM PerformedPhotoquest WHERE userId = :userId) " +
+                    "ORDER BY likesCount DESC LIMIT :offset, :limit";
+    private static final String PERFORMED_HOTTEST_QUEST_SQL =
+            "SELECT * FROM photoquest WHERE photoquest.id in\n" +
+                    "(SELECT photoquestId FROM PerformedPhotoquest WHERE userId = :userId) " +
+                    "ORDER BY viewsCount DESC LIMIT :offset, :limit";
+
     private static final String NEWS_SQL = " from `action` where (photoquestId in\n" +
             "(\n" +
             "SELECT photoquestId from followingphotoquest where userId=:userId and " +
@@ -78,6 +91,27 @@ public class AdvancedRequestsManager {
             sql = FOLLOWING_ADDING_DATE_QUEST_SQL;
         } else if(order == RatingOrder.hottest) {
             sql = FOLLOWING_HOTTEST_QUEST_SQL;
+        } else {
+            throw new UnsupportedOperationException();
+        }
+
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put("userId", userId);
+        offsetLimit.addToMap(params);
+
+        return (Collection<Photoquest>)
+                DBUtilities.executeSQL(persistenceManager, sql, params, Photoquest.class);
+    }
+
+    public Collection<Photoquest> getPerformedPhotoquests(long userId, RatingOrder order,
+                                                          OffsetLimit offsetLimit) {
+        String sql;
+        if(order == RatingOrder.newest){
+            sql = PERFORMED_RATED_QUEST_SQL;
+        } else if(order == RatingOrder.rated) {
+            sql = PERFORMED_ADDING_DATE_QUEST_SQL;
+        } else if(order == RatingOrder.hottest) {
+            sql = PERFORMED_HOTTEST_QUEST_SQL;
         } else {
             throw new UnsupportedOperationException();
         }

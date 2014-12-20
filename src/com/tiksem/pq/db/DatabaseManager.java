@@ -310,32 +310,6 @@ public class DatabaseManager {
         return result;
     }
 
-    private Collection<PerformedPhotoquest> getPerformedPhotoquestsByUser(long userId, OffsetLimit offsetLimit) {
-        getUserByIdOrThrow(userId);
-        PerformedPhotoquest performedPhotoquest = new PerformedPhotoquest();
-        performedPhotoquest.setUserId(userId);
-        return DBUtilities.queryByPattern(persistenceManager, performedPhotoquest, offsetLimit);
-    }
-
-    public Collection<Photoquest> getPhotoquestsPerformedByUser(HttpServletRequest request, long userId,
-                                                                OffsetLimit offsetLimit) {
-        Collection<PerformedPhotoquest> performedPhotoquests = getPerformedPhotoquestsByUser(userId, offsetLimit);
-        Collection<Photoquest> result = new ArrayList<Photoquest>();
-        for (PerformedPhotoquest performedPhotoquest : performedPhotoquests) {
-            Photoquest photoquest = getPhotoQuestByIdOrThrow(performedPhotoquest.getPhotoquestId());
-            result.add(photoquest);
-        }
-
-        setAvatar(request, result);
-        return result;
-    }
-
-    public Collection<Photoquest> getPhotoquestsPerformedBySignedInUser(HttpServletRequest request,
-                                                                        OffsetLimit offsetLimit) {
-        User user = getSignedInUserOrThrow(request);
-        return getPhotoquestsPerformedByUser(request, user.getId(), offsetLimit);
-    }
-
     public Collection<Photoquest> getPhotoquestsCreatedBySignedInUser(HttpServletRequest request,
                                                                       OffsetLimit offsetLimit,
                                                                       RatingOrder order) {
@@ -1946,6 +1920,27 @@ public class DatabaseManager {
             photoquest.setIsFollowing(true);
             setAvatar(request, photoquest);
         }
+
+        return result;
+    }
+
+    public long getPerformedPhotoquestsCount(long userId) {
+        PerformedPhotoquest pattern = new PerformedPhotoquest();
+        pattern.setUserId(userId);
+
+        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+    }
+
+    public Collection<Photoquest> getPerformedPhotoquests(HttpServletRequest request, long userId,
+                                                          OffsetLimit offsetLimit,
+                                                          RatingOrder order) {
+        Collection<Photoquest> result =
+                advancedRequestsManager.getPerformedPhotoquests(userId, order, offsetLimit);
+        for(Photoquest photoquest : result){
+            setAvatar(request, photoquest);
+        }
+
+        setPhotoquestsFollowingParamIfSignedIn(request, result);
 
         return result;
     }
