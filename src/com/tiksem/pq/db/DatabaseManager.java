@@ -1320,6 +1320,7 @@ public class DatabaseManager {
 
         Like like = new Like();
         like.setCommentId(commentId);
+        like.setPhotoId(comment.getPhotoId());
 
         like = like(request, like, comment.getUserId());
 
