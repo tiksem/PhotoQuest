@@ -799,6 +799,78 @@ public class DatabaseManager {
         }
     }
 
+    private interface NextPhotoPatternProvider {
+        Photo getPattern();
+    }
+
+    private Photo getNextPrevPhoto(HttpServletRequest request,
+                                   RatingOrder order,
+                                   long photoId,
+                                   NextPhotoPatternProvider patternProvider,
+                                   boolean next) {
+        String orderString = getPhotoRatingOrderingString(order);
+        Photo photo = getPhotoByIdOrThrow(photoId);
+        Photo pattern = patternProvider.getPattern();
+
+        long count = DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        if(count == 0){
+            throw new PhotoNotFoundException("Photo was not found in result set");
+        } else if(count == 1) {
+            initPhotoUrl(photo, request);
+            initYourLikeParameter(request, photo);
+            return photo;
+        }
+
+        long position = DBUtilities.getPosition(persistenceManager, photo, orderString, pattern);
+
+        if(next){
+            position++;
+        } else {
+            position--;
+        }
+
+        if(position < 0){
+            position = count - 1;
+        } else if(position >= count) {
+            position = 0;
+        }
+
+        OffsetLimit offsetLimit = new OffsetLimit(position, 1);
+        Collection<Photo> result = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, orderString);
+        if(result.isEmpty()){
+            throw new PhotoNotFoundException("Photo was not found in result set");
+        }
+
+        photo = result.iterator().next();
+        initPhotoUrl(photo, request);
+        initYourLikeParameter(request, photo);
+        return photo;
+    }
+
+    public Photo getNextPrevPhotoOfPhotoquest(HttpServletRequest request, final long photoQuestId, long photoId,
+                                          RatingOrder order, boolean next) {
+        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+            @Override
+            public Photo getPattern() {
+                Photo pattern = new Photo();
+                pattern.setPhotoquestId(photoQuestId);
+                return pattern;
+            }
+        }, next);
+    }
+
+    public Photo getNextPrevPhotoOfUser(HttpServletRequest request, final long userId, long photoId,
+                                              RatingOrder order, boolean next) {
+        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+            @Override
+            public Photo getPattern() {
+                Photo pattern = new Photo();
+                pattern.setUserId(userId);
+                return pattern;
+            }
+        }, next);
+    }
+
     public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId,
                                                    OffsetLimit offsetLimit, RatingOrder order) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
@@ -1763,6 +1835,7 @@ public class DatabaseManager {
         }
 
         initYourLikeParameter(request, photo);
+        initPhotoUrl(photo, request);
         photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
         return photo;
     }

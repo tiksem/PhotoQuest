@@ -383,6 +383,26 @@ public class ApiHandler {
         return new PhotosList(photos);
     }
 
+    @RequestMapping("/getNextPrevPhotoOfPhotoquest")
+    public @ResponseBody Object getNextPrevPhotoOfPhotoquest(@RequestParam("photoquestId") Long photoquestId,
+                                                         @RequestParam("photoId") Long photoId,
+                                                         @RequestParam("next") boolean next,
+                                                      @RequestParam(value = "order", required = false,
+                                                              defaultValue = "newest")
+                                                      RatingOrder order){
+        return getDatabaseManager().getNextPrevPhotoOfPhotoquest(request, photoquestId, photoId, order, next);
+    }
+
+    @RequestMapping("/getNextPrevPhotoOfUser")
+    public @ResponseBody Object getNextPrevPhotoOfUser(@RequestParam("userId") Long userId,
+                                                             @RequestParam("photoId") Long photoId,
+                                                             @RequestParam("next") boolean next,
+                                                             @RequestParam(value = "order", required = false,
+                                                                     defaultValue = "newest")
+                                                             RatingOrder order){
+        return getDatabaseManager().getNextPrevPhotoOfUser(request, userId, photoId, order, next);
+    }
+
     @RequestMapping("/getPhotosOfPhotoquestCount")
     public @ResponseBody Object getPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
         long count = getDatabaseManager().

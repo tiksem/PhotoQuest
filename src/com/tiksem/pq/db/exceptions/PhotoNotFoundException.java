@@ -7,4 +7,8 @@ public class PhotoNotFoundException extends RuntimeException {
     public PhotoNotFoundException(long id) {
         super("Photo with id " + id + " does not exist");
     }
+
+    public PhotoNotFoundException(String message) {
+        super(message);
+    }
 }
