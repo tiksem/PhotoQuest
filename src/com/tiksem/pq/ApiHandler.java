@@ -142,37 +142,21 @@ public class ApiHandler {
     public @ResponseBody Object getAllUsers(
             @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "gender", required = false) Boolean gender,
             OffsetLimit offsetLimit,
             @RequestParam(value = "order", required = false, defaultValue = "newest")
             RatingOrder order) {
-        Collection<User> users;
-        if(Strings.isEmpty(filter)){
-            users = getDatabaseManager().
-                    getAllUsersWithCheckingRelationShip(request, offsetLimit, order);
-
-            if (!Strings.isEmpty(location)) {
-                users = getDatabaseManager().getUsersByLocation(request, location, offsetLimit, order);
-            }
-        } else {
-            users = getDatabaseManager().searchUsers(request, filter, location, offsetLimit, order);
-        }
+        Collection<User> users
+                = getDatabaseManager().searchUsers(request, filter, location, gender, offsetLimit, order);
 
         return new UsersList(users);
     }
 
     @RequestMapping("/getUsersCount")
     public @ResponseBody Object getAllUsersCount(@RequestParam(value = "filter", required = false) String filter,
-                                                 @RequestParam(value = "location", required = false) String location) {
-        long count = 0;
-        if (Strings.isEmpty(filter)) {
-            count = getDatabaseManager().getAllUsersCount(request, false);
-
-            if (!Strings.isEmpty(location)) {
-                count = getDatabaseManager().getUsersByLocationCount(location);
-            }
-        } else {
-            count = getDatabaseManager().getSearchUsersCount(filter, location);
-        }
+                                                 @RequestParam(value = "location", required = false) String location,
+                                                 @RequestParam(value = "gender", required = false) Boolean gender) {
+        long count = getDatabaseManager().getSearchUsersCount(filter, location, gender);
 
         return new CountResponse(count);
     }

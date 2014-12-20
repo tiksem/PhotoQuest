@@ -114,7 +114,7 @@ public class DBUtilities {
         List<Class> relationsClasses = ignoreRelations ? Arrays.<Class>asList() : Arrays.<Class>asList(Relation.class);
         List<Field> fields =
                 Reflection.getFieldsWithAndWithoutAnnotations(patternClass,
-                        Arrays.asList(PrimaryKey.class, Index.class, Unique.class), relationsClasses);
+                        Arrays.asList(PrimaryKey.class, Index.class, Unique.class, Persistent.class), relationsClasses);
 
         List<String> parameters = outParameters;
         if(parameters == null){

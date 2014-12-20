@@ -557,38 +557,50 @@ public class DatabaseManager {
 
     private Query searchUsersQuery(String queryString, String location,
                                    Map<String, Object> outArgs,
+                                   Boolean gender,
                                    RatingOrder order) {
-        String[] queryParts = queryString.split(" +");
+        String[] queryParts = queryString != null ? queryString.split(" +") : new String[0];
         for (int i = 0; i < queryParts.length; i++) {
             queryParts[i] = Strings.capitalizeAndCopy(queryParts[i].toLowerCase());
         }
 
-        Query query = DBUtilities.createQuery(persistenceManager, User.class);
-        String filter;
-        String parametersString;
+        User pattern = new User();
+        pattern.setLocation(location);
+        pattern.setGender(gender);
 
+        StringBuilder outFilter = new StringBuilder();
+        List<String> parameters = new ArrayList<String>();
+        DBUtilities.getQueryByPattern(persistenceManager, pattern, outArgs, false, false,
+                parameters, outFilter);
+
+
+        String filter = null;
         if(queryParts.length == 1){
             filter = "this.name == query || this.lastName == query";
             outArgs.put("query", queryParts[0]);
-            parametersString = "String query";
+            parameters.add("String query");
         } else if(queryParts.length >= 2) {
             filter = "(this.name == query1 && this.lastName == query2) || " +
                     "(this.name == query2 && this.lastName == query1)";
             outArgs.put("query1", queryParts[0]);
             outArgs.put("query2", queryParts[1]);
-            parametersString = "String query1, String query2";
+            parameters.add("String query1, String query2");
+        }
+
+        if (filter != null) {
+            filter = "(" + filter + ") && (" + outFilter + ")";
         } else {
-            throw new IllegalArgumentException("empty query");
+            filter = outFilter.toString();
         }
 
-        if(!Strings.isEmpty(location)){
-            outArgs.put("location", location);
-            parametersString += ", String location";
-            filter = "(" + filter + ") && (this.location == location)";
-        }
+        Query query = DBUtilities.createQuery(persistenceManager, User.class);
 
-        query.setFilter(filter);
-        query.declareParameters(parametersString);
+        if (!Strings.isEmpty(filter)) {
+            query.setFilter(filter);
+        }
+        if (!parameters.isEmpty()) {
+            query.declareParameters(Strings.join(", ", parameters).toString());
+        }
         if (order != null) {
             query.setOrdering(getPeopleOrderingString(order));
         }
@@ -597,9 +609,10 @@ public class DatabaseManager {
     }
 
     public Collection<User> searchUsers(HttpServletRequest request, String queryString, String location,
+                                        Boolean gender,
                                         OffsetLimit offsetLimit, RatingOrder order) {
         Map<String, Object> args = new HashMap<String, Object>();
-        Query query = searchUsersQuery(queryString, location, args, order);
+        Query query = searchUsersQuery(queryString, location, args, gender, order);
         offsetLimit.applyToQuery(query);
 
         Collection<User> users = (Collection<User>) query.executeWithMap(args);
@@ -608,9 +621,9 @@ public class DatabaseManager {
         return users;
     }
 
-    public long getSearchUsersCount(String queryString, String location) {
+    public long getSearchUsersCount(String queryString, String location, Boolean gender) {
         Map<String, Object> args = new HashMap<String, Object>();
-        Query query = searchUsersQuery(queryString, location, args, null);
+        Query query = searchUsersQuery(queryString, location, args, gender, null);
         query.setResult("count(this)");
         return (Long)query.executeWithMap(args);
     }
