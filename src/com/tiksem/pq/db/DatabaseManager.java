@@ -803,6 +803,12 @@ public class DatabaseManager {
         Photo getPattern();
     }
 
+    private void setPhotoInfo(HttpServletRequest request, Photo photo) {
+        photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
+        initPhotoUrl(photo, request);
+        initYourLikeParameter(request, photo);
+    }
+
     private Photo getNextPrevPhoto(HttpServletRequest request,
                                    RatingOrder order,
                                    long photoId,
@@ -816,8 +822,7 @@ public class DatabaseManager {
         if(count == 0){
             throw new PhotoNotFoundException("Photo was not found in result set");
         } else if(count == 1) {
-            initPhotoUrl(photo, request);
-            initYourLikeParameter(request, photo);
+            setPhotoInfo(request, photo);
             return photo;
         }
 
@@ -842,8 +847,8 @@ public class DatabaseManager {
         }
 
         photo = result.iterator().next();
-        initPhotoUrl(photo, request);
-        initYourLikeParameter(request, photo);
+        setPhotoInfo(request, photo);
+        photo.setShowNextPrevButtons(true);
         return photo;
     }
 
@@ -912,7 +917,7 @@ public class DatabaseManager {
         return DBUtilities.queryCountByPattern(persistenceManager, pattern);
     }
 
-    public long getPhotosOfPhotoquestCount(HttpServletRequest request, long photoQuestId) {
+    public long getPhotosOfPhotoquestCount(long photoQuestId) {
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
         return DBUtilities.queryCountByPattern(persistenceManager, photoPattern);
@@ -1812,7 +1817,7 @@ public class DatabaseManager {
         return DBUtilities.getPosition(persistenceManager, photo, getPhotoRatingOrderingString(order), pattern);
     }
 
-    public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId) {
+    public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId, Long userId, Long photoquestId) {
         Photo photo = getPhotoByIdOrThrow(photoId);
 
         User signedInUser = getSignedInUser(request);
@@ -1834,9 +1839,14 @@ public class DatabaseManager {
             }
         }
 
-        initYourLikeParameter(request, photo);
-        initPhotoUrl(photo, request);
-        photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
+        setPhotoInfo(request, photo);
+
+        if(userId != null){
+            photo.setShowNextPrevButtons(getPhotosOfUserCount(userId) > 1);
+        } else if(photoquestId != null) {
+            photo.setShowNextPrevButtons(getPhotosOfPhotoquestCount(photoquestId) > 1);
+        }
+
         return photo;
     }
 

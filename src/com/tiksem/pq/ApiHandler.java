@@ -341,9 +341,12 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getPhotoById")
-    public @ResponseBody Object getPhotoById(@RequestParam("id") Long id){
+    public @ResponseBody Object getPhotoById(@RequestParam("id") Long id,
+                                             @RequestParam(value = "userId", required = false) Long userId,
+                                             @RequestParam(value = "photoquestId", required = false)
+                                             Long photoquestId){
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.getPhotoAndFillInfo(request, id);
+        return databaseManager.getPhotoAndFillInfo(request, id, userId, photoquestId);
     }
 
     @RequestMapping("/getPhotoPosition")
@@ -406,7 +409,7 @@ public class ApiHandler {
     @RequestMapping("/getPhotosOfPhotoquestCount")
     public @ResponseBody Object getPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
         long count = getDatabaseManager().
-                getPhotosOfPhotoquestCount(request, photoquestId);
+                getPhotosOfPhotoquestCount(photoquestId);
         return new CountResponse(count);
     }
 

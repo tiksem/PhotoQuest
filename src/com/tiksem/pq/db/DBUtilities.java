@@ -432,7 +432,9 @@ public class DBUtilities {
 
     public static void resetNotPersistentFields(Object object) {
         for(Field field : Reflection.getFieldsWithAnnotations(object.getClass(), NotPersistent.class)) {
-            Reflection.setValueOfField(object, field, null);
+            if (!field.getType().isPrimitive()) {
+                Reflection.setValueOfField(object, field, null);
+            }
         }
     }
 

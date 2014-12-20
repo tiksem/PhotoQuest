@@ -38,6 +38,9 @@ public class Photo implements Likable, InstanceCallbacks {
     @NotPersistent
     private Long position;
 
+    @NotPersistent
+    private boolean showNextPrevButtons = false;
+
     @Index
     @AddingDate
     private Long addingDate;
@@ -163,5 +166,13 @@ public class Photo implements Likable, InstanceCallbacks {
         } else {
             viewsCount++;
         }
+    }
+
+    public boolean isShowNextPrevButtons() {
+        return showNextPrevButtons;
+    }
+
+    public void setShowNextPrevButtons(boolean showNextPrevButtons) {
+        this.showNextPrevButtons = showNextPrevButtons;
     }
 }
