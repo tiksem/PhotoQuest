@@ -223,10 +223,15 @@ public class ApiHandler {
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
     public @ResponseBody Object addPhotoToPhotoQuest(@RequestParam(value = "photoquest", required = true) Long id,
+                                                     @RequestParam(value = "message", required = false) String message,
+                                                     @RequestParam(value = "follow",
+                                                             defaultValue = "false",
+                                                             required = false) boolean follow,
                                                  @RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
+        message = HttpUtilities.reencodePostParamString(message);
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.addPhotoToPhotoquest(request, id, file);
+        return databaseManager.addPhotoToPhotoquest(request, id, file, message, follow);
     }
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
@@ -337,7 +342,7 @@ public class ApiHandler {
 
     @RequestMapping("/getPhotoquestById")
     public @ResponseBody Object getPhotoquestById(@RequestParam("id") Long id){
-        return getDatabaseManager().getPhotoQuestByIdOrThrow(id);
+        return getDatabaseManager().getPhotoQuestAndFillInfo(request, id);
     }
 
     @RequestMapping("/getPhotoById")

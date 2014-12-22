@@ -3,6 +3,7 @@ package com.tiksem.pq.http;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.UnsupportedEncodingException;
 
 /**
  * User: Tikhonenko.S
@@ -44,5 +45,13 @@ public class HttpUtilities {
         Cookie cookie = new Cookie(key, value);
         cookie.setPath("/");
         return cookie;
+    }
+
+    public static String reencodePostParamString(String value) {
+        try {
+            return new String(value.getBytes("ISO-8859-1"), "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

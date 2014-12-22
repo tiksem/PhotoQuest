@@ -48,6 +48,9 @@ public class Photo implements Likable, InstanceCallbacks {
     @Index
     private Long viewsCount;
 
+    @Persistent
+    private String message;
+
     public Long getLikesCount() {
         return likesCount;
     }
@@ -174,5 +177,13 @@ public class Photo implements Likable, InstanceCallbacks {
 
     public void setShowNextPrevButtons(boolean showNextPrevButtons) {
         this.showNextPrevButtons = showNextPrevButtons;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 }

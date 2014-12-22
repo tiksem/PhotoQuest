@@ -221,6 +221,13 @@ public class DatabaseManager {
         return photoquest;
     }
 
+    public Photoquest getPhotoQuestAndFillInfo(HttpServletRequest request, long id) {
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(id);
+        setPhotoquestsFollowingParamIfSignedIn(request, Collections.singletonList(photoquest));
+        setAvatar(request, photoquest);
+        return photoquest;
+    }
+
     public Photoquest createSystemPhotoquest(String photoquestName) {
         Photoquest photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
         photoquest = makePersistent(photoquest);
@@ -673,15 +680,23 @@ public class DatabaseManager {
     }
 
     public Photo addPhotoToPhotoquest(HttpServletRequest request,
-                                      long photoquestId, MultipartFile file) throws IOException {
+                                      long photoquestId, MultipartFile file,
+                                      String message,
+                                      boolean follow) throws IOException {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
 
         if (!file.isEmpty()) {
             Photo photo = new Photo();
             photo.setPhotoquestId(photoquestId);
+            photo.setMessage(message);
             InputStream inputStream = file.getInputStream();
             photo = addPhoto(request, photo, inputStream);
             updatePhotoquestAvatar(photoquest);
+
+            if(follow){
+                followPhotoquest(request, photoquestId);
+            }
+
             return photo;
         } else {
             throw new FileIsEmptyException();
