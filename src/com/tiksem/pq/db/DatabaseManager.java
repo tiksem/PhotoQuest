@@ -244,7 +244,8 @@ public class DatabaseManager {
         setPhotoquestKeywords(photoquest.getId(), keywordConcat);
     }
 
-    public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName, List<String> keywords) {
+    public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName, List<String> keywords,
+                                       boolean follow) {
         if(keywords.size() > MAX_KEYWORDS_COUNT){
             throw new IllegalArgumentException("Too much tags, only " + MAX_KEYWORDS_COUNT + " are allowed");
         }
@@ -265,6 +266,10 @@ public class DatabaseManager {
         action.setUserId(userId);
         makePersistent(action);
         setPhotoquestKeywords(photoquest, keywords);
+
+        if(follow){
+            followPhotoquest(request, photoquest);
+        }
 
         return photoquest;
     }
@@ -2001,11 +2006,11 @@ public class DatabaseManager {
         return result;
     }
 
-    public FollowingPhotoquest followPhotoquest(HttpServletRequest request, long photoquestId) {
-        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+    public FollowingPhotoquest followPhotoquest(HttpServletRequest request, Photoquest photoquest) {
         User signedInUser = getSignedInUserOrThrow(request);
         Long signedInUserId = signedInUser.getId();
 
+        long photoquestId = photoquest.getId();
         FollowingPhotoquest followingPhotoquest = getFollowingPhotoquest(signedInUserId, photoquestId);
         if(followingPhotoquest != null){
             throw new PhotoquestIsFollowingException();
@@ -2016,6 +2021,11 @@ public class DatabaseManager {
         followingPhotoquest.setPhotoquestId(photoquestId);
 
         return makePersistent(followingPhotoquest);
+    }
+
+    public FollowingPhotoquest followPhotoquest(HttpServletRequest request, long photoquestId) {
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+        return followPhotoquest(request, photoquest);
     }
 
     public void unfollowPhotoquest(HttpServletRequest request, long photoquestId) {

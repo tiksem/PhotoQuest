@@ -210,6 +210,7 @@ public class ApiHandler {
     @RequestMapping("/createPhotoquest")
     public @ResponseBody Object createPhotoquest(
             @RequestParam(value = "name", required = true) String name,
+            @RequestParam(value = "follow", required = false, defaultValue = "false") boolean follow,
             @RequestParam(value = "tags", required = false, defaultValue = "") String tagsString) {
         tagsString = tagsString.toLowerCase();
         List<String> tags = Arrays.asList(tagsString.split(" +"));
@@ -218,7 +219,7 @@ public class ApiHandler {
                 throw new IllegalArgumentException("Wrong tag, should match [A-Za-z]{3,20} pattern");
             }
         }
-        return getDatabaseManager().createPhotoQuest(request, name, tags);
+        return getDatabaseManager().createPhotoQuest(request, name, tags, follow);
     }
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
