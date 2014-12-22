@@ -50,7 +50,7 @@ public class DBUtilities {
         }
 
         T result = collection.iterator().next();
-        resetNotPersistentFields(result);
+        //resetNotPersistentFields(result);
         return result;
     }
 
@@ -289,7 +289,7 @@ public class DBUtilities {
 
         try {
             Collection<T> result = new ArrayList<T>((Collection < T >) query.executeWithMap(args));
-            resetNotPersistentFields(result);
+            //resetNotPersistentFields(result);
             return result;
         } catch (NullPointerException e) {
             return new ArrayList<T>();
@@ -320,7 +320,7 @@ public class DBUtilities {
         }
 
         Collection<T> result = new ArrayList<T>((Collection < T >) query.execute());
-        resetNotPersistentFields(result);
+        //resetNotPersistentFields(result);
         return result;
     }
 
