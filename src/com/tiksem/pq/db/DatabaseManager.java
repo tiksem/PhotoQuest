@@ -1754,7 +1754,9 @@ public class DatabaseManager {
         long signedInUserId = signedInUser.getId();
         dialogPattern.setUser1(signedInUserId);
 
-        Collection<Dialog> result = DBUtilities.queryByPattern(persistenceManager, dialogPattern, offsetLimit);
+        String ordering = "lastMessageTime descending";
+        Collection<Dialog> result = DBUtilities.queryByPattern(persistenceManager, dialogPattern, offsetLimit,
+                ordering);
         for(Dialog dialog : result){
             Message lastMessage = getMessageByIdOrThrow(dialog.getLastMessageId());
 
