@@ -1474,10 +1474,12 @@ public class DatabaseManager {
 
         Long photoId = like.getPhotoId();
         Long commentId = like.getCommentId();
-        long replyUserId;
 
-        if(photoId != null){
-            if(commentId != null){
+        if(commentId != null){
+            Comment comment = getCommentByIdOrThrow(commentId);
+            decrementLikesCount(request, comment);
+        } else {
+            if(photoId == null){
                 throw new RuntimeException("WTF?");
             }
 
@@ -1485,14 +1487,6 @@ public class DatabaseManager {
             Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
             decrementLikesCount(request, photo, photoquest);
             updatePhotoquestAvatar(photoquest);
-            replyUserId = photo.getUserId();
-
-        } else if(commentId != null) {
-            Comment comment = getCommentByIdOrThrow(commentId);
-            decrementLikesCount(request, comment);
-            replyUserId = comment.getUserId();
-        } else {
-            throw new RuntimeException("WTF?");
         }
 
         Reply reply = getReplyByLikeId(likeId);

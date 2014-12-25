@@ -240,6 +240,8 @@ public class ApiHandler {
     public void
     getImageById(@PathVariable Long id,
                  @RequestParam(value = "size", required = false) Integer size,
+                 @RequestParam(value = "size", required = false) Integer width,
+                 @RequestParam(value = "size", required = false) Integer height,
                  OutputStream outputStream)
             throws IOException {
         try {
