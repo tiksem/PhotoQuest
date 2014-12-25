@@ -1278,6 +1278,13 @@ public class DatabaseManager {
         return DBUtilities.getObjectByPattern(persistenceManager, reply);
     }
 
+    private Reply getReplyByCommentId(long commentId) {
+        Reply reply = new Reply();
+        reply.setType(Reply.COMMENT);
+        reply.setId(commentId);
+        return DBUtilities.getObjectByPattern(persistenceManager, reply);
+    }
+
     private void addLikesAndRepliesToDeleteStack(List<Object> deleteStack, Comment comment, OffsetLimit offsetLimit) {
         Long commentId = comment.getId();
         Collection<Like> likes = getCommentLikes(commentId, offsetLimit);
@@ -1295,6 +1302,10 @@ public class DatabaseManager {
         Comment comment = getCommentByIdOrThrow(commentId);
         List<Object> deleteStack = new ArrayList<Object>();
         addLikesAndRepliesToDeleteStack(deleteStack, comment, offsetLimit);
+
+        Reply reply = getReplyByCommentId(commentId);
+        deleteStack.add(reply);
+
         deleteStack.add(comment);
         deleteAllPersistent(deleteStack);
     }
