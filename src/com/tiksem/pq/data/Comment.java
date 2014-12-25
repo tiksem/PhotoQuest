@@ -1,6 +1,7 @@
 package com.tiksem.pq.data;
 
 import com.tiksem.pq.data.annotations.AddingDate;
+import com.tiksem.pq.data.annotations.OnPrepareForStorage;
 
 import javax.jdo.annotations.*;
 
@@ -21,7 +22,7 @@ public class Comment implements Likable, WithPhoto {
     @Index
     private Long toUserId;
     @Persistent
-    private long likesCount = 0;
+    private Long likesCount;
 
     @NotPersistent
     private User user;
@@ -143,5 +144,12 @@ public class Comment implements Likable, WithPhoto {
 
     public void setPhoto(String photo) {
         this.photo = photo;
+    }
+
+    @OnPrepareForStorage
+    void prepareForStorage(){
+        if(likesCount == null){
+            likesCount = 0l;
+        }
     }
 }

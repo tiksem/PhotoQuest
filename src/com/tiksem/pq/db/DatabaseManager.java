@@ -827,6 +827,13 @@ public class DatabaseManager {
         photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
         initPhotoUrl(photo, request);
         initYourLikeParameter(request, photo);
+        User user = getUserByIdOrThrow(photo.getUserId());
+        setAvatar(request, user);
+        photo.setUser(user);
+
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+        setAvatar(request, photoquest);
+        photo.setPhotoquest(photoquest);
     }
 
     private Photo getNextPrevPhoto(HttpServletRequest request,

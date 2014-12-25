@@ -30,6 +30,12 @@ public class Photo implements Likable, InstanceCallbacks {
     private Long userId;
 
     @NotPersistent
+    private User user;
+
+    @NotPersistent
+    private Photoquest photoquest;
+
+    @NotPersistent
     private String url;
 
     @NotPersistent
@@ -185,5 +191,21 @@ public class Photo implements Likable, InstanceCallbacks {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Photoquest getPhotoquest() {
+        return photoquest;
+    }
+
+    public void setPhotoquest(Photoquest photoquest) {
+        this.photoquest = photoquest;
     }
 }
