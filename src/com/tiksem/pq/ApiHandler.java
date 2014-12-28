@@ -1,5 +1,7 @@
 package com.tiksem.pq;
 
+import com.tiksem.mysqljava.MysqlObjectMapper;
+import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.db.DBUtilities;
@@ -8,6 +10,8 @@ import com.tiksem.pq.db.OffsetLimit;
 import com.tiksem.pq.db.RatingOrder;
 import com.tiksem.pq.db.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
+import com.tiksem.pq.test.Eblo;
+import com.tiksem.pq.test.EbloInfo;
 import com.tiksem.pq.utils.MimeTypeUtils;
 import com.utils.framework.io.Network;
 import com.utils.framework.strings.Strings;
@@ -23,10 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -561,6 +562,58 @@ public class ApiHandler {
         return new Success();
     }
 
+    @RequestMapping("/testDatabase")
+    public @ResponseBody Object testDatabase() {
+        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        List<Eblo> eblos;
+        List<Eblo> eblos2;
+        List<EbloInfo> eblos3;
+        try {
+            mapper.createTables("com.tiksem.pq.test");
+            Eblo eblo = new Eblo();
+            eblo.setName("Semyon");
+            eblo.setPhoneNumber("0950534847");
+            eblo.setStored(true);
+            mapper.insert(eblo);
+
+            EbloInfo ebloInfo = new EbloInfo();
+            ebloInfo.setId(eblo.getId());
+            ebloInfo.setInfo("Yo!");
+            mapper.insert(ebloInfo);
+
+            Eblo pattern = new Eblo();
+            pattern.setName("Semyon");
+            pattern.setPhoneNumber("0950534847");
+
+            SelectParams selectParams = new SelectParams();
+            selectParams.ordering = "name DESC";
+
+            eblos = mapper.queryByPattern(pattern, selectParams);
+
+            selectParams = new SelectParams();
+            selectParams.ordering = "name DESC";
+
+            EbloInfo info = new EbloInfo();
+            info.setInfo("Yo!");
+            eblos2 = mapper.queryByForeignPattern(info, Eblo.class,
+                    "id",
+                    selectParams);
+
+            selectParams = new SelectParams();
+            selectParams.ordering = "eblo.name DESC";
+            selectParams.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
+
+            eblos3 = mapper.queryByPattern(info, selectParams);
+
+        } finally {
+            mapper.executeNonSelectSQL("DROP TABLE ebloinfo", new HashMap<String, Object>());
+            mapper.executeNonSelectSQL("DROP TABLE eblo", new HashMap<String, Object>());
+        }
+
+        return Arrays.asList(eblos, eblos2, eblos3);
+    }
+
+
     @RequestMapping("/initDatabase")
     public @ResponseBody Object initDatabase() {
         getDatabaseManager().initDatabase();
@@ -607,5 +660,11 @@ public class ApiHandler {
         }
 
         return new CountResponse(count);
+    }
+
+    @RequestMapping("/executeSQL")
+    public @ResponseBody Object executeSQL(@RequestParam("sql") String sql) {
+        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        return mapper.executeSelectSql(sql);
     }
 }
