@@ -54,4 +54,9 @@ public class HttpUtilities {
             throw new RuntimeException(e);
         }
     }
+
+    public static String getWarClassesPath() {
+        String path = HttpUtilities.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        return path.substring(0, path.indexOf("classes") + "classes".length());
+    }
 }

@@ -4,10 +4,7 @@ import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
-import com.tiksem.pq.db.DBUtilities;
-import com.tiksem.pq.db.DatabaseManager;
-import com.tiksem.pq.db.OffsetLimit;
-import com.tiksem.pq.db.RatingOrder;
+import com.tiksem.pq.db.*;
 import com.tiksem.pq.db.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.test.Eblo;
@@ -568,6 +565,7 @@ public class ApiHandler {
         List<Eblo> eblos;
         List<Eblo> eblos2;
         List<EbloInfo> eblos3;
+        List<EbloInfo> eblos4;
         try {
             mapper.createTables("com.tiksem.pq.test");
             Eblo eblo = new Eblo();
@@ -605,12 +603,15 @@ public class ApiHandler {
 
             eblos3 = mapper.queryByPattern(info, selectParams);
 
+            SqlFileExecutor sqlFileExecutor = new SqlFileExecutor(mapper);
+            eblos4 = sqlFileExecutor.executeSQLQuery("yo.sql", new HashMap<String, Object>(),
+                    EbloInfo.class, MysqlObjectMapper.ALL_FOREIGN);
         } finally {
             mapper.executeNonSelectSQL("DROP TABLE ebloinfo", new HashMap<String, Object>());
             mapper.executeNonSelectSQL("DROP TABLE eblo", new HashMap<String, Object>());
         }
 
-        return Arrays.asList(eblos, eblos2, eblos3);
+        return Arrays.asList(eblos, eblos2, eblos3, eblos4);
     }
 
 

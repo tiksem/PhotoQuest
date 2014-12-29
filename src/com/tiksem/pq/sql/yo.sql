@@ -1,0 +1,1 @@
+SELECT ebloinfo.*, eblo.* from eblo, ebloinfo WHERE eblo.id=ebloinfo.id and ebloinfo.info = "Yo!"

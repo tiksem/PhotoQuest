@@ -90,19 +90,42 @@ public class MysqlObjectMapper {
         }
     }
 
-    public <T> List<T> executeSQLQuery(String sql, Map<String, Object> args, Class<T> resultClass)
-            throws SQLException {
-        NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
-        if (args != null) {
-            statement.setObjects(args);
+    public <T> List<T> executeSQLQuery(String sql,
+                                       Map<String, Object> args,
+                                       Class<T> resultClass,
+                                       final List<String> foreigns) {
+        final List<Field> resultFields = SqlGenerationUtilities.getFields(resultClass);
+
+        try {
+            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            if (args != null) {
+                statement.setObjects(args);
+            }
+            ResultSet resultSet = statement.executeQuery();
+            List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
+                    new ResultSetUtilities.FieldsProvider() {
+                        @Override
+                        public List<Field> getFieldsOfClass(Class aClass) {
+                            return resultFields;
+                        }
+
+                        @Override
+                        public List<Field> getForeignValueFields(Class aClass) {
+                            return getForeignValueFieldsToFill(aClass, foreigns);
+                        };
+                    }, resultClass);
+
+            return (List<T>) objects;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-        ResultSet resultSet = statement.executeQuery();
-        return ResultSetUtilities.getList(resultClass, resultSet);
     }
 
-    public <T> T executeSingleRowSQLQuery(String sql, Map<String, Object> args, Class<T> resultClass)
-            throws SQLException {
-        List<T> result = executeSQLQuery(sql, args, resultClass);
+    public <T> T executeSingleRowSQLQuery(String sql,
+                                          Map<String, Object> args,
+                                          Class<T> resultClass,
+                                          List<String> foreigns) {
+        List<T> result = executeSQLQuery(sql, args, resultClass, foreigns);
         if(result.isEmpty()){
             return null;
         }
