@@ -20,6 +20,7 @@ public class SqlFileExecutor {
     private static final String SQL_PATH = HttpUtilities.getWarClassesPath() + "/sql/";
     private MysqlObjectMapper mapper;
     private Map<String, String> queries = new HashMap<String, String>();
+    private String sqlRootPath;
 
     public SqlFileExecutor(MysqlObjectMapper mapper) {
         this.mapper = mapper;

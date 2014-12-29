@@ -568,16 +568,6 @@ public class ApiHandler {
         List<EbloInfo> eblos4;
         try {
             mapper.createTables("com.tiksem.pq.test");
-            Eblo eblo = new Eblo();
-            eblo.setName("Semyon");
-            eblo.setPhoneNumber("0950534847");
-            eblo.setStored(true);
-            mapper.insert(eblo);
-
-            EbloInfo ebloInfo = new EbloInfo();
-            ebloInfo.setId(eblo.getId());
-            ebloInfo.setInfo("Yo!");
-            mapper.insert(ebloInfo);
 
             Eblo pattern = new Eblo();
             pattern.setName("Semyon");

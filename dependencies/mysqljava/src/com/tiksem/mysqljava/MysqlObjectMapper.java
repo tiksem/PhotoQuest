@@ -1,9 +1,13 @@
 package com.tiksem.mysqljava;
 
-import com.tiksem.mysqljava.annotations.ForeignValue;
+import com.tiksem.mysqljava.annotations.*;
+import com.tiksem.mysqljava.metadata.ColumnInfo;
+import com.tiksem.mysqljava.metadata.ForeignKeyInfo;
+import com.tiksem.mysqljava.metadata.IndexInfo;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;
+import com.utils.framework.strings.Strings;
 import org.springframework.jdbc.support.SQLErrorCodes;
 
 import java.lang.reflect.Field;
@@ -41,9 +45,19 @@ public class MysqlObjectMapper {
         List<Class<?>> classesInPackage = Reflection.findClassesInPackage(packageName);
         for(Class aClass : classesInPackage){
             createTable(aClass);
+            updateTable(aClass);
         }
         try {
             connection.commit();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean executeNonSelectSQL(String sql) {
+        try {
+            Statement statement = connection.createStatement();
+            return statement.execute(sql);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -89,6 +103,17 @@ public class MysqlObjectMapper {
             throw new RuntimeException(e);
         }
     }
+    public <T> List<T> executeSQLQuery(String sql,
+                                       Map<String, Object> args,
+                                       Class<T> resultClass) {
+        return executeSQLQuery(sql, args, resultClass, new ArrayList<String>());
+    }
+
+    public <T> List<T> executeSQLQuery(String sql,
+                                       Class<T> resultClass) {
+        return executeSQLQuery(sql, new HashMap<String, Object>(),
+                resultClass, new ArrayList<String>());
+    }
 
     public <T> List<T> executeSQLQuery(String sql,
                                        Map<String, Object> args,
@@ -102,20 +127,24 @@ public class MysqlObjectMapper {
                 statement.setObjects(args);
             }
             ResultSet resultSet = statement.executeQuery();
-            List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
-                    new ResultSetUtilities.FieldsProvider() {
-                        @Override
-                        public List<Field> getFieldsOfClass(Class aClass) {
-                            return resultFields;
-                        }
+            if (!foreigns.isEmpty() || foreigns == ALL_FOREIGN) {
+                List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
+                        new ResultSetUtilities.FieldsProvider() {
+                            @Override
+                            public List<Field> getFieldsOfClass(Class aClass) {
+                                return resultFields;
+                            }
 
-                        @Override
-                        public List<Field> getForeignValueFields(Class aClass) {
-                            return getForeignValueFieldsToFill(aClass, foreigns);
-                        };
-                    }, resultClass);
+                            @Override
+                            public List<Field> getForeignValueFields(Class aClass) {
+                                return getForeignValueFieldsToFill(aClass, foreigns);
+                            };
+                        }, resultClass);
 
-            return (List<T>) objects;
+                return (List<T>) objects;
+            } else {
+                return ResultSetUtilities.getList(resultFields, resultClass, resultSet);
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -299,6 +328,229 @@ public class MysqlObjectMapper {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void alterColumnDefinition() {
+
+    }
+
+    public List<ColumnInfo> getTableColumns(Class table) {
+        return executeSQLQuery("DESCRIBE " + table.getSimpleName(), ColumnInfo.class);
+    }
+
+    public List<IndexInfo> getTableKeys(Class table) {
+        return executeSQLQuery("SHOW KEYS FROM " + table.getSimpleName(), IndexInfo.class);
+    }
+
+    public List<ForeignKeyInfo> getForeignKeys(Class table) {
+        String sql = "select KEY_COLUMN_USAGE.*, REFERENTIAL_CONSTRAINTS.UPDATE_RULE, " +
+                "REFERENTIAL_CONSTRAINTS.DELETE_RULE\n" +
+                "from information_schema.KEY_COLUMN_USAGE, information_schema.REFERENTIAL_CONSTRAINTS\n" +
+                "where KEY_COLUMN_USAGE.TABLE_SCHEMA = :databaseName and KEY_COLUMN_USAGE.table_name=:tableName\n" +
+                "and REFERENTIAL_CONSTRAINTS.CONSTRAINT_SCHEMA = :databaseName and " +
+                "REFERENTIAL_CONSTRAINTS.table_name = :tableName";
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("tableName", table.getSimpleName());
+        args.put("databaseName", "photoquest");
+        return executeSQLQuery(sql, args, ForeignKeyInfo.class);
+    }
+
+    private void updateColumns(Class aClass) {
+        String tableName = aClass.getSimpleName();
+        List<ColumnInfo> columns = getTableColumns(aClass);
+        List<Field> fields = SqlGenerationUtilities.getFields(aClass);
+
+        Iterator<ColumnInfo> columnIterator = columns.iterator();
+        while (columnIterator.hasNext()) {
+            final ColumnInfo column = columnIterator.next();
+            Field field = CollectionUtils.find(fields, new Predicate<Field>() {
+                @Override
+                public boolean check(Field item) {
+                    return item.getName().equalsIgnoreCase(column.getCOLUMN_NAME());
+                }
+            });
+
+            if(field != null){
+                SqlGenerationUtilities.ModifyInfo info =
+                        SqlGenerationUtilities.modifyColumn(field, tableName);
+
+                fields.remove(field);
+                columnIterator.remove();
+
+                if(!SqlGenerationUtilities.sqlTypeEquals(info.fieldType, column.getCOLUMN_TYPE())){
+                    executeNonSelectSQL(info.sql);
+                    continue;
+                }
+
+                boolean isNullable = column.getIS_NULLABLE().equals("YES");
+                if(isNullable != info.isNullable){
+                    executeNonSelectSQL(info.sql);
+                    continue;
+                }
+
+                boolean hasAutoIncrement = column.getEXTRA().equals("auto_increment");
+                if(hasAutoIncrement != info.autoIncrement){
+                    executeNonSelectSQL(info.sql);
+                    continue;
+                }
+
+                boolean isPrimaryKey = column.getCOLUMN_KEY().equals("PRI");
+                boolean isUniqueKey = column.getCOLUMN_KEY().equals("UNI");
+                if(isPrimaryKey != info.isPrimaryKey || isUniqueKey != info.isUniqueKey){
+                    executeNonSelectSQL(info.sql);
+                }
+            }
+        }
+
+        for(ColumnInfo column : columns){
+            String sql = "DROP COLUMN " + column.getCOLUMN_NAME();
+            executeNonSelectSQL(sql);
+        }
+
+        for(Field field : fields){
+            String sql = SqlGenerationUtilities.addColumn(field, tableName).sql;
+            executeNonSelectSQL(sql);
+        }
+    }
+
+    private void dropIndex(String indexName, String tableName) {
+        String quotedTableName = Strings.quote(tableName, "`");
+        executeNonSelectSQL("DROP INDEX " + indexName + " ON " + quotedTableName);
+    }
+
+    private void addIndex(IndexType indexType, String tableName, String fieldName) {
+        String quotedTableName = Strings.quote(tableName, "`");
+        String sql = "CREATE INDEX " + fieldName + "_index ON " + quotedTableName +
+                "(" + fieldName + ") USING " + indexType;
+        executeNonSelectSQL(sql);
+    }
+
+    private void dropAndAddIndex(IndexType indexType, String indexName, String tableName, String fieldName) {
+        dropIndex(indexName, tableName);
+        addIndex(indexType, tableName, fieldName);
+    }
+
+    private void updateIndexes(Class aClass) {
+        String tableName = aClass.getSimpleName();
+        List<IndexInfo> indexes = getTableKeys(aClass);
+        List<Field> fields = SqlGenerationUtilities.getIndexedFields(aClass);
+
+        Iterator<IndexInfo> indexIterator = indexes.iterator();
+        while (indexIterator.hasNext()) {
+            IndexInfo index = indexIterator.next();
+            final String columnName = index.getCOLUMN_NAME();
+
+            Field field = CollectionUtils.find(fields, new Predicate<Field>() {
+                @Override
+                public boolean check(Field item) {
+                    return item.getName().equalsIgnoreCase(columnName);
+                }
+            });
+
+            if(field != null){
+                indexIterator.remove();
+                fields.remove(field);
+
+                IndexType indexType = SqlGenerationUtilities.getIndexType(field);
+                if(!index.getINDEX_TYPE().equals(indexType.toString())){
+                    dropAndAddIndex(indexType, index.getINDEX_NAME(), tableName, field.getName());
+                }
+            }
+        }
+
+        for(IndexInfo index : indexes){
+            dropIndex(index.getINDEX_NAME(), tableName);
+        }
+
+        for(Field field : fields){
+            IndexType indexType = SqlGenerationUtilities.getIndexType(field);
+            addIndex(indexType, tableName, field.getName());
+        }
+    }
+
+    private void dropForeignKey(String tableName, String constraintName) {
+        String sql = "ALTER TABLE `" + tableName + "` DROP FOREIGN KEY " + constraintName;
+    }
+
+    private void addForeignKey(String tableName, Field field, ForeignKey foreignKey) {
+        tableName = Strings.quote(tableName, "`");
+        String sql = "ALTER TABLE " + tableName +
+                " ADD FOREIGN KEY (`" + field.getName() + "`) REFERENCES " +
+                foreignKey.parent().getSimpleName() + "(`" + foreignKey.field() + "`)" +
+                " ON DELETE " + foreignKey.onDelete().toString().replace("_", " ") +
+                " ON UPDATE " + foreignKey.onUpdate().toString().replace("_", " ");
+        executeNonSelectSQL(sql);
+    }
+
+    private void updateForeignKeys(Class aClass) {
+        String tableName = aClass.getSimpleName();
+        List<ForeignKeyInfo> foreignKeys = getForeignKeys(aClass);
+        List<Field> fields = Reflection.getFieldsWithAnnotations(aClass, ForeignKey.class);
+
+        Iterator<ForeignKeyInfo> foreignKeyIterator = foreignKeys.iterator();
+        while (foreignKeyIterator.hasNext()) {
+            ForeignKeyInfo foreignKey = foreignKeyIterator.next();
+
+            final String columnName = foreignKey.getCOLUMN_NAME();
+            Field field = CollectionUtils.find(fields, new Predicate<Field>() {
+                @Override
+                public boolean check(Field item) {
+                    return item.getName().equalsIgnoreCase(columnName);
+                }
+            });
+
+            if (field != null) {
+                foreignKeyIterator.remove();
+                fields.remove(field);
+
+                ForeignKey key = Reflection.getAnnotationOrThrow(field, ForeignKey.class);
+                boolean sameUpdateRule = foreignKey.getUPDATE_RULE().replaceAll(" +", "_").
+                        equals(key.onUpdate().toString());
+                if(!sameUpdateRule){
+                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
+                    addForeignKey(tableName, field, key);
+                    continue;
+                }
+
+                boolean sameDeleteRule = foreignKey.getDELETE_RULE().replaceAll(" +", "_").
+                        equals(key.onDelete().toString());
+                if(!sameDeleteRule){
+                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
+                    addForeignKey(tableName, field, key);
+                    continue;
+                }
+
+                boolean sameParentTable = foreignKey.getREFERENCED_TABLE_NAME().
+                        equalsIgnoreCase(key.parent().getSimpleName());
+                if(!sameParentTable){
+                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
+                    addForeignKey(tableName, field, key);
+                    continue;
+                }
+
+                boolean sameParentFieldName = foreignKey.getREFERENCED_COLUMN_NAME().
+                        equalsIgnoreCase(key.field());
+                if(!sameParentFieldName){
+                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
+                    addForeignKey(tableName, field, key);
+                }
+            }
+        }
+
+        for(ForeignKeyInfo key : foreignKeys){
+            dropForeignKey(tableName, key.getCONSTRAINT_NAME());
+        }
+
+        for(Field field : fields){
+            ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+            addForeignKey(tableName, field, foreignKey);
+        }
+    }
+
+    public void updateTable(Class aClass) {
+        updateColumns(aClass);
+        updateIndexes(aClass);
+        updateForeignKeys(aClass);
     }
 
     @Override

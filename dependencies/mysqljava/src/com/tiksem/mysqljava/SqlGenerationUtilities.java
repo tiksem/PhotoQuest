@@ -4,9 +4,13 @@ import com.tiksem.mysqljava.annotations.*;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
+import org.springframework.integration.ip.util.RegexUtils;
+import sun.misc.Regexp;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by CM on 12/27/2014.
@@ -34,7 +38,55 @@ public class SqlGenerationUtilities {
         return false;
     }
 
-    private static String getSqlType(Field field) {
+    public static int getDefaultTypeLength(String sqlType) {
+        if(sqlType.equalsIgnoreCase("BIGINT")){
+            return 20;
+        } else if(sqlType.equalsIgnoreCase("INT")) {
+            return 10;
+        } else if(sqlType.equalsIgnoreCase("MEDIUMINT")) {
+            return 8;
+        } else if(sqlType.equalsIgnoreCase("SMALLINT")) {
+            return 5;
+        } else if(sqlType.equalsIgnoreCase("SMALLINT")) {
+            return 3;
+        } else if(sqlType.equalsIgnoreCase("BIT")) {
+            return 1;
+        } else if(sqlType.equalsIgnoreCase("CHAR")) {
+            return 255;
+        } else if(sqlType.equalsIgnoreCase("VARCHAR")) {
+            return 255;
+        }
+
+        return -1;
+    }
+
+    public static boolean sqlTypeEquals(String a, String b) {
+        if(a.equalsIgnoreCase(b)){
+            return true;
+        }
+
+        String pattern = " *\\(\\d+\\)";
+        String aType = a.replaceAll(pattern, "");
+        String bType = b.replaceAll(pattern, "");
+        if(!aType.equalsIgnoreCase(bType)){
+            return false;
+        }
+
+        int aDigit = Strings.findUnsignedIntegerInString(a);
+        int bDigit = Strings.findUnsignedIntegerInString(b);
+
+        if(aDigit < 0) {
+            aDigit = getDefaultTypeLength(aType);
+        }
+
+        if(bDigit < 0) {
+            bDigit = getDefaultTypeLength(bType);
+        }
+
+        return aDigit == bDigit;
+    }
+
+    public static String getSqlType(Field field) {
         String suggestedType = null;
         Stored stored = field.getAnnotation(Stored.class);
         if(stored != null){
@@ -71,32 +123,41 @@ public class SqlGenerationUtilities {
     }
 
     private static String getSqlType(Field field, String suggestedType) {
+        String result;
         if(Strings.isEmpty(suggestedType)){
             Class<?> type = field.getType();
 
             if(type == Long.class){
-                return "BIGINT";
+                result = "BIGINT";
             } else if(type == Integer.class) {
-                return "INT";
+                result = "INT";
             } else if(type == Short.class) {
-                return "SMALLINT";
+                result = "SMALLINT";
             } else if(type == Byte.class) {
-                return "TINYINT";
+                result = "TINYINT";
             } else if(type == String.class) {
-                return "VARCHAR(255)";
+                result = "VARCHAR";
             } else if(type == Float.class) {
-                return "FLOAT";
+                result = "FLOAT";
             } else if(type == Double.class) {
-                return "DOUBLE";
+                result = "DOUBLE";
             } else if(type == Boolean.class) {
-                return "BIT(1)";
+                result = "BIT";
             }
 
             throw new IllegalArgumentException("Unsupported type " + type.getSimpleName());
 
         } else {
-            return suggestedType;
+            result = suggestedType;
         }
+
+        int digit = Strings.findUnsignedIntegerInString(result);
+        if(digit < 0){
+            digit = getDefaultTypeLength(result);
+            result += "(" + digit + ")";
+        }
+
+        return result;
     }
 
     private static boolean isInt(Field field) {
@@ -205,8 +266,8 @@ public class SqlGenerationUtilities {
                 String keyDefinition = "FOREIGN KEY (" + fieldName + ") REFERENCES " + parent.getSimpleName() + "(" +
                         parentField.getName() + ")";
 
-                keyDefinition += " ON DELETE " + foreignKey.onDelete();
-                keyDefinition += " ON UPDATE " + foreignKey.onUpdate();
+                keyDefinition += " ON DELETE " + foreignKey.onDelete().toString().replace("_", " ");
+                keyDefinition += " ON UPDATE " + foreignKey.onUpdate().toString().replace("_", " ");
 
                 parts.add(columnDefinition);
                 parts.add(indexDefinition);
@@ -226,6 +287,38 @@ public class SqlGenerationUtilities {
     public static List<Field> getFields(Class aClass) {
         return Reflection.getFieldsWithAnnotations(aClass,
                 Index.class, Stored.class, PrimaryKey.class,
+                ForeignKey.class, Unique.class);
+    }
+
+    public static IndexType getIndexType(Field field) {
+        Index index = field.getAnnotation(Index.class);
+        if(index != null){
+            return index.indexType();
+        }
+
+        PrimaryKey primaryKey = field.getAnnotation(PrimaryKey.class);
+        if(primaryKey != null){
+            return primaryKey.indexType();
+        }
+
+        ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+        if(foreignKey != null){
+            return foreignKey.indexType();
+        }
+
+        Unique unique = field.getAnnotation(Unique.class);
+        if(unique != null){
+            return unique.indexType();
+        }
+
+        throw new IllegalArgumentException("Field " + field.getName() + " should have " +
+                "\nIndex.class, PrimaryKey.class,\n" +
+                "ForeignKey.class, Unique.class annotation");
+    }
+
+    public static List<Field> getIndexedFields(Class aClass) {
+        return Reflection.getFieldsWithAnnotations(aClass,
+                Index.class, PrimaryKey.class,
                 ForeignKey.class, Unique.class);
     }
 
@@ -420,5 +513,58 @@ public class SqlGenerationUtilities {
         }
 
         return result;
+    }
+
+    public static class ModifyInfo {
+        public String sql;
+        public boolean isNullable;
+        public boolean autoIncrement;
+        public String fieldType;
+        public boolean isPrimaryKey;
+        public boolean isUniqueKey;
+    }
+
+    public static ModifyInfo addColumn(Field field, String tableName) {
+        return alterColumn(field, tableName, "ADD");
+    }
+
+    public static ModifyInfo alterColumn(Field field, String tableName, String action) {
+        String alter = "ALTER TABLE `" + tableName + "`";
+
+        NotNull notNull = field.getAnnotation(NotNull.class);
+
+        String fieldType = SqlGenerationUtilities.getSqlType(field);
+        String sql = alter + " " + action + " " + field.getName() + " " + fieldType;
+
+        if(notNull != null){
+            sql += " not null";
+        }
+
+        boolean autoIncrement = false;
+        boolean isUniqueKey = field.getAnnotation(Unique.class) != null;
+        boolean isPrimaryKey = false;
+        PrimaryKey primaryKey = field.getAnnotation(PrimaryKey.class);
+        if(primaryKey != null && primaryKey.autoincrement()){
+            sql += " auto_increment PRIMARY KEY";
+            autoIncrement = true;
+            isPrimaryKey = true;
+        }
+
+        if(isUniqueKey){
+            sql += " UNIQUE KEY";
+        }
+
+        ModifyInfo info = new ModifyInfo();
+        info.sql = sql;
+        info.autoIncrement = autoIncrement;
+        info.isNullable = notNull == null;
+        info.fieldType = fieldType;
+        info.isUniqueKey = isUniqueKey;
+        info.isPrimaryKey = isPrimaryKey;
+        return info;
+    }
+
+    public static ModifyInfo modifyColumn(Field field, String tableName) {
+        return alterColumn(field, tableName, "MODIFY");
     }
 }

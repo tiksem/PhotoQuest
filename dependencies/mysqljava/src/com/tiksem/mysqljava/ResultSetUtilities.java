@@ -54,6 +54,35 @@ public class ResultSetUtilities {
         return maps;
     }
 
+    public static int getColumnIndex(final ResultSet resultSet, String column) {
+        final ResultSetMetaData metaData;
+        try {
+            metaData = resultSet.getMetaData();
+        } catch (SQLException e) {
+            throw new RuntimeException();
+        }
+
+        return new AbstractList<String>(){
+            @Override
+            public String get(int index) {
+                try {
+                    return metaData.getColumnName(index + 1).toLowerCase();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public int size() {
+                try {
+                    return metaData.getColumnCount();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }.indexOf(column.toLowerCase());
+    }
+
     public static <T> List<T> getList(List<Field> fields, Class<T> aClass, ResultSet resultSet) {
         List<T> result = new ArrayList<T>();
 
@@ -66,12 +95,12 @@ public class ResultSetUtilities {
 
                     for(Field field : fields){
                         String fieldName = field.getName();
-                        try {
-                            resultSet.findColumn(fieldName);
-                        } catch (SQLException e) {
+                        int index = getColumnIndex(resultSet, fieldName);
+                        if(index < 0){
                             continue;
                         }
-                        Object value = resultSet.getObject(fieldName);
+
+                        Object value = resultSet.getObject(index + 1);
                         Reflection.setFieldValueUsingSetter(object, field, value);
                     }
                 } else {
