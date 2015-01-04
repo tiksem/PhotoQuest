@@ -160,10 +160,11 @@ public class AdvancedRequestsManager {
         mapper.executeNonSelectSQL(CLEAR_USERS_RATING);
     }
 
-    public void insertActionFeed(long actionId, long userId) {
+    public void insertActionFeed(Action action) {
         Map<String, Object> args = new HashMap<String, Object>();
-        args.put("userId", userId);
-        args.put("actionId", actionId);
+        args.put("userId", action.getUserId());
+        args.put("actionId", action.getId());
+        args.put("photoquestId", action.getPhotoquestId());
         String sqlFile = "feed/commit_add_photo.sql";
         sqlFileExecutor.executeNonSelectQuery(sqlFile, args);
     }

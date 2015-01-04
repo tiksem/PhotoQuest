@@ -5,4 +5,4 @@ WHERE feed.userId = :userId
       AND photoquest.id = action.photoquestId
       AND photo.id = action.photoId
       AND user.id = action.userId
-LIMIT :limit, :offset;
+LIMIT :offset, :limit;

@@ -587,7 +587,7 @@ public class DatabaseManager {
 
     private void insertAction(Action action) {
         insert(action);
-        advancedRequestsManager.insertActionFeed(action.getId(), action.getUserId());
+        advancedRequestsManager.insertActionFeed(action);
     }
 
     private void commitAddPhotoAction(Photo photo) {
