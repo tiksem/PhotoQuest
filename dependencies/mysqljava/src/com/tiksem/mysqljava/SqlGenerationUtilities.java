@@ -343,7 +343,7 @@ public class SqlGenerationUtilities {
             @Override
             public String get(Field field) {
                 if (!Reflection.isNull(object, field)) {
-                    return field.getName();
+                    return "`" + field.getName() + "`";
                 }
 
                 return null;
@@ -518,7 +518,7 @@ public class SqlGenerationUtilities {
             Object value = Reflection.getFieldValueUsingGetter(values, field);
             if(value != null){
                 String fieldName = field.getName();
-                setParts.add(fieldName + " = :" + fieldName + "_update");
+                setParts.add("`" + fieldName + "` = :" + fieldName + "_update");
             }
         }
 

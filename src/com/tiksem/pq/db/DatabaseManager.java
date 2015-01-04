@@ -1388,7 +1388,7 @@ public class DatabaseManager {
         deleteAll(forDel);
     }
 
-    private void updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
+    private Dialog updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
         Dialog dialog = new Dialog();
         dialog.setUser1Id(user1Id);
         dialog.setUser2Id(user2Id);
@@ -1419,6 +1419,8 @@ public class DatabaseManager {
             dialog.setUser1Id(user2Id);
             insert(dialog);
         }
+
+        return dialog;
     }
 
     private Message addMessage(User fromUser, User toUser, String messageText) {
@@ -1434,7 +1436,9 @@ public class DatabaseManager {
 
         insert(message);
 
-        updateDialog(fromUserId, toUserId, message.getAddingDate(), message.getId());
+        Dialog dialog = updateDialog(fromUserId, toUserId, message.getAddingDate(), message.getId());
+        message.setDialogId(dialog.getId());
+        replace(message);
 
         replace(toUser);
         return message;

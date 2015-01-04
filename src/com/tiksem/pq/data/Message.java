@@ -12,7 +12,6 @@ public class Message {
     private Long id;
 
     @Index(indexType = IndexType.HASH)
-    @NotNull
     private Long dialogId;
 
     @Stored
