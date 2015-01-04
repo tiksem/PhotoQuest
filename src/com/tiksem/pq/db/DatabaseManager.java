@@ -120,7 +120,12 @@ public class DatabaseManager {
                     profileView.getAddingDate() >= PROFILE_VIEW_PERIOD){
                 profileView.setAddingDate(currentTimeMillis);
                 user.incrementRating();
-                replaceAll(user, profileView);
+                replace(user);
+                if (profileView == pattern) {
+                    insert(profileView);
+                } else {
+                    replace(profileView);
+                }
             }
         }
 
@@ -261,7 +266,7 @@ public class DatabaseManager {
         Long userId = user.getId();
         photoquest.setUserId(userId);
 
-        replace(photoquest);
+        insert(photoquest);
         Action action = new Action();
         action.setPhotoquestId(photoquest.getId());
         action.setUserId(userId);

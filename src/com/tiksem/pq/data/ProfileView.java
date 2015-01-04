@@ -7,7 +7,7 @@ import com.tiksem.mysqljava.annotations.*;
  */
 
 @Table
-@MultipleIndex(fields = {"userId", "visitorId"}, indexType = IndexType.HASH)
+@MultipleIndex(fields = {"userId", "visitorId"}, indexType = IndexType.HASH, isUnique = true)
 public class ProfileView {
     @Stored
     @NotNull
