@@ -19,24 +19,31 @@ import java.util.Map;
 public class SqlFileExecutor {
     private static final String SQL_PATH = HttpUtilities.getWarClassesPath() + "/sql/";
     private MysqlObjectMapper mapper;
-    private Map<String, String> queries = new HashMap<String, String>();
+    private Map<String, String[]> queries = new HashMap<String, String[]>();
 
     public SqlFileExecutor(MysqlObjectMapper mapper) {
         this.mapper = mapper;
     }
 
-    private String getSql(String fileName) {
-        String sql = queries.get(fileName);
-        if(sql == null){
+    private String[] getSqls(String fileName) {
+        String[] sqls = queries.get(fileName);
+        if(sqls == null){
             try {
-                sql = IOUtilities.readStringFromUrl(SQL_PATH + fileName);
+                String script = IOUtilities.readStringFromUrl(SQL_PATH + fileName);
+                script = script.replaceAll("[;\\s]*$", "");
+                sqls = script.split(";\\n*");
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            queries.put(fileName, sql);
+            queries.put(fileName, sqls);
         }
 
-        return sql;
+        return sqls;
+    }
+
+    private String getSql(String fielName) {
+        String[] sqls = getSqls(fielName);
+        return sqls[0];
     }
 
     public long executeCountQuery(String fileName,
@@ -46,8 +53,10 @@ public class SqlFileExecutor {
     }
 
     public void executeNonSelectQuery(String fileName, Map<String, Object> args) {
-        String sql = getSql(fileName);
-        mapper.executeNonSelectSQL(sql, args);
+        String[] sqls = getSqls(fileName);
+        for (String sql : sqls) {
+            mapper.executeNonSelectSQL(sql, args);
+        }
     }
 
     public <T> List<T> executeSQLQuery(String fileName,
