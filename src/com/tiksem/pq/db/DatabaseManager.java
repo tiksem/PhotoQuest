@@ -1233,7 +1233,8 @@ public class DatabaseManager {
         reply.setUserId(toUserId);
         toUser.incrementUnreadRepliesCount();
 
-        insertAll(comment, toUser);
+        insert(comment);
+        replace(toUser);
         reply.setId(comment.getId());
         insert(reply);
 
