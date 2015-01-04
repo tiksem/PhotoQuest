@@ -103,7 +103,7 @@ public class AdvancedRequestsManager {
     private Object searchUsersOrGetCount(SearchUsersParams params,
                                              OffsetLimit offsetLimit,
                                              boolean getCount) {
-        if(!Strings.isEmpty(params.query)){
+        if(Strings.isEmpty(params.query)){
             User user = new User();
             user.setGender(params.gender);
             user.setLocation(params.location);

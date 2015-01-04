@@ -22,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 /**
@@ -2106,7 +2108,7 @@ public class DatabaseManager {
 
     public void clearDatabase() throws IOException {
         new MysqlTablesCreator(mapper).clearDatabase();
-        if(!IOUtilities.deleteDirectory(new File("images"))){
+        if(!IOUtilities.removeDirectory(new File("images"))) {
             throw new IOException("Unable to delete images");
         }
     }

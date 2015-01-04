@@ -370,13 +370,8 @@ public class User implements WithAvatar {
     }
 
     public void setNameAndLastName(String name, String lastName) {
-        this.name = name;
-        this.lastName = lastName;
-
-        FieldsCheckingUtilities.fixNameField(
-                Reflection.getFieldByNameOrThrow(getClass(), "name"), this);
-        FieldsCheckingUtilities.fixNameField(
-                Reflection.getFieldByNameOrThrow(getClass(), "lastName"), this);
+        this.name = FieldsCheckingUtilities.getFixedNameField(name, getClass(), "name");
+        this.lastName = FieldsCheckingUtilities.getFixedNameField(lastName, getClass(), "lastName");;
 
         this.nameData = name + " " + lastName;
     }

@@ -329,10 +329,6 @@ public class SqlGenerationUtilities {
             }
         }
 
-        if(parts.isEmpty()){
-            throw new IllegalArgumentException("Invalid pattern, all fields are null");
-        }
-
         return Strings.join(" AND ", parts).toString();
     }
 
@@ -486,7 +482,7 @@ public class SqlGenerationUtilities {
 
         if(selectParams.ordering != null){
             String ordering = selectParams.ordering;
-            if(!ordering.contains(".")){
+            if(pattern != null && !ordering.contains(".")){
                 ordering = quotedClassName(pattern.getClass()) + "." + ordering;
             }
 

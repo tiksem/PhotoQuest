@@ -35,6 +35,18 @@ public class FieldsCheckingUtilities {
         return CHECK_NAME_FIELD_PATTERN.matcher(name).matches();
     }
 
+    public static String getFixedNameField(String value, Class aClass, String fieldName) {
+        value = value.toLowerCase();
+
+        if(!checkNameField(value)){
+            throw new NameFieldPatternException(aClass.getName(), fieldName, value);
+        }
+
+        value = Strings.capitalize(value).toString();
+
+        return value;
+    }
+
     public static void fixNameField(Field field, Object object) {
         Class clazz = field.getType();
         NameField nameField = field.getAnnotation(NameField.class);
@@ -49,13 +61,7 @@ public class FieldsCheckingUtilities {
                 return;
             }
 
-            value = value.toLowerCase();
-
-            if(!checkNameField(value)){
-                throw new NameFieldPatternException(clazz.getName(), field.getName(), value);
-            }
-
-            value = Strings.capitalize(value).toString();
+            value = getFixedNameField(value, clazz, field.getName());
             Reflection.setFieldValueUsingSetter(object, field, value);
         }
     }
