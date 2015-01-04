@@ -6,7 +6,7 @@ import com.tiksem.mysqljava.annotations.*;
  * Created by CM on 12/18/2014.
  */
 @Table
-@MultipleIndex(fields = {"userId", "photoId"}, indexType = IndexType.HASH)
+@MultipleIndex(fields = {"userId", "photoId"}, indexType = IndexType.HASH, isUnique = true)
 public class PhotoView {
     @Stored
     @NotNull

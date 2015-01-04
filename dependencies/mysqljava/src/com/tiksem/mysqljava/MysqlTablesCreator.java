@@ -387,10 +387,11 @@ public class MysqlTablesCreator {
         List<IndexInfo> indexes = getTableKeys(tableName);
         final List<ForeignKeyInfo> foreignKeys = getForeignKeys(tableName);
 
-        List<IndexInfo> multipleIndexes = CollectionUtils.removeNonUniqueItems(indexes, new Equals<IndexInfo>() {
+        List<IndexInfo> multipleIndexes = CollectionUtils.getRemovedItems(indexes, new Predicate<IndexInfo>() {
             @Override
-            public boolean equals(IndexInfo a, IndexInfo b) {
-                return a.getINDEX_NAME().equals(b.getINDEX_NAME());
+            public boolean check(IndexInfo item) {
+                String result = item.getINDEX_NAME().toLowerCase().replace(item.getCOLUMN_NAME().toLowerCase(), "");
+                return !result.equals("_index") && !result.equals("primary");
             }
         });
 

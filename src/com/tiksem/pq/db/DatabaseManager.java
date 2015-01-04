@@ -770,8 +770,12 @@ public class DatabaseManager {
             position = 0;
         }
 
-        OffsetLimit offsetLimit = new OffsetLimit(position, 1);
-        Collection<Photo> result = mapper.queryByPattern(pattern, offsetLimit, orderString);
+        SelectParams params = new SelectParams();
+        params.ordering = orderString + " desc";
+        params.offsetLimit = new OffsetLimit(position, 1);
+        params.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
+
+        Collection<Photo> result = mapper.queryByPattern(pattern, params);
         if(result.isEmpty()){
             throw new PhotoNotFoundException("Photo was not found in result set");
         }

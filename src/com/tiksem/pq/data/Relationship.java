@@ -17,11 +17,10 @@ public class Relationship {
     public static final int FOLLOWS = 2;
 
     @Stored
-    @ForeignKey(parent = User.class, field = "id")
+    @ForeignKey(parent = User.class, field = "id", indexType = IndexType.HASH)
     @NotNull
     private Long fromUserId;
-    @Index(indexType = IndexType.HASH)
-    @ForeignKey(parent = User.class, field = "id")
+    @ForeignKey(parent = User.class, field = "id", indexType = IndexType.HASH)
     @NotNull
     private Long toUserId;
     @Stored

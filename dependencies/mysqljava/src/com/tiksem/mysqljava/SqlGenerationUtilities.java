@@ -485,7 +485,12 @@ public class SqlGenerationUtilities {
         }
 
         if(selectParams.ordering != null){
-            query += " ORDER BY " + selectParams.ordering;
+            String ordering = selectParams.ordering;
+            if(!ordering.contains(".")){
+                ordering = quotedClassName(pattern.getClass()) + "." + ordering;
+            }
+
+            query += " ORDER BY " + ordering;
         }
 
         if (selectParams.offsetLimit != null) {
