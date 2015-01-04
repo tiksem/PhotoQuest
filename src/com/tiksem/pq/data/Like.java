@@ -1,28 +1,27 @@
 package com.tiksem.pq.data;
 
-import javax.jdo.annotations.*;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 11/10/2014.
  */
-@PersistenceCapable
-@PersistenceAware
+
+@Table
 public class Like implements WithPhoto {
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
-    @Index
+    @Index(indexType = IndexType.HASH)
     private Long photoId;
-    @Index
+    @Index(indexType = IndexType.HASH)
     private Long commentId;
-    @Index
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
     private Long userId;
 
-    @NotPersistent
+    @ForeignValue(idField = "userId")
     private User user;
 
-    @NotPersistent
     private String photo;
 
     public Long getId() {

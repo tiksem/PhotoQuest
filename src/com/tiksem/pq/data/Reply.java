@@ -1,30 +1,34 @@
 package com.tiksem.pq.data;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.tiksem.pq.data.annotations.AddingDate;
-
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 12/3/2014.
  */
-@PersistenceCapable
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"userId", "addingDate"})
+})
 public class Reply {
     public static final int FRIEND_REQUEST_ACCEPTED = 0;
     public static final int FRIEND_REQUEST_DECLINED = 1;
     public static final int COMMENT = 2;
     public static final int LIKE = 3;
 
-    @Index
+    @Stored(type = "INT(1)")
+    @NotNull
     private Integer type;
-    @Index
+
+    @Stored
+    @NotNull
     private Long id;
-    @Index
+
+    @Stored
+    @NotNull
     private Long userId;
 
     @AddingDate
-    @Index
+    @Stored
     private Long addingDate;
 
     public Integer getType() {

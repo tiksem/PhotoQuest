@@ -1,22 +1,19 @@
 package com.tiksem.pq;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
+import com.tiksem.mysqljava.MysqlTablesCreator;
+import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.db.*;
-import com.tiksem.pq.db.exceptions.PermissionDeniedException;
+import com.tiksem.pq.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.test.Eblo;
 import com.tiksem.pq.test.EbloInfo;
-import com.tiksem.pq.utils.MimeTypeUtils;
-import com.utils.framework.io.Network;
 import com.utils.framework.strings.Strings;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -78,8 +75,7 @@ public class ApiHandler {
         User user = new User();
         user.setLogin(login);
         user.setPassword(password);
-        user.setName(name);
-        user.setLastName(lastName);
+        user.setNameAndLastName(name, lastName);
         user.setLocation(location);
         user.setGender(gender);
 
@@ -93,21 +89,7 @@ public class ApiHandler {
                                          @RequestParam(value="location", required=false) String location)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        User user = databaseManager.getSignedInUserOrThrow(request);
-
-        if (name != null) {
-            user.setName(name);
-        }
-        if (lastName != null) {
-            user.setLastName(lastName);
-        }
-        if (location != null) {
-            user.setLocation(location);
-        }
-        databaseManager.updateLocation(user);
-        databaseManager.setUserInfo(request, user);
-
-        return databaseManager.makePersistent(user);
+        return databaseManager.editProfile(request, name, lastName, location);
     }
 
     @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
@@ -116,13 +98,7 @@ public class ApiHandler {
             @RequestParam(value="new", required=true) String newPassword)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        User user = databaseManager.getSignedInUserOrThrow(request);
-        if(!user.getPassword().equals(oldPassword)){
-            throw new PermissionDeniedException("Invalid password!");
-        }
-        user.setPassword(newPassword);
-
-        databaseManager.makePersistent(user);
+        databaseManager.changePassword(request, newPassword, oldPassword);
         return new Success();
     }
 
@@ -171,19 +147,22 @@ public class ApiHandler {
 
     @RequestMapping("/friends")
     public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit);
+        Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit,
+                RatingOrder.newest, true);
         return new UsersList(users);
     }
 
     @RequestMapping("/followers")
     public @ResponseBody Object getFollowers(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getFollowers(request, offsetLimit);
+        Collection<User> users = getDatabaseManager().getFollowers(request, offsetLimit,
+                RatingOrder.newest);
         return new UsersList(users);
     }
 
     @RequestMapping("/getFollowingUsers")
     public @ResponseBody Object getFollowingUsers(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getFollowingUsers(request, offsetLimit);
+        Collection<User> users = getDatabaseManager().getFollowingUsers(request, offsetLimit,
+                RatingOrder.newest);
         return new UsersList(users);
     }
 
@@ -197,12 +176,6 @@ public class ApiHandler {
     public @ResponseBody Object getSentFriendRequests(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getSentFriendRequests(request, offsetLimit);
         return new UsersList(users);
-    }
-
-    @RequestMapping("/deleteAllPhotos")
-    public @ResponseBody Object deleteAllPhotos() {
-        getDatabaseManager().deleteAllPhotos();
-        return new Success();
     }
 
     @RequestMapping("/createPhotoquest")
@@ -465,11 +438,6 @@ public class ApiHandler {
         return getDatabaseManager().addMessage(request, toUserId, message);
     }
 
-    @RequestMapping("/getAllMessages")
-    public @ResponseBody Object getAllMessages(OffsetLimit offsetLimit) {
-        return getDatabaseManager().getMessagesOfSignedInUser(request, offsetLimit);
-    }
-
     @RequestMapping("/getLocationSuggestions")
     public @ResponseBody Object getLocationSuggestions(@RequestParam(
             value = "query", required = true) String query) throws IOException {
@@ -482,7 +450,7 @@ public class ApiHandler {
         DatabaseManager databaseManager = getDatabaseManager();
         User user = databaseManager.getUserByIdOrThrow(userId);
         Collection<Message> result =
-                databaseManager.getDialogMessages(request, userId, offsetLimit);
+                databaseManager.getMessagesWithUser(request, userId, offsetLimit);
         databaseManager.setAvatar(request, user);
         DialogMessages dialogMessages = new DialogMessages();
         dialogMessages.messages = result;
@@ -497,9 +465,9 @@ public class ApiHandler {
     }
 
     @RequestMapping("/deleteComment")
-    public @ResponseBody Object deleteComment(OffsetLimit offsetLimit,
+    public @ResponseBody Object deleteComment(
             @RequestParam(value = "id", required = true) Long commentId) {
-        getDatabaseManager().deleteComment(request, commentId, offsetLimit);
+        getDatabaseManager().deleteComment(commentId);
         return new Success();
     }
 
@@ -538,76 +506,21 @@ public class ApiHandler {
         return new Success();
     }
 
-    @RequestMapping("/photos")
-    public @ResponseBody Object photos(OffsetLimit offsetLimit) {
-        return getDatabaseManager().getAllPhotos(request, offsetLimit);
-    }
-
-    @RequestMapping("/likes")
-    public @ResponseBody Object likes(OffsetLimit offsetLimit) {
-        return getDatabaseManager().getAllLikes(request, offsetLimit);
-    }
-
-    @RequestMapping("/comments")
-    public @ResponseBody Object comments(OffsetLimit offsetLimit) {
-        return getDatabaseManager().getAllComments(offsetLimit);
-    }
-
-    @RequestMapping("/refreshDatabase")
-    public @ResponseBody Object refreshDatabase() {
-        DBUtilities.enhanceClassesInPackage("com.tiksem.pq.data");
-        return new Success();
-    }
-
-    @RequestMapping("/testDatabase")
-    public @ResponseBody Object testDatabase() {
-        MysqlObjectMapper mapper = new MysqlObjectMapper();
-        List<Eblo> eblos;
-        List<Eblo> eblos2;
-        List<EbloInfo> eblos3;
-        List<EbloInfo> eblos4;
-        try {
-            mapper.createTables("com.tiksem.pq.test");
-
-            Eblo pattern = new Eblo();
-            pattern.setName("Semyon");
-            pattern.setPhoneNumber("0950534847");
-
-            SelectParams selectParams = new SelectParams();
-            selectParams.ordering = "name DESC";
-
-            eblos = mapper.queryByPattern(pattern, selectParams);
-
-            selectParams = new SelectParams();
-            selectParams.ordering = "name DESC";
-
-            EbloInfo info = new EbloInfo();
-            info.setInfo("Yo!");
-            eblos2 = mapper.queryByForeignPattern(info, Eblo.class,
-                    "id",
-                    selectParams);
-
-            selectParams = new SelectParams();
-            selectParams.ordering = "eblo.name DESC";
-            selectParams.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
-
-            eblos3 = mapper.queryByPattern(info, selectParams);
-
-            SqlFileExecutor sqlFileExecutor = new SqlFileExecutor(mapper);
-            eblos4 = sqlFileExecutor.executeSQLQuery("yo.sql", new HashMap<String, Object>(),
-                    EbloInfo.class, MysqlObjectMapper.ALL_FOREIGN);
-        } finally {
-            mapper.executeNonSelectSQL("DROP TABLE ebloinfo", new HashMap<String, Object>());
-            mapper.executeNonSelectSQL("DROP TABLE eblo", new HashMap<String, Object>());
-        }
-
-        return Arrays.asList(eblos, eblos2, eblos3, eblos4);
-    }
-
-
     @RequestMapping("/initDatabase")
     public @ResponseBody Object initDatabase() {
         getDatabaseManager().initDatabase();
+        return new Success();
+    }
+
+    @RequestMapping("/clearDatabase")
+    public @ResponseBody Object clearDatabase() throws IOException {
+        getDatabaseManager().clearDatabase();
+        return new Success();
+    }
+
+    @RequestMapping("/dropTables")
+    public @ResponseBody Object dropDatabase() {
+        getDatabaseManager().dropTables();
         return new Success();
     }
 
@@ -630,7 +543,7 @@ public class ApiHandler {
     public @ResponseBody Object getNews(
             @RequestParam(value = "userId", required = false) Long userId,
             OffsetLimit offsetLimit) {
-        Collection<Feed> news;
+        Collection<Action> news;
         if(userId == null){
             news = getDatabaseManager().getNews(request, offsetLimit);
         } else {

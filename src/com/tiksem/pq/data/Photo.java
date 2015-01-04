@@ -1,60 +1,58 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-import com.tiksem.pq.data.annotations.NotNull;
-
-import javax.jdo.InstanceCallbacks;
-import javax.jdo.annotations.*;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 10/31/2014.
  */
-@PersistenceCapable
-@PersistenceAware
-public class Photo implements Likable, InstanceCallbacks {
+
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"photoquestId", "likesCount"}),
+        @MultipleIndex(fields = {"photoquestId", "viewsCount"}),
+        @MultipleIndex(fields = {"userId", "likesCount"}),
+        @MultipleIndex(fields = {"userId", "viewsCount"})
+})
+public class Photo implements Likable {
     public static final String IMAGE_URL_PATH = "/image/";
 
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
-    @Index
+    @NotNull
+    @Stored
     private Long likesCount;
 
     @NotNull
-    @Index
+    @ForeignKey(parent = Photoquest.class, field = "id")
     private Long photoquestId;
 
     @NotNull
-    @Index
+    @ForeignKey(parent = User.class, field = "id")
     private Long userId;
 
-    @NotPersistent
+    @ForeignValue(idField = "userId")
     private User user;
 
-    @NotPersistent
+    @ForeignValue(idField = "photoquestId")
     private Photoquest photoquest;
 
-    @NotPersistent
     private String url;
 
-    @NotPersistent
     private Like yourLike;
 
-    @NotPersistent
     private Long position;
 
-    @NotPersistent
     private boolean showNextPrevButtons = false;
 
-    @Index
+    @Stored
     @AddingDate
     private Long addingDate;
 
-    @Index
+    @Stored
     private Long viewsCount;
 
-    @Persistent
+    @Stored
     private String message;
 
     public Long getLikesCount() {
@@ -121,28 +119,6 @@ public class Photo implements Likable, InstanceCallbacks {
 
     public void setYourLike(Like yourLike) {
         this.yourLike = yourLike;
-    }
-
-    @Override
-    public void jdoPreClear() {
-
-    }
-
-    @Override
-    public void jdoPreDelete() {
-
-    }
-
-    @Override
-    public void jdoPostLoad() {
-        if(likesCount == null){
-            likesCount = 0l;
-        }
-    }
-
-    @Override
-    public void jdoPreStore() {
-
     }
 
     public Long getAddingDate() {

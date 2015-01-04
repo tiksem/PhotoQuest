@@ -1,21 +1,21 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 12/18/2014.
  */
-@PersistenceCapable
+@Table
+@MultipleIndex(fields = {"userId", "photoquestId"}, indexType = IndexType.HASH, isUnique = true)
 public class PhotoquestView {
-    @Index
+    @Stored
+    @NotNull
     private Long userId;
-    @Index
+    @Stored
+    @NotNull
     private Long photoquestId;
     @AddingDate
-    @Index
+    @Stored
     private Long addingDate;
 
     public Long getUserId() {

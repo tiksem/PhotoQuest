@@ -1,14 +1,11 @@
 package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.*;
-import com.tiksem.mysqljava.metadata.ColumnInfo;
-import com.tiksem.mysqljava.metadata.ForeignKeyInfo;
-import com.tiksem.mysqljava.metadata.IndexInfo;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;
-import com.utils.framework.strings.Strings;
-import org.springframework.jdbc.support.SQLErrorCodes;
+import com.utils.framework.collections.map.ListValuesMultiMap;
+import com.utils.framework.collections.map.MultiMap;
 
 import java.lang.reflect.Field;
 import java.sql.*;
@@ -35,20 +32,7 @@ public class MysqlObjectMapper {
             connection = DriverManager.getConnection(
                     "jdbc:mysql://localhost/photoquest?" +
                     "user=root&password=fightforme");
-            connection.setAutoCommit(false);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void createTables(String packageName) {
-        List<Class<?>> classesInPackage = Reflection.findClassesInPackage(packageName);
-        for(Class aClass : classesInPackage){
-            createTable(aClass);
-            updateTable(aClass);
-        }
-        try {
-            connection.commit();
+            connection.setAutoCommit(true);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -75,7 +59,7 @@ public class MysqlObjectMapper {
         }
     }
 
-    public Object executeInsertSQL(String sql, Map<String, Object> args) {
+    private Object executeInsertSQL(String sql, Map<String, Object> args) {
         try {
             NamedParameterStatement statement = new NamedParameterStatement(connection, sql,
                     Statement.RETURN_GENERATED_KEYS);
@@ -89,6 +73,15 @@ public class MysqlObjectMapper {
             }
 
             return null;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ResultSet executeSelectSqlGetResultSet(String sql) {
+        try {
+            Statement statement = connection.createStatement();
+            return statement.executeQuery(sql);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -152,6 +145,12 @@ public class MysqlObjectMapper {
 
     public <T> T executeSingleRowSQLQuery(String sql,
                                           Map<String, Object> args,
+                                          Class<T> resultClass) {
+        return executeSingleRowSQLQuery(sql, args, resultClass, new ArrayList<String>());
+    }
+
+    public <T> T executeSingleRowSQLQuery(String sql,
+                                          Map<String, Object> args,
                                           Class<T> resultClass,
                                           List<String> foreigns) {
         List<T> result = executeSQLQuery(sql, args, resultClass, foreigns);
@@ -165,7 +164,7 @@ public class MysqlObjectMapper {
     private ResultSet getResultSetFromPattern(String sql, List<Field> fields, Object pattern) {
         try {
             NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
-            Map<String, Object> args = Reflection.fieldsToPropertyMap(pattern, fields);
+            Map<String, Object> args = ResultSetUtilities.getArgs(pattern, fields);
             statement.setObjects(args);
             return statement.executeQuery();
         } catch (SQLException e) {
@@ -199,16 +198,18 @@ public class MysqlObjectMapper {
 
         List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
                 new ResultSetUtilities.FieldsProvider() {
-            @Override
-            public List<Field> getFieldsOfClass(Class aClass) {
-                return resultFields;
-            }
+                    @Override
+                    public List<Field> getFieldsOfClass(Class aClass) {
+                        return resultFields;
+                    }
 
-            @Override
-            public List<Field> getForeignValueFields(Class aClass) {
-                return getForeignValueFieldsToFill(aClass, foreignFields);
-            };
-        }, resultClass);
+                    @Override
+                    public List<Field> getForeignValueFields(Class aClass) {
+                        return getForeignValueFieldsToFill(aClass, foreignFields);
+                    }
+
+                    ;
+                }, resultClass);
         return (List<T>) objects;
     }
 
@@ -265,6 +266,164 @@ public class MysqlObjectMapper {
         }
     }
 
+    public <T> T getObjectById(Class<T> aClass, Object id) {
+        String sql = SqlGenerationUtilities.getObjectByPrimaryKey(aClass, id);
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("id", id);
+        return executeSingleRowSQLQuery(sql, args, aClass);
+    }
+
+    public <T> T getObjectById(Class<T> aClass, Object id, List<String> foreigns) {
+        if(foreigns.isEmpty() && foreigns != ALL_FOREIGN){
+            return getObjectById(aClass, id);
+        }
+
+        T pattern = Reflection.createObjectOfClass(aClass);
+        Field primaryKey = SqlGenerationUtilities.getPrimaryKey(pattern);
+        if(primaryKey == null){
+            throw new IllegalArgumentException("Primary key is not defined");
+        }
+
+        Reflection.setFieldValueUsingSetter(pattern, primaryKey, id);
+
+        SelectParams selectParams = new SelectParams();
+        selectParams.foreignFieldsToFill = foreigns;
+        selectParams.offsetLimit = new OffsetLimit(0, 1);
+        List<T> result = queryByPattern(pattern, selectParams);
+        if(result.isEmpty()){
+            return null;
+        }
+
+        return result.get(0);
+    }
+
+    public <T> List<T> queryByPattern(final T pattern, OffsetLimit offsetLimit, String ordering) {
+        SelectParams params = new SelectParams();
+        params.offsetLimit = offsetLimit;
+        params.ordering = ordering;
+        return queryByPattern(pattern, params);
+    }
+
+    public <T> List<T> queryByPattern(final T pattern, OffsetLimit offsetLimit) {
+        return queryByPattern(pattern, offsetLimit, null);
+    }
+
+    public <T> T getObjectByPattern(final T pattern) {
+        List<T> list = queryByPattern(pattern, new OffsetLimit(0, 1));
+        if(list.isEmpty()){
+            return null;
+        }
+
+        return list.get(0);
+    }
+
+    public long getCountByPattern(final Object pattern) {
+        String sql = SqlGenerationUtilities.countByPattern(pattern);
+        ResultSet resultSet = getResultSetFromPattern(sql, SqlGenerationUtilities.getFields(pattern), pattern);
+        try {
+            resultSet.next();
+            return resultSet.getLong(1);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public <T> T max(Class aClass, String fieldName) {
+        return max(aClass, fieldName, null);
+    }
+
+    public <T> T getMaxByPattern(Object pattern, String fieldName, T defaultValue) {
+        List<Field> fields = SqlGenerationUtilities.getFields(pattern);
+        String sql = SqlGenerationUtilities.max(fields, pattern, fieldName);
+        try {
+            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            Map<String, Object> args = ResultSetUtilities.getArgs(pattern, fields);
+            statement.setObjects(args);
+            ResultSet resultSet = statement.executeQuery();
+            resultSet.next();
+            Object result = resultSet.getObject(1);
+            if(result == null){
+                return defaultValue;
+            }
+
+            return (T) result;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public <T> T getObjectWithMaxFieldByPattern(T pattern, String fieldName, T defaultValue) {
+        List<T> objects = queryByPattern(pattern, new OffsetLimit(0, 1), fieldName + " desc");
+        if(objects.isEmpty()){
+            return defaultValue;
+        }
+
+        return objects.iterator().next();
+    }
+
+    public <T> T max(Class aClass, String fieldName, T defaultValue) {
+        String sql = SqlGenerationUtilities.max(aClass, fieldName);
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(sql);
+            resultSet.next();
+            Object result = resultSet.getObject(1);
+            if(result == null){
+                return defaultValue;
+            }
+
+            return (T) result;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public <T> List<T> queryAllObjects(Class<T> aClass, SelectParams selectParams) {
+        List<SqlGenerationUtilities.Foreign> foreignFields = getForeignsFromClass(selectParams.foreignFieldsToFill,
+                aClass);
+        String sql = SqlGenerationUtilities.selectAll(aClass, foreignFields, selectParams);
+        return executeSQLQuery(sql, new HashMap<String, Object>(), aClass, selectParams.foreignFieldsToFill);
+    }
+
+    public <T> List<T> queryAllObjects(Class<T> aClass, OffsetLimit offsetLimit, String ordering) {
+        SelectParams selectParams = new SelectParams();
+        selectParams.offsetLimit = offsetLimit;
+        selectParams.ordering = ordering;
+        return queryAllObjects(aClass, selectParams);
+    }
+
+    public long getAllObjectsCount(Class aClass) {
+        try {
+            String sql = SqlGenerationUtilities.count(aClass);
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(sql);
+            resultSet.next();
+            return resultSet.getLong(1);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public long getObjectPosition(Object object, Object pattern, String orderBy, boolean desc) {
+        String sql = SqlGenerationUtilities.getPosition(pattern, object.getClass(), orderBy, desc);
+        Map<String, Object> args = ResultSetUtilities.getArgs(pattern,
+                SqlGenerationUtilities.getFields(pattern));
+        args.put(orderBy, Reflection.getFieldValueUsingGetter(object, orderBy));
+        return executeCountQuery(sql, args);
+    }
+
+    public long executeCountQuery(String sql, Map<String, Object> args) {
+        try {
+            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            statement.setObjects(args);
+            ResultSet resultSet = statement.executeQuery();
+            resultSet.next();
+            return resultSet.getLong(1);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public <T> List<T> queryByPattern(final T pattern, SelectParams selectParams) {
         List<String> foreignFieldNames = selectParams.foreignFieldsToFill;
         List<SqlGenerationUtilities.Foreign> foreigns = getForeignsFromClass(foreignFieldNames, pattern.getClass());
@@ -273,42 +432,69 @@ public class MysqlObjectMapper {
         return getListFromPattern(sql, pattern, pattern.getClass(), foreignFieldNames);
     }
 
-    public void insertAll(Iterable<Object> objects) {
-        for(Object object : objects){
-            List<Field> fields = SqlGenerationUtilities.getFieldsExcludingPrimaryKey(object.getClass());
-            Map<String, Object> args = Reflection.fieldsToPropertyMap(object, fields);
-            String sql = SqlGenerationUtilities.insert(object, fields);
-            Object id = executeInsertSQL(sql, args);
-            if (id != null) {
-                SqlGenerationUtilities.setObjectId(object, id);
+    private boolean hasUniqueMultiIndexes(Class<?> aClass) {
+        MultipleIndex multipleIndex = aClass.getAnnotation(MultipleIndex.class);
+        if(multipleIndex != null && multipleIndex.isUnique()){
+            return true;
+        }
+
+        MultipleIndexes multipleIndexes = aClass.getAnnotation(MultipleIndexes.class);
+        if(multipleIndexes == null){
+            return false;
+        } else {
+            MultipleIndex[] indexes = multipleIndexes.indexes();
+            for(MultipleIndex index : indexes){
+                if(index.isUnique()){
+                    return true;
+                }
             }
+
+            return false;
         }
-        try {
-            connection.commit();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+    }
+
+    public void insertAll(List<Object> objects) {
+        InsertStatement insertStatement = new InsertStatement(objects);
+        insertStatement.execute(connection);
+    }
+
+    public void insert(Object object) {
+        insertAll(Collections.singletonList(object));
     }
 
     public void insertAll(Object... objects) {
         insertAll(Arrays.asList(objects));
     }
 
-    public void insert(Object object) {
-        insertAll(Arrays.asList(object));
+    public void replace(Object object) {
+        replaceAll(Collections.singletonList(object));
+    }
+
+    public void replaceAll(final List<Object> objects) {
+        ReplaceStatement replaceStatement = new ReplaceStatement(objects);
+        replaceStatement.execute(connection);
+    }
+
+    public <T> void updateUsingPattern(T pattern, T values) {
+        String sql = SqlGenerationUtilities.update(pattern, values);
+        List<Field> patternFields = SqlGenerationUtilities.getFields(pattern);
+        List<Field> valuesFields = SqlGenerationUtilities.getFields(values);
+
+        Map<String, Object> args = ResultSetUtilities.getArgs(pattern, patternFields);
+        Map<String, Object> valuesArgs = ResultSetUtilities.getArgs(values, valuesFields);
+        for(String key : valuesArgs.keySet()){
+            args.put(key + "_update", valuesArgs.get(key));
+        }
+
+        executeNonSelectSQL(sql, args);
     }
 
     public void deleteAll(Iterable<Object> objects) {
         for(Object object : objects){
             List<Field> fields = Reflection.getAllFields(object);
-            Map<String, Object> args = Reflection.fieldsToPropertyMap(object, fields);
+            Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
             String sql = SqlGenerationUtilities.delete(object, fields);
             executeNonSelectSQL(sql, args);
-        }
-        try {
-            connection.commit();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -318,239 +504,6 @@ public class MysqlObjectMapper {
 
     public void delete(Object object) {
         deleteAll(Arrays.asList(object));
-    }
-
-    public void createTable(Class aClass) {
-        try {
-            String sql = SqlGenerationUtilities.createTable(aClass);
-            Statement statement = connection.createStatement();
-            statement.execute(sql);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void alterColumnDefinition() {
-
-    }
-
-    public List<ColumnInfo> getTableColumns(Class table) {
-        return executeSQLQuery("DESCRIBE " + table.getSimpleName(), ColumnInfo.class);
-    }
-
-    public List<IndexInfo> getTableKeys(Class table) {
-        return executeSQLQuery("SHOW KEYS FROM " + table.getSimpleName(), IndexInfo.class);
-    }
-
-    public List<ForeignKeyInfo> getForeignKeys(Class table) {
-        String sql = "select KEY_COLUMN_USAGE.*, REFERENTIAL_CONSTRAINTS.UPDATE_RULE, " +
-                "REFERENTIAL_CONSTRAINTS.DELETE_RULE\n" +
-                "from information_schema.KEY_COLUMN_USAGE, information_schema.REFERENTIAL_CONSTRAINTS\n" +
-                "where KEY_COLUMN_USAGE.TABLE_SCHEMA = :databaseName and KEY_COLUMN_USAGE.table_name=:tableName\n" +
-                "and REFERENTIAL_CONSTRAINTS.CONSTRAINT_SCHEMA = :databaseName and " +
-                "REFERENTIAL_CONSTRAINTS.table_name = :tableName";
-        Map<String, Object> args = new HashMap<String, Object>();
-        args.put("tableName", table.getSimpleName());
-        args.put("databaseName", "photoquest");
-        return executeSQLQuery(sql, args, ForeignKeyInfo.class);
-    }
-
-    private void updateColumns(Class aClass) {
-        String tableName = aClass.getSimpleName();
-        List<ColumnInfo> columns = getTableColumns(aClass);
-        List<Field> fields = SqlGenerationUtilities.getFields(aClass);
-
-        Iterator<ColumnInfo> columnIterator = columns.iterator();
-        while (columnIterator.hasNext()) {
-            final ColumnInfo column = columnIterator.next();
-            Field field = CollectionUtils.find(fields, new Predicate<Field>() {
-                @Override
-                public boolean check(Field item) {
-                    return item.getName().equalsIgnoreCase(column.getCOLUMN_NAME());
-                }
-            });
-
-            if(field != null){
-                SqlGenerationUtilities.ModifyInfo info =
-                        SqlGenerationUtilities.modifyColumn(field, tableName);
-
-                fields.remove(field);
-                columnIterator.remove();
-
-                if(!SqlGenerationUtilities.sqlTypeEquals(info.fieldType, column.getCOLUMN_TYPE())){
-                    executeNonSelectSQL(info.sql);
-                    continue;
-                }
-
-                boolean isNullable = column.getIS_NULLABLE().equals("YES");
-                if(isNullable != info.isNullable){
-                    executeNonSelectSQL(info.sql);
-                    continue;
-                }
-
-                boolean hasAutoIncrement = column.getEXTRA().equals("auto_increment");
-                if(hasAutoIncrement != info.autoIncrement){
-                    executeNonSelectSQL(info.sql);
-                    continue;
-                }
-
-                boolean isPrimaryKey = column.getCOLUMN_KEY().equals("PRI");
-                boolean isUniqueKey = column.getCOLUMN_KEY().equals("UNI");
-                if(isPrimaryKey != info.isPrimaryKey || isUniqueKey != info.isUniqueKey){
-                    executeNonSelectSQL(info.sql);
-                }
-            }
-        }
-
-        for(ColumnInfo column : columns){
-            String sql = "DROP COLUMN " + column.getCOLUMN_NAME();
-            executeNonSelectSQL(sql);
-        }
-
-        for(Field field : fields){
-            String sql = SqlGenerationUtilities.addColumn(field, tableName).sql;
-            executeNonSelectSQL(sql);
-        }
-    }
-
-    private void dropIndex(String indexName, String tableName) {
-        String quotedTableName = Strings.quote(tableName, "`");
-        executeNonSelectSQL("DROP INDEX " + indexName + " ON " + quotedTableName);
-    }
-
-    private void addIndex(IndexType indexType, String tableName, String fieldName) {
-        String quotedTableName = Strings.quote(tableName, "`");
-        String sql = "CREATE INDEX " + fieldName + "_index ON " + quotedTableName +
-                "(" + fieldName + ") USING " + indexType;
-        executeNonSelectSQL(sql);
-    }
-
-    private void dropAndAddIndex(IndexType indexType, String indexName, String tableName, String fieldName) {
-        dropIndex(indexName, tableName);
-        addIndex(indexType, tableName, fieldName);
-    }
-
-    private void updateIndexes(Class aClass) {
-        String tableName = aClass.getSimpleName();
-        List<IndexInfo> indexes = getTableKeys(aClass);
-        List<Field> fields = SqlGenerationUtilities.getIndexedFields(aClass);
-
-        Iterator<IndexInfo> indexIterator = indexes.iterator();
-        while (indexIterator.hasNext()) {
-            IndexInfo index = indexIterator.next();
-            final String columnName = index.getCOLUMN_NAME();
-
-            Field field = CollectionUtils.find(fields, new Predicate<Field>() {
-                @Override
-                public boolean check(Field item) {
-                    return item.getName().equalsIgnoreCase(columnName);
-                }
-            });
-
-            if(field != null){
-                indexIterator.remove();
-                fields.remove(field);
-
-                IndexType indexType = SqlGenerationUtilities.getIndexType(field);
-                if(!index.getINDEX_TYPE().equals(indexType.toString())){
-                    dropAndAddIndex(indexType, index.getINDEX_NAME(), tableName, field.getName());
-                }
-            }
-        }
-
-        for(IndexInfo index : indexes){
-            dropIndex(index.getINDEX_NAME(), tableName);
-        }
-
-        for(Field field : fields){
-            IndexType indexType = SqlGenerationUtilities.getIndexType(field);
-            addIndex(indexType, tableName, field.getName());
-        }
-    }
-
-    private void dropForeignKey(String tableName, String constraintName) {
-        String sql = "ALTER TABLE `" + tableName + "` DROP FOREIGN KEY " + constraintName;
-    }
-
-    private void addForeignKey(String tableName, Field field, ForeignKey foreignKey) {
-        tableName = Strings.quote(tableName, "`");
-        String sql = "ALTER TABLE " + tableName +
-                " ADD FOREIGN KEY (`" + field.getName() + "`) REFERENCES " +
-                foreignKey.parent().getSimpleName() + "(`" + foreignKey.field() + "`)" +
-                " ON DELETE " + foreignKey.onDelete().toString().replace("_", " ") +
-                " ON UPDATE " + foreignKey.onUpdate().toString().replace("_", " ");
-        executeNonSelectSQL(sql);
-    }
-
-    private void updateForeignKeys(Class aClass) {
-        String tableName = aClass.getSimpleName();
-        List<ForeignKeyInfo> foreignKeys = getForeignKeys(aClass);
-        List<Field> fields = Reflection.getFieldsWithAnnotations(aClass, ForeignKey.class);
-
-        Iterator<ForeignKeyInfo> foreignKeyIterator = foreignKeys.iterator();
-        while (foreignKeyIterator.hasNext()) {
-            ForeignKeyInfo foreignKey = foreignKeyIterator.next();
-
-            final String columnName = foreignKey.getCOLUMN_NAME();
-            Field field = CollectionUtils.find(fields, new Predicate<Field>() {
-                @Override
-                public boolean check(Field item) {
-                    return item.getName().equalsIgnoreCase(columnName);
-                }
-            });
-
-            if (field != null) {
-                foreignKeyIterator.remove();
-                fields.remove(field);
-
-                ForeignKey key = Reflection.getAnnotationOrThrow(field, ForeignKey.class);
-                boolean sameUpdateRule = foreignKey.getUPDATE_RULE().replaceAll(" +", "_").
-                        equals(key.onUpdate().toString());
-                if(!sameUpdateRule){
-                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
-                    addForeignKey(tableName, field, key);
-                    continue;
-                }
-
-                boolean sameDeleteRule = foreignKey.getDELETE_RULE().replaceAll(" +", "_").
-                        equals(key.onDelete().toString());
-                if(!sameDeleteRule){
-                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
-                    addForeignKey(tableName, field, key);
-                    continue;
-                }
-
-                boolean sameParentTable = foreignKey.getREFERENCED_TABLE_NAME().
-                        equalsIgnoreCase(key.parent().getSimpleName());
-                if(!sameParentTable){
-                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
-                    addForeignKey(tableName, field, key);
-                    continue;
-                }
-
-                boolean sameParentFieldName = foreignKey.getREFERENCED_COLUMN_NAME().
-                        equalsIgnoreCase(key.field());
-                if(!sameParentFieldName){
-                    dropForeignKey(tableName, foreignKey.getCONSTRAINT_NAME());
-                    addForeignKey(tableName, field, key);
-                }
-            }
-        }
-
-        for(ForeignKeyInfo key : foreignKeys){
-            dropForeignKey(tableName, key.getCONSTRAINT_NAME());
-        }
-
-        for(Field field : fields){
-            ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
-            addForeignKey(tableName, field, foreignKey);
-        }
-    }
-
-    public void updateTable(Class aClass) {
-        updateColumns(aClass);
-        updateIndexes(aClass);
-        updateForeignKeys(aClass);
     }
 
     @Override

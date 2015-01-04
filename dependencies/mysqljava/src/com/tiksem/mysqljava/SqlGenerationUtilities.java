@@ -104,14 +104,15 @@ public class SqlGenerationUtilities {
                     if(index != null){
                         suggestedType = index.type();
                     } else {
-                        ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
-                        if(foreignKey != null){
-                            Class parent = foreignKey.parent();
-                            try {
-                                Field parentField = parent.getDeclaredField(foreignKey.field());
+                        Serialized serialized = field.getAnnotation(Serialized.class);
+                        if(serialized != null){
+                            return "BLOB";
+                        } else {
+                            ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+                            if(foreignKey != null){
+                                Field parentField = Reflection.getFieldByNameOrThrow(foreignKey.parent(),
+                                        foreignKey.field());
                                 return getSqlType(parentField);
-                            } catch (NoSuchFieldException e) {
-                                throw new RuntimeException(e);
                             }
                         }
                     }
@@ -123,7 +124,7 @@ public class SqlGenerationUtilities {
     }
 
     private static String getSqlType(Field field, String suggestedType) {
-        String result;
+        String result = null;
         if(Strings.isEmpty(suggestedType)){
             Class<?> type = field.getType();
 
@@ -145,22 +146,26 @@ public class SqlGenerationUtilities {
                 result = "BIT";
             }
 
-            throw new IllegalArgumentException("Unsupported type " + type.getSimpleName());
+            if (result == null) {
+                throw new IllegalArgumentException("Unsupported type " + type.getSimpleName());
+            }
 
         } else {
             result = suggestedType;
         }
 
-        int digit = Strings.findUnsignedIntegerInString(result);
-        if(digit < 0){
-            digit = getDefaultTypeLength(result);
-            result += "(" + digit + ")";
+        if (!result.equals("BLOB")) {
+            int digit = Strings.findUnsignedIntegerInString(result);
+            if(digit < 0){
+                digit = getDefaultTypeLength(result);
+                result += "(" + digit + ")";
+            }
         }
 
         return result;
     }
 
-    private static boolean isInt(Field field) {
+    public static boolean isInt(Field field) {
         Class<?> type = field.getType();
         return type == Long.class || type == Integer.class || type == Short.class || type == Byte.class;
     }
@@ -203,75 +208,34 @@ public class SqlGenerationUtilities {
                 continue;
             }
 
+            Serialized serialized = field.getAnnotation(Serialized.class);
+            if(serialized != null){
+                parts.add(getColumnDefinition(field, "BLOB", false));
+                continue;
+            }
+
             PrimaryKey primaryKey = field.getAnnotation(PrimaryKey.class);
             if(primaryKey != null){
                 String columnDefinition = getColumnDefinition(field, primaryKey.type(),
                         primaryKey.autoincrement());
                 columnDefinition += " PRIMARY KEY";
 
-                String fieldName = field.getName();
-                String indexDefinition = getIndexDefinition(fieldName, primaryKey.indexType());
-
                 parts.add(columnDefinition);
-                parts.add(indexDefinition);
                 continue;
             }
 
             Unique unique = field.getAnnotation(Unique.class);
             if(unique != null){
                 String columnDefinition = getColumnDefinition(field, unique.type(), false);
-
-                String fieldName = field.getName();
-
                 parts.add(columnDefinition);
-                String uniqueKeyDefinition = "UNIQUE KEY " + fieldName + "_index " +
-                        "USING " + unique.indexType()
-                        + " (`" + fieldName + "`)";
-                parts.add(uniqueKeyDefinition);
                 continue;
             }
 
             Index index = field.getAnnotation(Index.class);
             if(index != null){
                 String columnDefinition = getColumnDefinition(field, index.type(), false);
-
-                String fieldName = field.getName();
-                String indexDefinition = getIndexDefinition(fieldName, index.indexType());
-
                 parts.add(columnDefinition);
-                parts.add(indexDefinition);
                 continue;
-            }
-
-            ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
-            if(foreignKey != null){
-                Class parent = foreignKey.parent();
-                Field parentField;
-                try {
-                    parentField = parent.getDeclaredField(foreignKey.field());
-                } catch (NoSuchFieldException e) {
-                    throw new RuntimeException(e);
-                }
-
-                PrimaryKey parentPrimaryKey = parentField.getAnnotation(PrimaryKey.class);
-                if(parentPrimaryKey == null){
-                    throw new IllegalStateException("Unable to define ForeignKey, parent should be " +
-                            "PrimaryKey");
-                }
-
-                String columnDefinition = getColumnDefinition(field, parentPrimaryKey.type(), false);
-                String fieldName = field.getName();
-                String indexDefinition = "INDEX " + fieldName + "_index USING " + foreignKey.indexType()
-                        + " (" + fieldName + ")";
-                String keyDefinition = "FOREIGN KEY (" + fieldName + ") REFERENCES " + parent.getSimpleName() + "(" +
-                        parentField.getName() + ")";
-
-                keyDefinition += " ON DELETE " + foreignKey.onDelete().toString().replace("_", " ");
-                keyDefinition += " ON UPDATE " + foreignKey.onUpdate().toString().replace("_", " ");
-
-                parts.add(columnDefinition);
-                parts.add(indexDefinition);
-                parts.add(keyDefinition);
             }
         }
 
@@ -287,7 +251,7 @@ public class SqlGenerationUtilities {
     public static List<Field> getFields(Class aClass) {
         return Reflection.getFieldsWithAnnotations(aClass,
                 Index.class, Stored.class, PrimaryKey.class,
-                ForeignKey.class, Unique.class);
+                ForeignKey.class, Unique.class, Serialized.class);
     }
 
     public static IndexType getIndexType(Field field) {
@@ -301,14 +265,14 @@ public class SqlGenerationUtilities {
             return primaryKey.indexType();
         }
 
-        ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
-        if(foreignKey != null){
-            return foreignKey.indexType();
-        }
-
         Unique unique = field.getAnnotation(Unique.class);
         if(unique != null){
             return unique.indexType();
+        }
+
+        ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+        if(foreignKey != null){
+            return foreignKey.indexType();
         }
 
         throw new IllegalArgumentException("Field " + field.getName() + " should have " +
@@ -318,14 +282,33 @@ public class SqlGenerationUtilities {
 
     public static List<Field> getIndexedFields(Class aClass) {
         return Reflection.getFieldsWithAnnotations(aClass,
-                Index.class, PrimaryKey.class,
-                ForeignKey.class, Unique.class);
+                Index.class, PrimaryKey.class, Unique.class);
     }
 
     public static List<Field> getFieldsExcludingPrimaryKey(Class aClass) {
         return Reflection.getFieldsWithAnnotations(aClass,
-                Index.class, Stored.class,
-                ForeignKey.class, Unique.class);
+                Index.class, Stored.class, Unique.class, ForeignKey.class, Serialized.class);
+    }
+
+    public static List<MultipleIndex> getUniqueMultiIndexes(Class<?> aClass) {
+        List<MultipleIndex> result = new ArrayList<MultipleIndex>();
+
+        MultipleIndex multipleIndex = aClass.getAnnotation(MultipleIndex.class);
+        if(multipleIndex != null && multipleIndex.isUnique()){
+            result.add(multipleIndex);
+        }
+
+        MultipleIndexes multipleIndexes = aClass.getAnnotation(MultipleIndexes.class);
+        if(multipleIndexes != null){
+            MultipleIndex[] indexes = multipleIndexes.indexes();
+            for(MultipleIndex index : indexes){
+                if(index.isUnique()){
+                    result.add(index);
+                }
+            }
+        }
+
+        return result;
     }
 
     public static String generatePatternWhereClosure(Object pattern, List<Field> fields) {
@@ -358,16 +341,16 @@ public class SqlGenerationUtilities {
         return generatePatternWhereClosure(pattern, fields);
     }
 
-    public static String insert(final Object object) {
-        return insert(object, getFields(object));
-    }
-
-    public static String insert(final Object object, List<Field> fields) {
+    public static String insert(final Object object, List<Field> fields, boolean replace) {
         List<String> fieldNames = CollectionUtils.transform(fields,
                 new CollectionUtils.Transformer<Field, String>() {
             @Override
             public String get(Field field) {
-                return field.getName();
+                if (!Reflection.isNull(object, field)) {
+                    return field.getName();
+                }
+
+                return null;
             }
         });
 
@@ -375,11 +358,16 @@ public class SqlGenerationUtilities {
                 new CollectionUtils.Transformer<Field, String>() {
             @Override
             public String get(Field field) {
-                return ":" + field.getName();
+                if (!Reflection.isNull(object, field)) {
+                    return ":" + field.getName();
+                }
+
+                return null;
             }
         });
 
-        String result =  "INSERT INTO `" + object.getClass().getSimpleName() +
+        String result = replace ? "REPLACE" : "INSERT";
+        result += " INTO `" + object.getClass().getSimpleName() +
                 "` (" + Strings.join(", ", fieldNames) + ")\nVALUES (" +
                 Strings.join(", ", values)
                 + ")";
@@ -395,10 +383,39 @@ public class SqlGenerationUtilities {
         return Strings.quote(aClass.getSimpleName(), "`");
     }
 
+    public static String selectAll(Class resultClass,
+                                   List<Foreign> foreigns,
+                                   SelectParams selectParams) {
+        return select(Collections.singletonList(resultClass), foreigns, null, selectParams);
+    }
+
     public static String select(Object pattern,
                                 List<Foreign> foreigns,
                                 SelectParams selectParams) {
         return select(Arrays.<Class>asList(pattern.getClass()), foreigns, pattern, selectParams);
+    }
+
+    public static String getPosition(Object pattern, Class aClass, String orderBy, boolean desc) {
+        String tableName = quotedClassName(aClass);
+        String sql = "SELECT count(*) FROM " + tableName;
+        String where = null;
+        if (pattern != null) {
+            where = generatePatternWhereClosure(pattern);
+        }
+
+        String orderingWhere;
+        if (desc) {
+            orderingWhere = orderBy + " > :" + orderBy;
+        } else {
+            orderingWhere = orderBy + " < :" + orderBy;
+        }
+
+        sql += " WHERE (" + orderingWhere + ")";
+        if(!Strings.isEmpty(where)){
+            sql += " AND (" + where + ")";
+        }
+
+        return sql;
     }
 
     public static String select(List<Class> resultClasses,
@@ -445,10 +462,17 @@ public class SqlGenerationUtilities {
                             }
                         })).toString();
 
-        String where = generatePatternWhereClosure(pattern, getFields(pattern));
+        String where = "";
+        if (pattern != null) {
+            where = generatePatternWhereClosure(pattern, getFields(pattern));
+        }
 
         if(!foreignWhereParts.isEmpty()){
-            where = "(" + where + ") AND (" + Strings.join(" AND ", foreignWhereParts) + ")";
+            if (!Strings.isEmpty(where)) {
+                where = "(" + where + ") AND (" + Strings.join(" AND ", foreignWhereParts) + ")";
+            } else {
+                where = Strings.join(" AND ", foreignWhereParts).toString();
+            }
         }
 
         if(selectParams.whereTransformer != null){
@@ -476,9 +500,44 @@ public class SqlGenerationUtilities {
         return Reflection.getFieldWithAnnotation(object.getClass(), PrimaryKey.class);
     }
 
+    public static Field getPrimaryKey(Class aClass) {
+        return Reflection.getFieldWithAnnotation(aClass, PrimaryKey.class);
+    }
+
     public static void setObjectId(Object object, Object id) {
         Field field = getPrimaryKey(object);
         Reflection.setFieldValueUsingSetter(object, field, id);
+    }
+
+    public static String update(Object pattern, List<Field> patternFields, Object values, List<Field> valueFields) {
+        String where = generatePatternWhereClosure(pattern, patternFields);
+        String sql = "UPDATE " + quotedClassName(pattern.getClass());
+        List<String> setParts = new ArrayList<String>();
+        for(Field field : valueFields){
+            Object value = Reflection.getFieldValueUsingGetter(values, field);
+            if(value != null){
+                String fieldName = field.getName();
+                setParts.add(fieldName + " = :" + fieldName + "_update");
+            }
+        }
+
+        if(setParts.isEmpty()){
+            throw new IllegalArgumentException("Nothing to update, all fields are null");
+        }
+
+        sql += " SET " + Strings.join(", ", setParts);
+
+        if(!Strings.isEmpty(where)){
+            sql += " WHERE " + where;
+        }
+
+        return sql;
+    }
+
+    public static String update(Object pattern, Object values) {
+        List<Field> patternFields = getFields(pattern);
+        List<Field> valueFields = getFields(values);
+        return update(pattern, patternFields, values, valueFields);
     }
 
     public static String delete(Object object,
@@ -538,15 +597,21 @@ public class SqlGenerationUtilities {
 
         if(notNull != null){
             sql += " not null";
+        } else {
+            sql += " null";
         }
 
         boolean autoIncrement = false;
         boolean isUniqueKey = field.getAnnotation(Unique.class) != null;
         boolean isPrimaryKey = false;
         PrimaryKey primaryKey = field.getAnnotation(PrimaryKey.class);
-        if(primaryKey != null && primaryKey.autoincrement()){
-            sql += " auto_increment PRIMARY KEY";
-            autoIncrement = true;
+        if(primaryKey != null){
+            if(primaryKey.autoincrement() && isInt(field)){
+                sql += " auto_increment";
+                autoIncrement = true;
+            }
+
+            sql += " PRIMARY KEY";
             isPrimaryKey = true;
         }
 
@@ -557,7 +622,7 @@ public class SqlGenerationUtilities {
         ModifyInfo info = new ModifyInfo();
         info.sql = sql;
         info.autoIncrement = autoIncrement;
-        info.isNullable = notNull == null;
+        info.isNullable = (notNull == null && !isPrimaryKey);
         info.fieldType = fieldType;
         info.isUniqueKey = isUniqueKey;
         info.isPrimaryKey = isPrimaryKey;
@@ -566,5 +631,51 @@ public class SqlGenerationUtilities {
 
     public static ModifyInfo modifyColumn(Field field, String tableName) {
         return alterColumn(field, tableName, "MODIFY");
+    }
+
+    public static String getObjectByPrimaryKey(Class aClass, Object id) {
+        Field primaryKey = getPrimaryKey(aClass);
+        if(primaryKey == null){
+            throw new IllegalArgumentException("Primary key is not defined");
+        }
+
+        return "SELECT * FROM `" + aClass.getSimpleName() + "` WHERE " + primaryKey.getName() + "= :id";
+    }
+
+    public static String countByPattern(Object pattern) {
+        String sql = "SELECT count(*) FROM " + quotedClassName(pattern.getClass());
+        String where = generatePatternWhereClosure(pattern);
+        if(!Strings.isEmpty(where)){
+            sql += " WHERE " + where;
+        }
+
+        return sql;
+    }
+
+    public static String count(Class aClass) {
+        return  "SELECT count(*) FROM " + quotedClassName(aClass);
+    }
+
+    private static String max(List<Field> fields, Class aClass, Object pattern, String fieldName) {
+        Reflection.getFieldByNameOrThrow(aClass, fieldName);
+        String sql = "SELECT max(" + fieldName + ") FROM " + quotedClassName(aClass);
+        String where = null;
+        if (pattern != null) {
+            where = generatePatternWhereClosure(pattern, fields);
+        }
+
+        if(!Strings.isEmpty(where)){
+            sql += " WHERE " + where;
+        }
+
+        return sql;
+    }
+
+    public static String max(List<Field> fields, Object pattern, String fieldName) {
+        return max(fields, pattern.getClass(), pattern, fieldName);
+    }
+
+    public static String max(Class aClass, String fieldName) {
+        return max(null, aClass, null, fieldName);
     }
 }

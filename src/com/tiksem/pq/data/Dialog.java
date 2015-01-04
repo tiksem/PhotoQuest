@@ -1,53 +1,62 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.tiksem.pq.data.annotations.AddingDate;
-import com.tiksem.pq.data.annotations.OnPrepareForStorage;
-import com.tiksem.pq.data.annotations.Relation;
-
-import javax.jdo.annotations.*;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 11/15/2014.
  */
-@PersistenceCapable
-@PersistenceAware
-public class Dialog {
-    @Index
-    @JsonIgnore
-    @Relation(relationName = "user")
-    private Long user1;
-    @Index
-    @JsonIgnore
-    @Relation(relationName = "user")
-    private Long user2;
 
-    @Index
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"user1Id", "user2Id", "lastMessageTime"}),
+})
+public class Dialog {
+    @NotNull
+    @Index(indexType = IndexType.HASH)
+    private Long id;
+
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
+    private Long user1Id;
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
+    private Long user2Id;
+
+    @ForeignKey(parent = Message.class, field = "id")
+    @NotNull
     private Long lastMessageId;
 
-    @Index
+    @Stored
+    @NotNull
     private Long lastMessageTime;
 
-    @NotPersistent
+    @ForeignValue(idField = "lastMessageId")
     private Message lastMessage;
 
-    @NotPersistent
+    @JsonIgnore
+    @ForeignValue(idField = "user1Id")
+    private User user1;
+    @JsonIgnore
+    @ForeignValue(idField = "user2Id")
+    private User user2;
+
     private User user;
 
-    public Long getUser1() {
-        return user1;
+    public Long getUser1Id() {
+        return user1Id;
     }
 
-    public void setUser1(Long user1) {
-        this.user1 = user1;
+    public void setUser1Id(Long user1Id) {
+        this.user1Id = user1Id;
     }
 
-    public Long getUser2() {
-        return user2;
+    public Long getUser2Id() {
+        return user2Id;
     }
 
-    public void setUser2(Long user2) {
-        this.user2 = user2;
+    public void setUser2Id(Long user2Id) {
+        this.user2Id = user2Id;
     }
 
     public Long getLastMessageId() {
@@ -74,11 +83,35 @@ public class Dialog {
         this.lastMessage = lastMessage;
     }
 
+    public User getUser1() {
+        return user1;
+    }
+
+    public void setUser1(User user1) {
+        this.user1 = user1;
+    }
+
+    public User getUser2() {
+        return user2;
+    }
+
+    public void setUser2(User user2) {
+        this.user2 = user2;
+    }
+
     public User getUser() {
         return user;
     }
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 }

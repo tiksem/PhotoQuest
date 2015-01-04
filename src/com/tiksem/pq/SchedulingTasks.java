@@ -20,6 +20,6 @@ public class SchedulingTasks {
 
     @Scheduled(cron = "0 * * * * *")
     public void clearRatingAndViews() {
-        databaseManager.clearRatingAndViews();
+        //databaseManager.clearRatingAndViews();
     }
 }

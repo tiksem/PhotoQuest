@@ -2,13 +2,16 @@ package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.ForeignKey;
 import com.tiksem.mysqljava.annotations.ForeignValue;
+import com.tiksem.mysqljava.annotations.Serialized;
 import com.utils.framework.CollectionUtils;
+import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;
+import com.utils.framework.io.IOUtilities;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -42,7 +45,12 @@ public class ResultSetUtilities {
 
                     Object value = resultSet.getObject(i + 1);
                     String columnName = metaData.getColumnName(i + 1);
-                    table.put(columnName, value);
+                    if (!(value instanceof Blob)) {
+                        table.put(columnName, value);
+                    } else {
+                        Blob blob = (Blob)value;
+                        table.put(columnName, blob.getBinaryStream());
+                    }
                 }
 
                 maps.add(map);
@@ -83,6 +91,36 @@ public class ResultSetUtilities {
         }.indexOf(column.toLowerCase());
     }
 
+    private static Object getColumnValue(Field field, ResultSet resultSet, int index) {
+        Object value = null;
+        try {
+            if (resultSet.getMetaData().getColumnClassName(index + 1).equals("[B")) {
+                Blob blob = resultSet.getBlob(index + 1);
+                if(field.getAnnotation(Serialized.class) != null){
+                    try {
+                        value = IOUtilities.deserialize(blob.getBinaryStream());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    throw new UnsupportedOperationException("Blob cast is supported only fro serialized fields");
+                }
+            } else {
+                if (resultSet.getObject(index + 1) != null) {
+                    value = resultSet.getObject(index + 1, field.getType());
+                } else {
+                    value = null;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return value;
+    }
+
     public static <T> List<T> getList(List<Field> fields, Class<T> aClass, ResultSet resultSet) {
         List<T> result = new ArrayList<T>();
 
@@ -100,7 +138,8 @@ public class ResultSetUtilities {
                             continue;
                         }
 
-                        Object value = resultSet.getObject(index + 1);
+                        Object value = getColumnValue(field, resultSet, index);
+
                         Reflection.setFieldValueUsingSetter(object, field, value);
                     }
                 } else {
@@ -114,6 +153,20 @@ public class ResultSetUtilities {
         }
 
         return result;
+    }
+
+    static Map<String, Object> getArgs(final Object object, List<Field> fields) {
+        return Reflection.fieldsToPropertyMap(object, fields,
+                new Reflection.ParamTransformer() {
+                    @Override
+                    public Object transform(Field field, Object value) {
+                        if (field.getAnnotation(Serialized.class) != null) {
+                            return IOUtilities.toInputStream(value);
+                        }
+
+                        return value;
+                    }
+                });
     }
 
     public interface FieldsProvider {
@@ -136,6 +189,20 @@ public class ResultSetUtilities {
         Object foreignObject = Reflection.getOrCreateFieldValue(object, foreignField);
 
         Reflection.setFieldsFromMap(foreignObject, parentValues);
+    }
+
+    public static <T> List<T> getValuesOfColumn(ResultSet resultSet, String columnName) {
+        List<T> result = new ArrayList<T>();
+
+        try {
+            while (resultSet.next()) {
+                result.add((T) resultSet.getObject(getColumnIndex(resultSet, columnName) + 1));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return result;
     }
 
     public static List<Object> getListWithSeveralTables(ResultSet resultSet,
@@ -167,7 +234,34 @@ public class ResultSetUtilities {
 
                 List<Field> fieldsInClass = fields.get(classIndex);
                 Object object = Reflection.createObjectOfClass(resultClasses[classIndex]);
-                Reflection.setFieldsFromMap(object, fieldsInClass, entry.getValue());
+
+
+                Map<String, Object> objectMap = entry.getValue();
+                for(final Map.Entry<String, Object> objectEntry : objectMap.entrySet()){
+                    Object value = objectEntry.getValue();
+                    if(value instanceof InputStream){
+                        Field field = CollectionUtils.find(fieldsInClass, new Predicate<Field>() {
+                            @Override
+                            public boolean check(Field item) {
+                                return item.getName().equalsIgnoreCase(objectEntry.getKey());
+                            }
+                        });
+
+                        if (field != null) {
+                            if(field.getAnnotation(Serialized.class) != null){
+                                try {
+                                    value = IOUtilities.deserialize((InputStream) value);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        }
+                    }
+
+                    objectMap.put(objectEntry.getKey(), value);
+                }
+
+                Reflection.setFieldsFromMap(object, fieldsInClass, objectMap);
                 result.add(object);
 
                 List<Field> foreignFields = foreignValueFields.get(classIndex);

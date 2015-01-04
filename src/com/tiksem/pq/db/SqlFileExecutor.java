@@ -20,7 +20,6 @@ public class SqlFileExecutor {
     private static final String SQL_PATH = HttpUtilities.getWarClassesPath() + "/sql/";
     private MysqlObjectMapper mapper;
     private Map<String, String> queries = new HashMap<String, String>();
-    private String sqlRootPath;
 
     public SqlFileExecutor(MysqlObjectMapper mapper) {
         this.mapper = mapper;
@@ -40,11 +39,35 @@ public class SqlFileExecutor {
         return sql;
     }
 
+    public long executeCountQuery(String fileName,
+                                  Map<String, Object> params) {
+        String sql = getSql(fileName);
+        return mapper.executeCountQuery(sql, params);
+    }
+
+    public void executeNonSelectQuery(String fileName, Map<String, Object> args) {
+        String sql = getSql(fileName);
+        mapper.executeNonSelectSQL(sql, args);
+    }
+
     public <T> List<T> executeSQLQuery(String fileName,
                           Map<String, Object> params,
                           Class<T> resultClass,
                           List<String> foreigns) {
         String sql = getSql(fileName);
         return mapper.executeSQLQuery(sql, params, resultClass, foreigns);
+    }
+
+    public <T> List<T> executeSQLQuery(String fileName,
+                                       Map<String, Object> params,
+                                       Class<T> resultClass) {
+        String sql = getSql(fileName);
+        return mapper.executeSQLQuery(sql, params, resultClass);
+    }
+
+    public <T> List<T> executeSQLQuery(String fileName,
+                                      Class<T> resultClass) {
+        String sql = getSql(fileName);
+        return mapper.executeSQLQuery(sql, resultClass);
     }
 }

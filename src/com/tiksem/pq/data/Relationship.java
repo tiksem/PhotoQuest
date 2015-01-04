@@ -1,28 +1,40 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 12/5/2014.
  */
-@PersistenceCapable
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"fromUserId", "toUserId"}, indexType = IndexType.HASH),
+        @MultipleIndex(fields = {"fromUserId", "type", "addingDate"}, indexType = IndexType.BTREE),
+        @MultipleIndex(fields = {"toUserId", "type", "addingDate"}, indexType = IndexType.BTREE)
+})
 public class Relationship {
     public static final int FRIENDSHIP = 0;
     public static final int FRIEND_REQUEST = 1;
     public static final int FOLLOWS = 2;
 
-    @Index
+    @Stored
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
     private Long fromUserId;
-    @Index
+    @Index(indexType = IndexType.HASH)
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
     private Long toUserId;
-    @Index
+    @Stored
+    @NotNull
     private Integer type;
     @AddingDate
-    @Index
+    @Stored
     private Long addingDate;
+
+    @ForeignValue(idField = "fromUserId")
+    private User fromUser;
+    @ForeignValue(idField = "toUserId")
+    private User toUser;
 
     public Long getFromUserId() {
         return fromUserId;
@@ -54,5 +66,21 @@ public class Relationship {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    public User getFromUser() {
+        return fromUser;
+    }
+
+    public void setFromUser(User fromUser) {
+        this.fromUser = fromUser;
+    }
+
+    public User getToUser() {
+        return toUser;
+    }
+
+    public void setToUser(User toUser) {
+        this.toUser = toUser;
     }
 }

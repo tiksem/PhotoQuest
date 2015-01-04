@@ -1,15 +1,13 @@
 package com.tiksem.pq.test;
 
-import com.tiksem.mysqljava.annotations.ForeignKey;
-import com.tiksem.mysqljava.annotations.ForeignValue;
-import com.tiksem.mysqljava.annotations.PrimaryKey;
-import com.tiksem.mysqljava.annotations.Stored;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 12/27/2014.
  */
 public class EbloInfo {
     @ForeignKey(parent = Eblo.class, field = "id")
+    @Index
     private Long id;
     @Stored(type = "TEXT")
     private String info;

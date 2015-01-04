@@ -1,20 +1,26 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 12/4/2014.
  */
-@PersistenceCapable
+
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"userId", "photoquestId"}, indexType = IndexType.HASH),
+        @MultipleIndex(fields = {"userId", "addingDate"})
+})
 public class FollowingPhotoquest {
-    @Index
+    @ForeignKey(parent = Photoquest.class, field = "id")
+    @NotNull
     private Long photoquestId;
-    @Index
+
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
     private Long userId;
-    @Index
+
+    @Stored
     @AddingDate
     private Long addingDate;
 

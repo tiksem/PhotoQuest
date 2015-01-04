@@ -9,6 +9,6 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PrimaryKey {
     String type() default "";
-    IndexType indexType() default IndexType.HASH;
+    IndexType indexType() default IndexType.BTREE;
     boolean autoincrement() default true;
 }

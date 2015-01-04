@@ -10,7 +10,8 @@ import java.lang.annotation.RetentionPolicy;
 public @interface ForeignKey {
     Class parent();
     String field();
-    IndexType indexType() default IndexType.HASH;
     OnDelete onDelete() default OnDelete.CASCADE;
     OnUpdate onUpdate() default OnUpdate.CASCADE;
+    IndexType indexType() default IndexType.HASH;
+    boolean unique() default false;
 }

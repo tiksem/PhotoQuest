@@ -1,42 +1,48 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-import com.tiksem.pq.data.annotations.OnPrepareForStorage;
-
-import javax.jdo.annotations.*;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 11/10/2014.
  */
-@PersistenceCapable
-@PersistenceAware
+
+@Table
 public class Comment implements Likable, WithPhoto {
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
+
+    @Stored
+    @NotNull
     private String message;
-    @Index
+
+    @ForeignKey(parent = Photo.class, field = "id")
+    @NotNull
     private Long photoId;
-    @Index
+
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
     private Long userId;
-    @Index
+
+    @ForeignKey(parent = User.class, field = "id")
     private Long toUserId;
-    @Persistent
+
+    @Stored
+    @NotNull
     private Long likesCount;
 
-    @NotPersistent
-    private User user;
-    @NotPersistent
-    private User toUser;
-    @Index
+    @ForeignKey(parent = Comment.class, field = "id")
     private Long toCommentId;
 
-    @NotPersistent
+    @ForeignValue(idField = "userId")
+    private User user;
+    @ForeignValue(idField = "toUserId")
+    private User toUser;
+
     private Like yourLike;
 
-    @NotPersistent
     private String photo;
 
+    @Stored
     @AddingDate
     private Long addingDate;
 
@@ -104,11 +110,11 @@ public class Comment implements Likable, WithPhoto {
         this.toUser = toUser;
     }
 
-    public long getLikesCount() {
+    public Long getLikesCount() {
         return likesCount;
     }
 
-    public void setLikesCount(long likesCount) {
+    public void setLikesCount(Long likesCount) {
         this.likesCount = likesCount;
     }
 

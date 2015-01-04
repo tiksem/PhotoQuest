@@ -1,44 +1,43 @@
 package com.tiksem.pq.data;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.tiksem.pq.data.annotations.AddingDate;
-
-import javax.jdo.InstanceCallbacks;
-import javax.jdo.annotations.*;
-import javax.persistence.Transient;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 10/31/2014.
  */
 
-@PersistenceCapable
-@PersistenceAware
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"userId", "likesCount"}),
+        @MultipleIndex(fields = {"userId", "viewsCount"})
+})
 public class Photoquest implements WithAvatar, Likable {
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
-    @Unique
-    @Persistent
+    @Unique(type = "VARCHAR(30)", indexType = IndexType.HASH)
+    @NotNull
     private String name;
-    @Index
+
+    @Stored
+    @NotNull
     private Long likesCount;
-    @Index
+
+    @Stored
+    @NotNull
     private Long viewsCount;
-    @Index
+
+    @ForeignKey(parent = User.class, field = "id")
     private Long userId;
-    @Index
-    @JsonIgnore
+    @Stored
     private Long avatarId;
 
-    @Index
+    @Stored
     @AddingDate
     private Long addingDate;
 
-    @NotPersistent
     private String avatar;
 
-    @NotPersistent
     private Boolean isFollowing;
 
     public static Photoquest withZeroViewsAndLikes(String name) {

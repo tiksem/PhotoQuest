@@ -1,24 +1,44 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 12/6/2014.
  */
-@PersistenceCapable
+
+@Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"userId", "id"})
+})
 public class Action {
-    @Index
+    @PrimaryKey
+    @JsonIgnore
+    private Long id;
+
+    @ForeignKey(parent = User.class, field = "id")
+    @NotNull
+    @JsonIgnore
     private Long userId;
-    @Index
+
+    @ForeignKey(parent = Photoquest.class, field = "id")
+    @JsonIgnore
     private Long photoquestId;
-    @Index
+
+    @ForeignKey(parent = Photo.class, field = "id")
+    @JsonIgnore
     private Long photoId;
-    @Index
+
+    @Stored
     @AddingDate
     private Long addingDate;
+
+    @ForeignValue(idField = "photoquestId")
+    private Photoquest photoquest;
+    @ForeignValue(idField = "userId")
+    private User user;
+    @ForeignValue(idField = "photoId")
+    private Photo photo;
 
     public Long getUserId() {
         return userId;
@@ -50,5 +70,37 @@ public class Action {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Photoquest getPhotoquest() {
+        return photoquest;
+    }
+
+    public void setPhotoquest(Photoquest photoquest) {
+        this.photoquest = photoquest;
+    }
+
+    public Photo getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(Photo photo) {
+        this.photo = photo;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

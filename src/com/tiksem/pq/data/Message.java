@@ -1,40 +1,32 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.pq.data.annotations.AddingDate;
-import com.tiksem.pq.data.annotations.OnPrepareForStorage;
-import com.tiksem.pq.data.annotations.Relation;
-
-import javax.jdo.annotations.*;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 11/14/2014.
  */
-@PersistenceCapable
-@PersistenceAware
+@Table
+@MultipleIndex(fields = {"dialogId", "id"})
 public class Message {
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
-    @Index
-    @Relation(relationName = "user")
+    @Index(indexType = IndexType.HASH)
+    @NotNull
+    private Long dialogId;
+
+    @Stored
     private Long fromUserId;
-    @Index
-    @Relation(relationName = "user")
+    @Stored
     private Long toUserId;
 
-    @Persistent
+    @Stored
     private String message;
 
-    @Index
+    @Stored
     private Boolean read;
 
-    @Index
-    private Boolean deletedBySender;
-
-    @Index
-    private Boolean deletedByReceiver;
-
+    @Stored
     @AddingDate
     private Long addingDate;
 
@@ -78,22 +70,6 @@ public class Message {
         this.addingDate = addingDate;
     }
 
-    public Boolean getDeletedBySender() {
-        return deletedBySender;
-    }
-
-    public void setDeletedBySender(Boolean deletedBySender) {
-        this.deletedBySender = deletedBySender;
-    }
-
-    public Boolean getDeletedByReceiver() {
-        return deletedByReceiver;
-    }
-
-    public void setDeletedByReceiver(Boolean deletedByReceiver) {
-        this.deletedByReceiver = deletedByReceiver;
-    }
-
     public Boolean getRead() {
         return read;
     }
@@ -107,13 +83,13 @@ public class Message {
         if (read == null) {
             read = false;
         }
-        if (deletedByReceiver == null) {
-            deletedByReceiver = false;
-        }
-        if (deletedBySender == null) {
-            deletedBySender = false;
-        }
     }
 
+    public Long getDialogId() {
+        return dialogId;
+    }
 
+    public void setDialogId(Long dialogId) {
+        this.dialogId = dialogId;
+    }
 }

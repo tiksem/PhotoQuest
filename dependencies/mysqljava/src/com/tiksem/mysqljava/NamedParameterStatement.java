@@ -1,5 +1,6 @@
 package com.tiksem.mysqljava;
 
+import java.io.InputStream;
 import java.sql.*;
 import java.util.*;
 
@@ -130,7 +131,11 @@ public class NamedParameterStatement {
     public void setObject(String name, Object value) throws SQLException {
         int[] indexes = getIndexes(name);
         for (int i = 0; i < indexes.length; i++) {
-            statement.setObject(indexes[i], value);
+            if (value instanceof InputStream) {
+                statement.setBlob(indexes[i], (InputStream) value);
+            } else {
+                statement.setObject(indexes[i], value);
+            }
         }
     }
 

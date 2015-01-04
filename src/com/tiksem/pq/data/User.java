@@ -1,77 +1,90 @@
 package com.tiksem.pq.data;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.tiksem.pq.data.annotations.*;
-import sun.util.resources.LocaleNames_mk;
-
-import javax.jdo.annotations.*;
-import java.sql.Date;
+import com.tiksem.mysqljava.FieldsCheckingUtilities;
+import com.tiksem.mysqljava.annotations.*;
+import com.tiksem.mysqljava.annotations.NotNull;
+import com.utils.framework.Reflection;
 
 /**
  * Created by CM on 10/30/2014.
  */
 
-@PersistenceCapable
-@PersistenceAware
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"location", "nameData"}),
+        @MultipleIndex(fields = {"location", "gender", "nameData"}),
+        @MultipleIndex(fields = {"gender", "nameData"}),
+        @MultipleIndex(fields = {"location", "gender", "rating"}),
+        @MultipleIndex(fields = {"gender", "rating"}),
+        @MultipleIndex(fields = {"location", "rating"}),
+        @MultipleIndex(fields = {"location", "gender", "id"}),
+        @MultipleIndex(fields = {"gender", "id"}),
+        @MultipleIndex(fields = {"location", "id"})
+})
+@Table
 public class User implements WithAvatar {
     @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
     private Long id;
 
-    @Index
+    @Unique(type = "VARCHAR(25)")
+    @NotNull
     @Login
     private String login;
-    @Index
+    @Stored(type = "VARCHAR(20)")
+    @NotNull
     @Password
     private String password;
 
-    @Index
+    @Stored
     private Long avatarId;
 
-    @Index
-    @NameField
+    @NotNull
+    @Index(type = "VARCHAR(60)")
+    private String nameData;
+
     private String name;
-    @Index
-    @NameField
     private String lastName;
 
-    @Index
+    @Stored
     @AddingDate
     private Long addingDate;
 
-    @Index
+    @Stored
+    @NotNull
     private Long unreadMessagesCount;
     
-    @Index
+    @Stored
+    @NotNull
     private Long unreadRepliesCount;
     
-    @Index
+    @Stored
+    @NotNull
     private Long sentRequestsCount;
 
-    @Index
+    @Stored
+    @NotNull
     private Long receivedRequestsCount;
 
-    @Index
+    @Stored
+    @NotNull
     private String location;
 
-    @Index
+    @Stored(type = "CHAR(2)")
+    @NotNull
     private String countryCode;
 
     @Index
+    @NotNull
     private Long rating;
 
-    @Persistent
+    @NotNull
+    @Stored
     private Boolean gender;
 
-    @NotPersistent
     private String avatar;
 
-    @NotPersistent
     private RelationStatus relation;
 
-    @NotPersistent
     private String country;
-    @NotPersistent
     private String city;
 
     public User(String login, String password) {
@@ -130,16 +143,8 @@ public class User implements WithAvatar {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getLastName() {
         return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
     }
 
     public RelationStatus getRelation() {
@@ -358,5 +363,31 @@ public class User implements WithAvatar {
 
     public void setGender(Boolean gender) {
         this.gender = gender;
+    }
+
+    public String getNameData() {
+        return nameData;
+    }
+
+    public void setNameAndLastName(String name, String lastName) {
+        this.name = name;
+        this.lastName = lastName;
+
+        FieldsCheckingUtilities.fixNameField(
+                Reflection.getFieldByNameOrThrow(getClass(), "name"), this);
+        FieldsCheckingUtilities.fixNameField(
+                Reflection.getFieldByNameOrThrow(getClass(), "lastName"), this);
+
+        this.nameData = name + " " + lastName;
+    }
+
+    public void setNameData(String nameData) {
+        String[] parts = nameData.split(" ");
+        if(parts.length != 2){
+            throw new IllegalArgumentException("Illegal namedData format, should be something like " +
+                    "Ivan Eblan");
+        }
+
+        setNameAndLastName(parts[0], parts[1]);
     }
 }

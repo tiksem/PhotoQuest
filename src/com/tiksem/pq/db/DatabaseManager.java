@@ -1,11 +1,14 @@
 package com.tiksem.pq.db;
 
+import com.tiksem.mysqljava.MysqlObjectMapper;
+import com.tiksem.mysqljava.MysqlTablesCreator;
+import com.tiksem.mysqljava.OffsetLimit;
+import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
-import com.tiksem.pq.data.response.Feed;
 import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
-import com.tiksem.pq.db.exceptions.*;
+import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.google.places.*;
@@ -16,36 +19,17 @@ import com.utils.framework.randomuser.Response;
 import com.utils.framework.strings.Strings;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.jdo.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 
 /**
  * Created by CM on 10/30/2014.
  */
 public class DatabaseManager {
-    private static final PersistenceManagerFactory factory;
-
     private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
-
-    private static final String MOST_RATED_PHOTO_MAX_ORDERING = "likesCount descending, viewsCount descending, " +
-            "addingDate descending";
-
-    private static final String NEWEST_PHOTO_MAX_ORDERING = "addingDate descending, likesCount descending, " +
-            "viewsCount descending";
-
-    private static final String HOTTEST_PHOTO_MAX_ORDERING = "viewsCount descending, likesCount descending, " +
-            "addingDate descending";
-
-    private static final String RATING_PEOPLE_ORDERING = "rating descending";
-
-
-    private static final String ADDING_DATE_ORDERING = "addingDate descending";
 
     private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
 
@@ -55,43 +39,56 @@ public class DatabaseManager {
     private static final long PROFILE_VIEW_PERIOD = 30 * 1000;
     private static final long PHOTO_VIEW_PERIOD = 30 * 1000;
 
-    private final PersistenceManager persistenceManager;
+    private MysqlObjectMapper mapper;
 
     private ImageManager imageManager = new FileSystemImageManager("images", "magic");
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
 
-    static {
-        factory = DBUtilities.createMySQLConnectionFactory("PhotoQuest");
-    }
-
     public DatabaseManager() {
-        persistenceManager = factory.getPersistenceManager();
-        advancedRequestsManager = new AdvancedRequestsManager(persistenceManager);
+        mapper = new MysqlObjectMapper();
+        advancedRequestsManager = new AdvancedRequestsManager(mapper);
     }
 
-    public <T> T makePersistent(T object) {
-        return DBUtilities.makePersistent(persistenceManager, object);
+    private <T> T replace(T object) {
+        mapper.replace(object);
+        return object;
     }
 
-    private <T> T[] makeAllPersistent(T... objects) {
-        return DBUtilities.makeAllPersistent(persistenceManager, objects);
+    private void replaceAll(Object... objects) {
+        mapper.replaceAll(Arrays.asList(objects));
     }
 
-    private <T> T[] makeAllPersistent(Collection<T> objects) {
-        return DBUtilities.makeAllPersistent(persistenceManager, objects);
+    private void replaceAll(List<Object> objects) {
+        mapper.replaceAll(objects);
     }
 
-    private void deletePersistent(Object object) {
-        DBUtilities.deletePersistent(persistenceManager, object);
+    private void insert(Object object) {
+        mapper.insert(object);
     }
 
-    private void deleteAllPersistent(Collection objects) {
-        DBUtilities.deleteAllPersistent(persistenceManager, objects);
+    private void insertAll(Object... objects) {
+        mapper.insertAll(objects);
+    }
+
+    private void insertAll(Iterator<Object> objects) {
+        mapper.insertAll(objects);
+    }
+
+    private void delete(Object pattern) {
+        mapper.delete(pattern);
+    }
+
+    private void deleteAll(Object... objects) {
+        mapper.deleteAll(objects);
+    }
+
+    private void deleteAll(Iterable<Object> objects) {
+        mapper.deleteAll(objects);
     }
 
     public User getUserById(long id) {
-        return DBUtilities.getObjectById(persistenceManager, User.class, id);
+        return mapper.getObjectById(User.class, id);
     }
 
     public User getUserByIdOrThrow(long id) {
@@ -111,7 +108,7 @@ public class DatabaseManager {
             ProfileView pattern = new ProfileView();
             pattern.setVisitorId(signedInUser.getId());
             pattern.setUserId(id);
-            ProfileView profileView = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+            ProfileView profileView = mapper.getObjectByPattern(pattern);
             if(profileView == null){
                 profileView = pattern;
             }
@@ -121,7 +118,7 @@ public class DatabaseManager {
                     profileView.getAddingDate() >= PROFILE_VIEW_PERIOD){
                 profileView.setAddingDate(currentTimeMillis);
                 user.incrementRating();
-                makeAllPersistent(user, profileView);
+                replaceAll(user, profileView);
             }
         }
 
@@ -133,7 +130,7 @@ public class DatabaseManager {
     public User getUserByLogin(String login) {
         User user = new User();
         user.setLogin(login);
-        return DBUtilities.getObjectByPattern(persistenceManager, user);
+        return mapper.getObjectByPattern(user);
     }
 
     public User getUserByLoginOrThrow(String login) {
@@ -144,6 +141,7 @@ public class DatabaseManager {
 
         return user;
     }
+
 
     public User getUserByLoginAndPassword(String login, String password) {
         User user = getUserByLogin(login);
@@ -203,13 +201,11 @@ public class DatabaseManager {
     public Photoquest getPhotoQuestByName(String photoquestName) {
         Photoquest photoquest = new Photoquest();
         photoquest.setName(photoquestName);
-        return DBUtilities.getObjectByPattern(persistenceManager, photoquest);
+        return mapper.getObjectByPattern(photoquest);
     }
 
     public Photoquest getPhotoQuestById(long id) {
-        Photoquest photoquest = new Photoquest();
-        photoquest.setId(id);
-        return DBUtilities.getObjectByPattern(persistenceManager, photoquest);
+        return mapper.getObjectById(Photoquest.class, id);
     }
 
     public Photoquest getPhotoQuestByIdOrThrow(long id) {
@@ -230,13 +226,16 @@ public class DatabaseManager {
 
     public Photoquest createSystemPhotoquest(String photoquestName) {
         Photoquest photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
-        photoquest = makePersistent(photoquest);
+        insert(photoquest);
         setPhotoquestKeywords(photoquest, Collections.<String>emptyList());
         return photoquest;
     }
 
     private void setPhotoquestKeywords(long photoquestId, String keywords) {
-        advancedRequestsManager.insertPhotoquestSearch(photoquestId, keywords);
+        PhotoquestSearch photoquestSearch = new PhotoquestSearch();
+        photoquestSearch.setKeywords(keywords);
+        photoquestSearch.setPhotoquestId(photoquestId);
+        insert(photoquestSearch);
     }
 
     private void setPhotoquestKeywords(Photoquest photoquest, List<String> keywords) {
@@ -260,11 +259,12 @@ public class DatabaseManager {
         Long userId = user.getId();
         photoquest.setUserId(userId);
 
-        photoquest = makePersistent(photoquest);
+        replace(photoquest);
         Action action = new Action();
         action.setPhotoquestId(photoquest.getId());
         action.setUserId(userId);
-        makePersistent(action);
+        insertAction(action);
+
         setPhotoquestKeywords(photoquest, keywords);
 
         if(follow){
@@ -280,7 +280,7 @@ public class DatabaseManager {
         Photoquest pattern = new Photoquest();
         pattern.setUserId(userId);
         Collection<Photoquest> photoquests =
-                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, getPhotoRatingOrderingString(order));
+                mapper.queryByPattern(pattern, offsetLimit, getPhotoOrderBy(order));
         setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
         setAvatar(request, photoquests);
         return photoquests;
@@ -289,7 +289,7 @@ public class DatabaseManager {
     public long getPhotoquestsCreatedByUserCount(long userId) {
         Photoquest photoquest = new Photoquest();
         photoquest.setUserId(userId);
-        return DBUtilities.queryCountByPattern(persistenceManager, photoquest);
+        return mapper.getCountByPattern(photoquest);
     }
 
     public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
@@ -298,28 +298,9 @@ public class DatabaseManager {
     }
 
     public Collection<Photoquest> searchPhotoquests(final HttpServletRequest request, String query, OffsetLimit offsetLimit) {
-        Photoquest photoquestByName = getPhotoQuestByName(query);
-        Long excludeId = null;
-        Collection<Photoquest> result = new ArrayList<Photoquest>();
-        if(photoquestByName != null){
-            excludeId = photoquestByName.getId();
-            if(offsetLimit.getOffset() == 0){
-                offsetLimit.setLimit(offsetLimit.getLimit() - 1);
-            }
-            result.add(photoquestByName);
-        }
-
-        List<Long> ides = advancedRequestsManager.getPhotoquestsByQuery(query, excludeId, offsetLimit);
-        result.addAll(CollectionUtils.transform(ides,
-                new CollectionUtils.Transformer<Long, Photoquest>() {
-                    @Override
-                    public Photoquest get(Long id) {
-                        return getPhotoQuestByIdOrThrow(id);
-                    }
-                }));
-
-        initPhotoquestsInfo(request, result);
-        return result;
+        List<Photoquest> photoquests = advancedRequestsManager.getPhotoquestsByQuery(query, offsetLimit);
+        initPhotoquestsInfo(request, photoquests);
+        return photoquests;
     }
 
     public Collection<Photoquest> getPhotoquestsCreatedBySignedInUser(HttpServletRequest request,
@@ -332,25 +313,8 @@ public class DatabaseManager {
         return getPhotoquestsCreatedByUserCount(getSignedInUserOrThrow(request).getId());
     }
 
-    public void update(HttpServletRequest request, Object... objects) {
-        update(request, Arrays.asList(objects));
-    }
-
-    public void update(HttpServletRequest request, Collection<Object> objects) {
-        makeAllPersistent(objects);
-
-        for (Object object : objects) {
-            if (object instanceof WithAvatar) {
-                WithAvatar withAvatar = (WithAvatar) object;
-                setAvatar(request, withAvatar);
-            }
-        }
-    }
-
     private Location getLocationById(String id) {
-        Location location = new Location();
-        location.setId(id);
-        return DBUtilities.getObjectByPattern(persistenceManager, location);
+        return mapper.getObjectById(Location.class, id);
     }
 
     private Location getLocationByIdOrThrow(String id) {
@@ -370,7 +334,8 @@ public class DatabaseManager {
         locationInfo.setCity(city.name);
         locationInfo.setCountry(city.country);
         location.setInfo(Language.en, locationInfo);
-        return makePersistent(location);
+        insert(location);
+        return location;
     }
 
     public void updateLocation(User user) throws IOException {
@@ -393,7 +358,38 @@ public class DatabaseManager {
 
         updateLocation(user);
 
-        return makePersistent(user);
+        insert(user);
+        return user;
+    }
+
+    public User editProfile(HttpServletRequest request,
+                            String name, String lastName,
+                            String location) throws IOException {
+        User user = getSignedInUserOrThrow(request);
+
+        if (name != null) {
+            user.setNameAndLastName(name, user.getLastName());
+        }
+        if (lastName != null) {
+            user.setNameAndLastName(user.getName(), lastName);
+        }
+        if (location != null) {
+            user.setLocation(location);
+        }
+        updateLocation(user);
+        setUserInfo(request, user);
+
+        return replace(user);
+    }
+
+    public void changePassword(HttpServletRequest request, String newPassword, String oldPassword) {
+        User user = getSignedInUserOrThrow(request);
+        if(!user.getPassword().equals(oldPassword)){
+            throw new PermissionDeniedException("Invalid password!");
+        }
+        user.setPassword(newPassword);
+
+        replace(user);
     }
 
     public City getCityOrThrow(String location) throws IOException {
@@ -410,12 +406,11 @@ public class DatabaseManager {
     }
 
     public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
-        InputStream avatarInputStream = null
-                ;
+        InputStream avatarInputStream = null;
         try {
             avatarInputStream = avatar.getInputStream();
         } catch (IOException e) {
-
+            throw new RuntimeException(e);
         }
 
         return registerUser(request, user, avatarInputStream);
@@ -442,30 +437,14 @@ public class DatabaseManager {
                 throw new RuntimeException("WTF?");
             }
 
-            update(request, user);
+            replace(user);
         }
 
         return user;
     }
 
-    public Collection<User> getAllUsers(HttpServletRequest request, OffsetLimit offsetLimit, RatingOrder order) {
-        return getAllUsers(request, true, false, offsetLimit, order);
-    }
-
-    public Collection<User> getAllUsersWithCheckingRelationShip(HttpServletRequest request,
-                                                                OffsetLimit offsetLimit,
-                                                                RatingOrder order) {
-        return getAllUsers(request, false, true, offsetLimit, order);
-    }
-
-    public long getAllUsersCount(HttpServletRequest request, boolean includeSignedInUser) {
-        long result = DBUtilities.getAllObjectsOfClassCount(persistenceManager,
-                User.class);
-        if(includeSignedInUser && getSignedInUser(request) != null){
-            result--;
-        }
-
-        return result;
+    public long getAllUsersCount() {
+        return mapper.getAllObjectsCount(User.class);
     }
 
     private void setRelationStatus(User signedInUser, Collection<User> users) {
@@ -477,7 +456,7 @@ public class DatabaseManager {
             pattern.setFromUserId(signedInUserId);
             pattern.setToUserId(userId);
 
-            Relationship relationship = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+            Relationship relationship = mapper.getObjectByPattern(pattern);
             if (relationship != null) {
                 Integer type = relationship.getType();
                 if(type == Relationship.FRIENDSHIP){
@@ -493,7 +472,7 @@ public class DatabaseManager {
                 pattern.setFromUserId(userId);
                 pattern.setToUserId(signedInUserId);
 
-                relationship = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+                relationship = mapper.getObjectByPattern(pattern);
                 if(relationship != null){
                     Integer type = relationship.getType();
                     if(type == Relationship.FOLLOWS){
@@ -508,48 +487,22 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<User> getAllUsers(HttpServletRequest request, boolean includeSignedInUser,
-                                        boolean fillRelationshipData, OffsetLimit offsetLimit,
+    public Collection<User> getAllUsers(HttpServletRequest request,
+                                        boolean fillRelationshipData,
+                                        OffsetLimit offsetLimit,
                                         RatingOrder order) {
-        Collection<User> users = null;
-        User signedInUser = null;
-
-        long signedInUserId = 0;
-        String orderingString = getPeopleOrderingString(order);
-
-        if (includeSignedInUser) {
-            users = DBUtilities.getAllObjectsOfClass(persistenceManager,
-                    User.class, offsetLimit, orderingString);
-        } else {
-            signedInUser = getSignedInUser(request);
-            if(signedInUser == null){
-                users = DBUtilities.getAllObjectsOfClass(persistenceManager,
-                        User.class, offsetLimit, orderingString);
-            } else {
-                signedInUserId = signedInUser.getId();
-                User user = new User();
-                user.setId(signedInUserId);
-                users = DBUtilities.queryByExcludePattern(persistenceManager, user, offsetLimit, orderingString);
-            }
-        }
+        Collection<User> users = mapper.queryAllObjects(User.class, offsetLimit,
+                getPeopleOrderBy(order) + " desc");
 
         setUsersInfo(request, users);
 
-        if(fillRelationshipData && signedInUser != null){
-            setRelationStatus(signedInUser, users);
+        if(fillRelationshipData){
+            User signedInUser = getSignedInUser(request);
+            if (signedInUser != null) {
+                setRelationStatus(signedInUser, users);
+            }
         }
 
-        return users;
-    }
-
-    public Collection<User> getUsersByLocation(HttpServletRequest request, String location,
-                                               OffsetLimit offsetLimit,
-                                               RatingOrder order) {
-        User pattern = new User();
-        pattern.setLocation(location);
-        String orderingString = getPeopleOrderingString(order);
-        Collection<User> users = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, orderingString);
-        setUsersInfoAndRelationStatus(request, users);
         return users;
     }
 
@@ -564,93 +517,41 @@ public class DatabaseManager {
     public long getUsersByLocationCount(String location) {
         User pattern = new User();
         pattern.setLocation(location);
-        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        return mapper.getCountByPattern(pattern);
     }
 
-    private Query searchUsersQuery(String queryString, String location,
-                                   Map<String, Object> outArgs,
-                                   Boolean gender,
-                                   RatingOrder order) {
-        String[] queryParts = queryString != null ? queryString.split(" +") : new String[0];
-        for (int i = 0; i < queryParts.length; i++) {
-            queryParts[i] = Strings.capitalizeAndCopy(queryParts[i].toLowerCase());
-        }
-
-        User pattern = new User();
-        pattern.setLocation(location);
-        pattern.setGender(gender);
-
-        StringBuilder outFilter = new StringBuilder();
-        List<String> parameters = new ArrayList<String>();
-        DBUtilities.getQueryByPattern(persistenceManager, pattern, outArgs, false, false,
-                parameters, outFilter);
-
-
-        String filter = null;
-        if(queryParts.length == 1){
-            filter = "this.name == query || this.lastName == query";
-            outArgs.put("query", queryParts[0]);
-            parameters.add("String query");
-        } else if(queryParts.length >= 2) {
-            filter = "(this.name == query1 && this.lastName == query2) || " +
-                    "(this.name == query2 && this.lastName == query1)";
-            outArgs.put("query1", queryParts[0]);
-            outArgs.put("query2", queryParts[1]);
-            parameters.add("String query1, String query2");
-        }
-
-        if (filter != null) {
-            filter = "(" + filter + ") && (" + outFilter + ")";
-        } else {
-            filter = outFilter.toString();
-        }
-
-        Query query = DBUtilities.createQuery(persistenceManager, User.class);
-
-        if (!Strings.isEmpty(filter)) {
-            query.setFilter(filter);
-        }
-        if (!parameters.isEmpty()) {
-            query.declareParameters(Strings.join(", ", parameters).toString());
-        }
-        if (order != null) {
-            query.setOrdering(getPeopleOrderingString(order));
-        }
-
-        return query;
-    }
-
-    public Collection<User> searchUsers(HttpServletRequest request, String queryString, String location,
+    public Collection<User> searchUsers(HttpServletRequest request,
+                                        String queryString,
+                                        String location,
                                         Boolean gender,
-                                        OffsetLimit offsetLimit, RatingOrder order) {
-        Map<String, Object> args = new HashMap<String, Object>();
-        Query query = searchUsersQuery(queryString, location, args, gender, order);
-        offsetLimit.applyToQuery(query);
-
-        Collection<User> users = (Collection<User>) query.executeWithMap(args);
+                                        OffsetLimit offsetLimit,
+                                        RatingOrder order) {
+        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
+        args.gender = gender;
+        args.query = queryString;
+        args.location = location;
+        args.orderBy = getPeopleOrderBy(order);
+        Collection<User> users = advancedRequestsManager.searchUsers(args, offsetLimit);
         setUsersInfoAndRelationStatus(request, users);
 
         return users;
     }
 
     public long getSearchUsersCount(String queryString, String location, Boolean gender) {
-        Map<String, Object> args = new HashMap<String, Object>();
-        Query query = searchUsersQuery(queryString, location, args, gender, null);
-        query.setResult("count(this)");
-        return (Long)query.executeWithMap(args);
-    }
-
-    public void deleteAllPhotos() {
-        DBUtilities.deleteAllObjectsOfClass(persistenceManager, Photo.class);
-        new File("images").delete();
+        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
+        args.gender = gender;
+        args.query = queryString;
+        args.location = location;
+        return advancedRequestsManager.getSearchUsersCount(args);
     }
 
     public PerformedPhotoquest getOrCreatePerformedPhotoquest(long userId, long photoquestId) {
         PerformedPhotoquest pattern = new PerformedPhotoquest();
         pattern.setUserId(userId);
         pattern.setPhotoquestId(photoquestId);
-        PerformedPhotoquest performedPhotoquest = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+        PerformedPhotoquest performedPhotoquest = mapper.getObjectByPattern(pattern);
         if(performedPhotoquest == null){
+            insert(pattern);
             return pattern;
         }
 
@@ -667,13 +568,18 @@ public class DatabaseManager {
         photo.setLikesCount(0l);
         photo.setUserId(userId);
 
-        photo = makePersistent(photo);
+        insert(photo);
         imageManager.saveImage(photo.getId(), bitmapData);
-        makePersistent(getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId()));
+        getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId());
 
         commitAddPhotoAction(photo);
 
         return photo;
+    }
+
+    private void insertAction(Action action) {
+        insert(action);
+        advancedRequestsManager.insertActionFeed(action.getId(), action.getUserId());
     }
 
     private void commitAddPhotoAction(Photo photo) {
@@ -681,7 +587,7 @@ public class DatabaseManager {
         action.setPhotoquestId(photo.getPhotoquestId());
         action.setPhotoId(photo.getId());
         action.setUserId(photo.getUserId());
-        makePersistent(action);
+        insertAction(action);
     }
 
     public Photo addPhotoToPhotoquest(HttpServletRequest request,
@@ -709,7 +615,7 @@ public class DatabaseManager {
     }
 
     public Photo getPhotoById(long id) {
-        return DBUtilities.getObjectById(persistenceManager, Photo.class, id);
+        return mapper.getObjectById(Photo.class, id);
     }
 
     public Photo getPhotoByIdOrThrow(long id) {
@@ -722,7 +628,7 @@ public class DatabaseManager {
     }
 
     public Message getMessageById(long id) {
-        return DBUtilities.getObjectById(persistenceManager, Message.class, id);
+        return mapper.getObjectById(Message.class, id);
     }
 
     public Message getMessageByIdOrThrow(long id) {
@@ -790,12 +696,6 @@ public class DatabaseManager {
         initYourLikeParameter(request, Collections.singletonList(photo));
     }
 
-    public Collection<Photo> getAllPhotos(HttpServletRequest request, OffsetLimit offsetLimit) {
-        Collection<Photo> photos = DBUtilities.getAllObjectsOfClass(persistenceManager, Photo.class, offsetLimit);
-        initPhotosUrl(photos, request);
-        return photos;
-    }
-
     private void addPhotoquestViewIfNeed(HttpServletRequest request, Photoquest photoquest) {
         User signedInUser = getSignedInUser(request);
         if(signedInUser == null){
@@ -805,7 +705,7 @@ public class DatabaseManager {
         PhotoquestView pattern = new PhotoquestView();
         pattern.setPhotoquestId(photoquest.getId());
         pattern.setUserId(signedInUser.getId());
-        PhotoquestView photoquestView = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+        PhotoquestView photoquestView = mapper.getObjectByPattern(pattern);
         if(photoquestView == null){
             photoquestView = pattern;
         }
@@ -815,7 +715,12 @@ public class DatabaseManager {
                 photoquestView.getAddingDate() >= PHOTOQUEST_VIEW_PERIOD){
             photoquestView.setAddingDate(currentTimeMillis);
             photoquest.incrementViewsCount();
-            makeAllPersistent(photoquest, photoquestView);
+            replace(photoquest);
+            if(photoquestView == pattern){
+                insert(photoquestView);
+            } else {
+                replace(photoquestView);
+            }
         }
     }
 
@@ -827,13 +732,11 @@ public class DatabaseManager {
         photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
         initPhotoUrl(photo, request);
         initYourLikeParameter(request, photo);
-        User user = getUserByIdOrThrow(photo.getUserId());
+        User user = photo.getUser();
         setAvatar(request, user);
-        photo.setUser(user);
 
-        Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+        Photoquest photoquest = photo.getPhotoquest();
         setAvatar(request, photoquest);
-        photo.setPhotoquest(photoquest);
     }
 
     private Photo getNextPrevPhoto(HttpServletRequest request,
@@ -841,11 +744,11 @@ public class DatabaseManager {
                                    long photoId,
                                    NextPhotoPatternProvider patternProvider,
                                    boolean next) {
-        String orderString = getPhotoRatingOrderingString(order);
+        String orderString = getPhotoOrderBy(order);
         Photo photo = getPhotoByIdOrThrow(photoId);
         Photo pattern = patternProvider.getPattern();
 
-        long count = DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        long count = mapper.getCountByPattern(pattern);
         if(count == 0){
             throw new PhotoNotFoundException("Photo was not found in result set");
         } else if(count == 1) {
@@ -853,7 +756,7 @@ public class DatabaseManager {
             return photo;
         }
 
-        long position = DBUtilities.getPosition(persistenceManager, photo, orderString, pattern);
+        long position = mapper.getObjectPosition(photo, pattern, orderString, true);
 
         if(next){
             position++;
@@ -868,7 +771,7 @@ public class DatabaseManager {
         }
 
         OffsetLimit offsetLimit = new OffsetLimit(position, 1);
-        Collection<Photo> result = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, orderString);
+        Collection<Photo> result = mapper.queryByPattern(pattern, offsetLimit, orderString);
         if(result.isEmpty()){
             throw new PhotoNotFoundException("Photo was not found in result set");
         }
@@ -910,12 +813,9 @@ public class DatabaseManager {
 
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
-        String orderString = getPhotoRatingOrderingString(order);
+        String orderString = getPhotoOrderBy(order);
 
-        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
-        params.offsetLimit = offsetLimit;
-        params.ordering = orderString;
-        Collection<Photo> photos = DBUtilities.queryByPattern(persistenceManager, photoPattern, params);
+        Collection<Photo> photos = mapper.queryByPattern(photoPattern, offsetLimit, orderString);
         initPhotosUrl(photos, request);
 
         initYourLikeParameter(request, photos);
@@ -929,9 +829,9 @@ public class DatabaseManager {
                                              OffsetLimit offsetLimit, RatingOrder order) {
         Photo pattern = new Photo();
         pattern.setUserId(userId);
-        String ordering = getPhotoRatingOrderingString(order);
+        String ordering = getPhotoOrderBy(order);
         Collection<Photo> photos =
-                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, ordering);
+                mapper.queryByPattern(pattern, offsetLimit, ordering);
         initPhotosUrl(photos, request);
         initYourLikeParameter(request, photos);
 
@@ -941,13 +841,13 @@ public class DatabaseManager {
     public long getPhotosOfUserCount(long userId) {
         Photo pattern = new Photo();
         pattern.setUserId(userId);
-        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        return mapper.getCountByPattern(pattern);
     }
 
     public long getPhotosOfPhotoquestCount(long photoQuestId) {
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
-        return DBUtilities.queryCountByPattern(persistenceManager, photoPattern);
+        return mapper.getCountByPattern(photoPattern);
     }
 
     public String getDefaultAvatar(HttpServletRequest request) {
@@ -983,33 +883,33 @@ public class DatabaseManager {
         }
     }
 
-    private String getPhotoRatingOrderingString(RatingOrder order) {
+    private String getPhotoOrderBy(RatingOrder order) {
         String orderString;
         switch (order) {
             case hottest:
-                orderString = HOTTEST_PHOTO_MAX_ORDERING;
+                orderString = "viewsCount";
                 break;
             case rated:
-                orderString = MOST_RATED_PHOTO_MAX_ORDERING;
+                orderString = "likesCount";
                 break;
             default:
-                orderString = NEWEST_PHOTO_MAX_ORDERING;
+                orderString = "id";
                 break;
         }
 
         return orderString;
     }
 
-    private String getPeopleOrderingString(RatingOrder order) {
+    private String getPeopleOrderBy(RatingOrder order) {
         String orderString;
         switch (order) {
             case hottest:
                 throw new UnsupportedOperationException("hottest is not supported yet");
             case rated:
-                orderString = RATING_PEOPLE_ORDERING;
+                orderString = "rating";
                 break;
             default:
-                orderString = ADDING_DATE_ORDERING;
+                orderString = "id";
                 break;
         }
 
@@ -1039,10 +939,10 @@ public class DatabaseManager {
 
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
                                                  RatingOrder order) {
-        String orderString = getPhotoRatingOrderingString(order);
+        String orderString = getPhotoOrderBy(order);
 
         Collection<Photoquest> result =
-                DBUtilities.getAllObjectsOfClass(persistenceManager, Photoquest.class,
+                mapper.queryAllObjects(Photoquest.class,
                         offsetLimit, orderString);
         initPhotoquestsInfo(request, result);
 
@@ -1050,7 +950,7 @@ public class DatabaseManager {
     }
 
     public long getPhotoQuestsCount() {
-        return DBUtilities.getAllObjectsOfClassCount(persistenceManager, Photoquest.class);
+        return mapper.getAllObjectsCount(Photoquest.class);
     }
 
     public boolean hasFriendship(long user1Id, long user2Id) {
@@ -1061,7 +961,7 @@ public class DatabaseManager {
         Relationship friendship = new Relationship();
         friendship.setFromUserId(user1Id);
         friendship.setToUserId(user2Id);
-        return DBUtilities.getObjectByPattern(persistenceManager, friendship);
+        return mapper.getObjectByPattern(friendship);
     }
 
     public Relationship getFriendshipOrThrow(long user1Id, long user2Id) {
@@ -1085,7 +985,7 @@ public class DatabaseManager {
         friendship2.setFromUserId(user2.getId());
         friendship2.setToUserId(user1.getId());
 
-        makeAllPersistent(friendship1, friendship2);
+        insertAll(friendship1, friendship2);
     }
 
     public void addFriend(HttpServletRequest request, long userId) {
@@ -1115,60 +1015,49 @@ public class DatabaseManager {
 
         Relationship friendship1 = getFriendshipOrThrow(userId, signedInUserId);
         Relationship friendship2 = getFriendshipOrThrow(signedInUserId, userId);
-        deleteAllPersistent(Arrays.asList(friendship1, friendship2));
+        deleteAll(friendship1, friendship2);
     }
 
-    public List<Long> getRelationsIdesOf(long userId, OffsetLimit offsetLimit, int relationType, boolean asFromUser) {
-        Relationship pattern = new Relationship();
-        if (asFromUser) {
-            pattern.setFromUserId(userId);
-        } else {
-            pattern.setToUserId(userId);
-        }
-        pattern.setType(relationType);
+    public List<User> getUsersByFromUserIdInRelation(long fromUserId, int relationType,
+                                                     OffsetLimit offsetLimit,
+                                                     RatingOrder order) {
+        Relationship relationship = new Relationship();
+        relationship.setType(relationType);
+        relationship.setFromUserId(fromUserId);
 
-        Collection<Relationship> friendships =
-                DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit, ADDING_DATE_ORDERING);
-        ArrayList<Long> result = new ArrayList<Long>(friendships.size());
-
-        for(Relationship friendship : friendships){
-            result.add(friendship.getToUserId());
-        }
-
-        return result;
+        SelectParams selectParams = new SelectParams();
+        selectParams.ordering = getPeopleOrderBy(order) + " desc";
+        selectParams.offsetLimit = offsetLimit;
+        return mapper.queryByForeignPattern(relationship, User.class, "fromUserId", selectParams);
     }
 
-    public List<Long> getFriendsIdesOf(long userId, OffsetLimit offsetLimit) {
-        return getRelationsIdesOf(userId, offsetLimit, Relationship.FRIENDSHIP, true);
+    public List<User> getUsersByToUserIdInRelation(long toUserId, int relationType,
+                                                     OffsetLimit offsetLimit,
+                                                     RatingOrder order) {
+        Relationship relationship = new Relationship();
+        relationship.setType(relationType);
+        relationship.setToUserId(toUserId);
+
+        SelectParams selectParams = new SelectParams();
+        selectParams.ordering = getPeopleOrderBy(order) + " desc";
+        selectParams.offsetLimit = offsetLimit;
+        return mapper.queryByForeignPattern(relationship, User.class, "fromUserId", selectParams);
     }
 
-    public List<User> getUsersByIdes(Iterable<Long> ides) {
-        List<User> result = new ArrayList<User>();
-        for(Long id : ides){
-            User user = getUserByIdOrThrow(id);
-            result.add(user);
-        }
-
-        return result;
-    }
-
-    public List<User> getFriendsOf(long userId, OffsetLimit offsetLimit) {
-        return getUsersByIdes(getFriendsIdesOf(userId, offsetLimit));
-    }
-
-    public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return getFriends(request, offsetLimit, true);
+    public List<User> getFriendsOf(long userId, OffsetLimit offsetLimit, RatingOrder order) {
+        return getUsersByFromUserIdInRelation(userId, Relationship.FRIENDSHIP, offsetLimit, order);
     }
 
     public long getFriendsCount(HttpServletRequest request) {
         Relationship friendshipPattern = new Relationship();
         friendshipPattern.setType(Relationship.FRIENDSHIP);
         friendshipPattern.setFromUserId(getSignedInUserOrThrow(request).getId());
-        return DBUtilities.queryCountByPattern(persistenceManager, friendshipPattern);
+        return mapper.getCountByPattern(friendshipPattern);
     }
 
-    public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit, boolean fillFriendShipData) {
-        List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId(), offsetLimit);
+    public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit, RatingOrder order,
+                                 boolean fillFriendShipData) {
+        List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId(), offsetLimit, order);
         setUsersInfo(request, friends);
         if (fillFriendShipData) {
             for(User friend : friends){
@@ -1180,10 +1069,6 @@ public class DatabaseManager {
         return friends;
     }
 
-    public List<Long> getFriendsIdes(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return getFriendsIdesOf(getSignedInUserOrThrow(request).getId(), offsetLimit);
-    }
-
     public Photoquest getOrCreateSystemPhotoQuest(String photoquestName) {
         Photoquest photoquest = getPhotoQuestByName(photoquestName);
         if(photoquest == null){
@@ -1193,16 +1078,8 @@ public class DatabaseManager {
         return photoquest;
     }
 
-    public void beginTransaction() {
-        persistenceManager.currentTransaction().begin();
-    }
-
-    public void endTransaction() {
-        persistenceManager.currentTransaction().commit();
-    }
-
     public Comment getCommentById(long id) {
-        return DBUtilities.getObjectById(persistenceManager, Comment.class, id);
+        return mapper.getObjectById(Comment.class, id);
     }
 
     public Comment getCommentByIdOrThrow(long id) {
@@ -1215,21 +1092,21 @@ public class DatabaseManager {
     }
 
     public Like getLikeById(long id) {
-        return DBUtilities.getObjectById(persistenceManager, Like.class, id);
+        return mapper.getObjectById(Like.class, id);
     }
 
     public Like getLikeByUserAndPhotoId(long userId, long photoId) {
         Like like = new Like();
         like.setUserId(userId);
         like.setPhotoId(photoId);
-        return DBUtilities.getObjectByPattern(persistenceManager, like);
+        return mapper.getObjectByPattern(like);
     }
 
     public Like getLikeByUserAndCommentId(long userId, long commentId) {
         Like like = new Like();
         like.setUserId(userId);
         like.setCommentId(commentId);
-        return DBUtilities.getObjectByPattern(persistenceManager, like);
+        return mapper.getObjectByPattern(like);
     }
 
     public Like getLikeByIdOrThrow(long id) {
@@ -1269,27 +1146,27 @@ public class DatabaseManager {
     public Collection<Like> getCommentLikes(long commentId, OffsetLimit offsetLimit) {
         Like like = new Like();
         like.setCommentId(commentId);
-        return DBUtilities.queryByPattern(persistenceManager, like, offsetLimit);
+        return mapper.queryByPattern(like, offsetLimit);
     }
 
     public Collection<Comment> getCommentsOnComment(long commentId, OffsetLimit offsetLimit) {
         Comment comment = new Comment();
         comment.setToCommentId(commentId);
-        return DBUtilities.queryByPattern(persistenceManager, comment, offsetLimit);
+        return mapper.queryByPattern(comment, offsetLimit);
     }
 
     private Reply getReplyByLikeId(long likeId) {
         Reply reply = new Reply();
         reply.setType(Reply.LIKE);
         reply.setId(likeId);
-        return DBUtilities.getObjectByPattern(persistenceManager, reply);
+        return mapper.getObjectByPattern(reply);
     }
 
     private Reply getReplyByCommentId(long commentId) {
         Reply reply = new Reply();
         reply.setType(Reply.COMMENT);
         reply.setId(commentId);
-        return DBUtilities.getObjectByPattern(persistenceManager, reply);
+        return mapper.getObjectByPattern(reply);
     }
 
     private void addLikesAndRepliesToDeleteStack(List<Object> deleteStack, Comment comment, OffsetLimit offsetLimit) {
@@ -1305,16 +1182,9 @@ public class DatabaseManager {
         deleteStack.addAll(likes);
     }
 
-    public void deleteComment(HttpServletRequest request, long commentId, OffsetLimit offsetLimit) {
-        Comment comment = getCommentByIdOrThrow(commentId);
-        List<Object> deleteStack = new ArrayList<Object>();
-        addLikesAndRepliesToDeleteStack(deleteStack, comment, offsetLimit);
-
-        Reply reply = getReplyByCommentId(commentId);
-        deleteStack.add(reply);
-
-        deleteStack.add(comment);
-        deleteAllPersistent(deleteStack);
+    public void deleteComment(long commentId) {
+        getCommentByIdOrThrow(commentId);
+        advancedRequestsManager.deleteComment(commentId);
     }
 
     public Comment addComment(HttpServletRequest request,
@@ -1352,48 +1222,34 @@ public class DatabaseManager {
         reply.setUserId(toUserId);
         toUser.incrementUnreadRepliesCount();
 
-        comment = (Comment) makeAllPersistent(comment, toUser)[0];
+        insertAll(comment, toUser);
         reply.setId(comment.getId());
-        makePersistent(reply);
+        insert(reply);
 
         return comment;
     }
 
-    private void removeComment(Comment comment) {
-        deletePersistent(comment);
-    }
-
-    public void removeComment(long commentId) {
-        Comment comment = getCommentByIdOrThrow(commentId);
-        removeComment(comment);
-    }
-
-    public void removeCommentOfSignedInUser(HttpServletRequest request, long commentId) {
-        User user = getSignedInUserOrThrow(request);
-
-        Comment comment = getCommentByIdOrThrow(commentId);
-        if(!user.getId().equals(comment.getUserId())){
-            throw new PermissionDeniedException("Trying to delete comment," +
-                    " witch is not created by signed in user");
-        }
-
-        removeComment(comment);
-    }
-
-    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request, long photoId,
-                                                  Long startingDate,
+    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request,
+                                                  long photoId,
+                                                  final Long afterId,
                                                   OffsetLimit offsetLimit) {
         Comment commentPattern = new Comment();
         commentPattern.setPhotoId(photoId);
 
-        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
-        params.ordering = ADDING_DATE_ORDERING;
-        if (startingDate != null) {
-            params.additionalFilter = "this.addingDate > " + startingDate;
-        }
-        params.offsetLimit = offsetLimit;
+        SelectParams selectParams = new SelectParams();
+        selectParams.offsetLimit = offsetLimit;
+        selectParams.ordering = "id desc";
 
-        Collection<Comment> comments = DBUtilities.queryByPattern(persistenceManager, commentPattern, params);
+        if (afterId != null) {
+            selectParams.whereTransformer = new CollectionUtils.Transformer<String, String>() {
+                @Override
+                public String get(String where) {
+                    return "(" + where + ") AND id > " + afterId;
+                }
+            };
+        }
+
+        Collection<Comment> comments = mapper.queryByPattern(commentPattern, selectParams);
 
         User signedInUser = getSignedInUser(request);
         if(signedInUser != null){
@@ -1449,7 +1305,7 @@ public class DatabaseManager {
             likable.incrementLikesCount();
         }
 
-        update(request, likables);
+        replaceAll(likables);
     }
 
     private void decrementLikesCount(HttpServletRequest request, Likable... likables) {
@@ -1457,18 +1313,18 @@ public class DatabaseManager {
             likable.decrementLikesCount();
         }
 
-        update(request, likables);
+        replaceAll(request, likables);
     }
 
     private Like like(HttpServletRequest request, Like like, long toUserId) {
         User signedInUser = getSignedInUserOrThrow(request);
         like.setUserId(signedInUser.getId());
 
-        if(DBUtilities.getObjectByPattern(persistenceManager, like) != null){
+        if(mapper.getObjectByPattern(like) != null){
             throw new LikeExistsException(like);
         }
 
-        like = makePersistent(like);
+        insert(like);
 
         Reply reply = new Reply();
         reply.setId(like.getId());
@@ -1477,7 +1333,7 @@ public class DatabaseManager {
 
         User toUser = getUserByIdOrThrow(toUserId);
         toUser.incrementUnreadRepliesCount();
-        makeAllPersistent(reply, toUser);
+        insertAll(reply, toUser);
 
         like.setUser(signedInUser);
 
@@ -1515,18 +1371,43 @@ public class DatabaseManager {
             forDel.add(reply);
         }
 
-        deleteAllPersistent(forDel);
+        deleteAll(forDel);
     }
 
-    public Collection<Like> getAllLikes(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return DBUtilities.getAllObjectsOfClass(persistenceManager, Like.class, offsetLimit);
+    private void updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
+        Dialog dialog = new Dialog();
+        dialog.setUser1Id(user1Id);
+        dialog.setUser2Id(user2Id);
+        Dialog storedDialog = mapper.getObjectByPattern(dialog);
+        if(storedDialog != null){
+            dialog.setId(storedDialog.getId());
+        }
+
+        dialog.setLastMessageId(lastMessageId);
+        dialog.setLastMessageTime(lastMessageTime);
+
+        if(storedDialog != null){
+            Dialog pattern = new Dialog();
+            pattern.setUser1Id(user1Id);
+            pattern.setUser2Id(user2Id);
+            mapper.updateUsingPattern(pattern, dialog);
+
+            pattern.setUser2Id(user1Id);
+            pattern.setUser1Id(user2Id);
+            dialog.setUser2Id(user1Id);
+            dialog.setUser1Id(user2Id);
+            mapper.updateUsingPattern(pattern, dialog);
+        } else {
+            Long maxId = mapper.max(Dialog.class, "id", 0l);
+            dialog.setId(maxId);
+            insert(dialog);
+            dialog.setUser2Id(user1Id);
+            dialog.setUser1Id(user2Id);
+            insert(dialog);
+        }
     }
 
-    public Collection<Comment> getAllComments(OffsetLimit offsetLimit) {
-        return DBUtilities.getAllObjectsOfClass(persistenceManager, Comment.class, offsetLimit);
-    }
-
-    private Message addMessage(HttpServletRequest request, User fromUser, User toUser, String messageText) {
+    private Message addMessage(User fromUser, User toUser, String messageText) {
         toUser.incrementUnreadMessagesCount();
 
         long fromUserId = fromUser.getId();
@@ -1537,72 +1418,71 @@ public class DatabaseManager {
         message.setToUserId(toUserId);
         message.setMessage(messageText);
 
-        message = makePersistent(message);
-        Dialog dialog = getOrCreateDialog(fromUserId, toUserId);
-        dialog.setLastMessageId(message.getId());
-        dialog.setLastMessageTime(message.getAddingDate());
+        insert(message);
 
-        update(request, toUser, dialog);
+        updateDialog(fromUserId, toUserId, message.getAddingDate(), message.getId());
+
+        replace(toUser);
         return message;
     }
 
     public Message addMessage(HttpServletRequest request, long toUserId, String messageText) {
         User signedInUser = getSignedInUserOrThrow(request);
         User toUser = getUserByIdOrThrow(toUserId);
-        return addMessage(request, signedInUser, toUser, messageText);
+        return addMessage(signedInUser, toUser, messageText);
     }
 
     public void deleteMessage(long id) {
         Message message = getMessageByIdOrThrow(id);
-        deletePersistent(message);
+        delete(message);
     }
 
-    public void readMessage(HttpServletRequest request, long messageId) {
-        User user = getSignedInUserOrThrow(request);
-        long userId = user.getId();
-        Message message = getMessageByIdAndUserId(userId, messageId);
-        if(userId == message.getFromUserId()){
-            throw new MessageReadException("Message was sent by the user, it couldn't be marked as read");
-        }
-
-        user.decrementUnreadMessagesCount();
-        message.setRead(true);
-        update(request, message, user);
-    }
-
-    public void markMessageAsDeleted(HttpServletRequest request, long messageId) {
-        User user = getSignedInUserOrThrow(request);
-        long userId = user.getId();
-        Message message = getMessageByIdAndUserId(userId, messageId);
-
-        if(userId == message.getFromUserId()){
-            message.setDeletedBySender(true);
-        } else {
-            message.setDeletedByReceiver(true);
-        }
-    }
-
-    public Collection<Message> getMessagesByUserId(long userId, OffsetLimit offsetLimit, boolean includeDeleted) {
+    public Collection<Message> getMessagesByUserId(long userId, OffsetLimit offsetLimit) {
         Message message = new Message();
         message.setFromUserId(userId);
-        return DBUtilities.queryByPattern(persistenceManager, message, offsetLimit);
+        return mapper.queryByPattern(message, offsetLimit, "id desc");
     }
 
-    private <T> Collection<T> queryByAddingDate(T pattern, OffsetLimit offsetLimit) {
-        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
-        params.ordering = "addingDate descending";
-        params.offsetLimit = offsetLimit;
-        return DBUtilities.queryByPattern(persistenceManager, pattern, params);
+    private Dialog getDialogById(long dialogId) {
+        Dialog dialog = new Dialog();
+        dialog.setId(dialogId);
+        return mapper.getObjectByPattern(dialog);
     }
 
-    public Collection<Message> getDialogMessages(HttpServletRequest request, long widthUserId,
+    private Dialog getDialogByIdOrThrow(long dialogId) {
+        Dialog dialog = getDialogById(dialogId);
+        if(dialog == null){
+            throw new DialogNotFoundException(dialogId);
+        }
+
+        return dialog;
+    }
+
+    public Collection<Message> getMessagesByDialogId(HttpServletRequest request, long dialogId,
+                                                 OffsetLimit offsetLimit) {
+        Dialog dialog = getDialogByIdOrThrow(dialogId);
+        return getDialogMessages(request, dialog, offsetLimit);
+    }
+
+    public Collection<Message> getMessagesWithUser(HttpServletRequest request, long userId,
+                                                     OffsetLimit offsetLimit) {
+        Dialog dialog = new Dialog();
+        dialog.setUser1Id(userId);
+        dialog = mapper.getObjectByPattern(dialog);
+        if(dialog == null){
+            return new ArrayList<Message>();
+        }
+
+        return getDialogMessages(request, dialog, offsetLimit);
+    }
+
+    public Collection<Message> getDialogMessages(HttpServletRequest request, Dialog dialog,
                                                  OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
-        getUserByIdOrThrow(widthUserId);
         Message pattern = new Message();
-        pattern.setFromUserId(widthUserId);
-        pattern.setToUserId(signedInUser.getId());
-        Collection<Message> messages = queryByAddingDate(pattern, offsetLimit);
+        pattern.setDialogId(dialog.getId());
+
+        Collection<Message> messages = mapper.queryByPattern(pattern, offsetLimit);
         List forUpdate = new ArrayList();
 
         int readMessagesCount = 0;
@@ -1616,16 +1496,12 @@ public class DatabaseManager {
 
         signedInUser.setUnreadMessagesCount(signedInUser.getUnreadMessagesCount() - readMessagesCount);
         forUpdate.add(signedInUser);
-        update(request, forUpdate);
+        replaceAll(forUpdate);
 
         return messages;
     }
 
     public Message getMessageByIdAndUserId(long userId, long messageId) {
-        return getMessageByIdAndUserId(userId, messageId, false);
-    }
-
-    public Message getMessageByIdAndUserId(long userId, long messageId, boolean includeDeleted) {
         Message message = getMessageByIdOrThrow(messageId);
         if(message.getFromUserId() != userId && message.getToUserId() != userId){
             throw new MessageNotOwnedByUserException(userId, messageId);
@@ -1634,17 +1510,12 @@ public class DatabaseManager {
         return message;
     }
 
-    public Collection<Message> getMessagesOfSignedInUser(HttpServletRequest request, OffsetLimit offsetLimit) {
-        User signedInUser = getSignedInUserOrThrow(request);
-        return getMessagesByUserId(signedInUser.getId(), offsetLimit, false);
-    }
-
     public Relationship getFriendRequest(long fromUserId, long toUserId) {
         Relationship request = new Relationship();
         request.setFromUserId(fromUserId);
         request.setToUserId(toUserId);
         request.setType(Relationship.FRIEND_REQUEST);
-        return DBUtilities.getObjectByPattern(persistenceManager, request);
+        return mapper.getObjectByPattern(request);
     }
 
     public Relationship getFriendRequestOrThrow(long fromUserId, long toUserId) {
@@ -1660,7 +1531,7 @@ public class DatabaseManager {
         Relationship relationship = new Relationship();
         relationship.setFromUserId(fromUserId);
         relationship.setToUserId(toUserId);
-        return DBUtilities.getObjectByPattern(persistenceManager, relationship);
+        return mapper.getObjectByPattern(relationship);
     }
 
     public Relationship sendFriendRequest(HttpServletRequest request, long userId) {
@@ -1684,7 +1555,8 @@ public class DatabaseManager {
         signedInUser.incrementSentRequestsCount();
         friend.incrementReceivedRequestsCount();
 
-        return (Relationship) makeAllPersistent(friendRequest, signedInUser, friend)[0];
+        replaceAll(friendRequest, signedInUser, friend);
+        return friendRequest;
     }
 
     private Relationship deleteFriendRequestOrUnfollow(HttpServletRequest request, User fromUser, User toUser) {
@@ -1696,20 +1568,20 @@ public class DatabaseManager {
         if(relationship.getType() == Relationship.FRIEND_REQUEST){
             fromUser.decrementSentRequestsCount();
             toUser.decrementReceivedRequestsCount();
-            update(request, fromUser, toUser);
+            replaceAll(request, fromUser, toUser);
         }
 
-        deletePersistent(relationship);
+        delete(relationship);
         return relationship;
     }
 
     private Relationship deleteFriendRequest(HttpServletRequest request, User fromUser, User toUser) {
         Relationship friendRequest = getFriendRequestOrThrow(fromUser.getId(),
                 toUser.getId());
-        deletePersistent(friendRequest);
+        delete(friendRequest);
         fromUser.decrementSentRequestsCount();
         toUser.decrementReceivedRequestsCount();
-        update(request, fromUser, toUser);
+        replaceAll(request, fromUser, toUser);
         return friendRequest;
     }
 
@@ -1731,7 +1603,7 @@ public class DatabaseManager {
         reply.setUserId(friend.getId());
 
         friend.incrementUnreadRepliesCount();
-        update(request, friend, reply);
+        replaceAll(request, friend, reply);
     }
 
     private void declineFriendRequest(HttpServletRequest request, long userId) {
@@ -1750,45 +1622,29 @@ public class DatabaseManager {
         followUser(friendId, signedInUserId);
 
         friend.incrementUnreadRepliesCount();
-        update(request, friend, reply);
-    }
-
-    private Dialog getOrCreateDialog(long user1Id, long user2Id) {
-        Dialog dialog = new Dialog();
-        dialog.setUser1(user1Id);
-        dialog.setUser2(user2Id);
-        Dialog result = DBUtilities.getObjectByPattern(persistenceManager, dialog);
-        if(result != null){
-            return result;
-        }
-
-        return dialog;
+        replaceAll(request, friend, reply);
     }
 
     public Collection<Dialog> getDialogs(HttpServletRequest request, OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
         Dialog dialogPattern = new Dialog();
         long signedInUserId = signedInUser.getId();
-        dialogPattern.setUser1(signedInUserId);
+        dialogPattern.setUser1Id(signedInUserId);
 
-        String ordering = "lastMessageTime descending";
-        Collection<Dialog> result = DBUtilities.queryByPattern(persistenceManager, dialogPattern, offsetLimit,
-                ordering);
+        SelectParams selectParams = new SelectParams();
+        selectParams.offsetLimit = offsetLimit;
+        selectParams.ordering = "lastMessageTime desc";
+        selectParams.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
+        Collection<Dialog> result = mapper.queryByPattern(dialogPattern, selectParams);
+
         for(Dialog dialog : result){
-            Message lastMessage = getMessageByIdOrThrow(dialog.getLastMessageId());
-
-            long userId = dialog.getUser1();
-            if(userId == signedInUserId){
-                userId = dialog.getUser2();
-            } else if(signedInUserId != dialog.getUser2()) {
-                throw new RuntimeException("Broken database, dialog, associated with the signed in user " +
-                        "doesn't have lastMassage, associated with him");
+            if(dialog.getUser1().getId() != signedInUserId){
+                dialog.setUser(dialog.getUser1());
+            } else {
+                dialog.setUser(dialog.getUser2());
             }
 
-            User user = getUserByIdOrThrow(userId);
-            setAvatar(request, user);
-            dialog.setLastMessage(lastMessage);
-            dialog.setUser(user);
+            setAvatar(request, dialog.getUser());
         }
 
         return result;
@@ -1805,8 +1661,7 @@ public class DatabaseManager {
 
         for(Response userData : data){
             User user = new User();
-            user.setName(userData.name);
-            user.setLastName(userData.lastName);
+            user.setNameAndLastName(userData.name, userData.lastName);
             user.setLogin("user" + startId++);
             user.setPassword(password);
             user.setGender(userData.gender == Gender.male);
@@ -1827,16 +1682,18 @@ public class DatabaseManager {
     public Photo getMostRatedPhotoOfPhotoquest(long photoQuestId) {
         Photo pattern = new Photo();
         pattern.setPhotoquestId(photoQuestId);
-        return DBUtilities.getMaxByPattern(persistenceManager, pattern, MOST_RATED_PHOTO_MAX_ORDERING);
+        return mapper.getObjectWithMaxFieldByPattern(pattern, "likesCount", null);
     }
 
     public void updatePhotoquestAvatar(Photoquest photoquest) {
         Long avatarId = photoquest.getAvatarId();
         Photo photo = getMostRatedPhotoOfPhotoquest(photoquest.getId());
-        Long photoId = photo.getId();
-        if(!photoId.equals(avatarId)){
-            photoquest.setAvatarId(photoId);
-            makePersistent(photoquest);
+        if (photo != null) {
+            Long photoId = photo.getId();
+            if(!photoId.equals(avatarId)){
+                photoquest.setAvatarId(photoId);
+                replace(photoquest);
+            }
         }
     }
 
@@ -1848,18 +1705,21 @@ public class DatabaseManager {
     private long getPhotoInPhotoquestPosition(Photo photo, RatingOrder order) {
         Photo pattern = new Photo();
         pattern.setPhotoquestId(photo.getPhotoquestId());
-        return DBUtilities.getPosition(persistenceManager, photo, getPhotoRatingOrderingString(order), pattern);
+        return mapper.getObjectPosition(photo, pattern, getPhotoOrderBy(order), true);
     }
 
     public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId, Long userId, Long photoquestId) {
-        Photo photo = getPhotoByIdOrThrow(photoId);
+        Photo photo = mapper.getObjectById(Photo.class, photoId, MysqlObjectMapper.ALL_FOREIGN);
+        if(photo == null){
+            throw new PhotoNotFoundException(photoId);
+        }
 
         User signedInUser = getSignedInUser(request);
         if(signedInUser != null){
             PhotoView pattern = new PhotoView();
             pattern.setPhotoId(photoId);
             pattern.setUserId(signedInUser.getId());
-            PhotoView photoView = DBUtilities.getObjectByPattern(persistenceManager, pattern);
+            PhotoView photoView = mapper.getObjectByPattern(pattern);
             if(photoView == null){
                 photoView = pattern;
             }
@@ -1869,7 +1729,13 @@ public class DatabaseManager {
                     photoView.getAddingDate() >= PHOTO_VIEW_PERIOD){
                 photoView.setAddingDate(currentTimeMillis);
                 photo.incrementViewsCount();
-                makeAllPersistent(photo, photoView);
+                replace(photo);
+
+                if(photoView == pattern){
+                    insert(photoView);
+                } else {
+                    replace(photoView);
+                }
             }
         }
 
@@ -1898,15 +1764,15 @@ public class DatabaseManager {
         return stats;
     }
 
-    private Collection<Reply> getReplies(User user, HttpServletRequest request, OffsetLimit offsetLimit) {
-        Reply reply = new Reply();
-        reply.setUserId(user.getId());
+    private Collection<Reply> getReplies(User user, OffsetLimit offsetLimit) {
+        Reply pattern = new Reply();
+        pattern.setUserId(user.getId());
 
-        DBUtilities.QueryParams params = new DBUtilities.QueryParams();
-        params.ordering = "addingDate descending";
+        SelectParams params = new SelectParams();
+        params.ordering = "addingDate desc";
         params.offsetLimit = offsetLimit;
 
-        return DBUtilities.queryByPattern(persistenceManager, reply, params);
+        return mapper.queryByPattern(pattern, params);
     }
 
     private void setPhoto(HttpServletRequest request, WithPhoto withPhoto) {
@@ -1920,9 +1786,9 @@ public class DatabaseManager {
     public Collection<ReplyResponse> getRepliesWithFullInfo(HttpServletRequest request, OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
         signedInUser.setUnreadRepliesCount(0l);
-        update(request, signedInUser);
+        replace(signedInUser);
 
-        Collection<Reply> replies = getReplies(signedInUser, request, offsetLimit);
+        Collection<Reply> replies = getReplies(signedInUser, offsetLimit);
 
         Collection<ReplyResponse> replyResponses = new ArrayList<ReplyResponse>(replies.size());
         for(Reply reply : replies){
@@ -1962,7 +1828,7 @@ public class DatabaseManager {
         User user = getSignedInUserOrThrow(request);
         Reply reply = new Reply();
         reply.setUserId(user.getId());
-        return DBUtilities.queryCountByPattern(persistenceManager, reply);
+        return mapper.getCountByPattern(reply);
     }
 
     private List<User> getFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit, boolean received) {
@@ -1977,15 +1843,20 @@ public class DatabaseManager {
             pattern.setFromUserId(signedInUserId);
         }
 
-        Collection<Relationship> friendRequests = DBUtilities.queryByPattern(persistenceManager, pattern,
-                offsetLimit,
-                ADDING_DATE_ORDERING);
+        SelectParams params = new SelectParams();
+        params.ordering = "addingDate desc";
+        params.offsetLimit = offsetLimit;
+        if(received){
+            params.foreignFieldsToFill = Arrays.asList("fromUser");
+        } else {
+            params.foreignFieldsToFill = Arrays.asList("toUser");
+        }
+
+        Collection<Relationship> friendRequests = mapper.queryByPattern(pattern, params);
         List<User> result = new ArrayList<User>(friendRequests.size());
 
         for(Relationship friendRequest : friendRequests){
-            long friendId = received ? friendRequest.getFromUserId() : friendRequest.getToUserId();
-
-            User friend = getUserByIdOrThrow(friendId);
+            User friend = received ? friendRequest.getFromUser() : friendRequest.getToUser();
             setAvatar(request, friend);
             friend.setRelation(received ? RelationStatus.request_received : RelationStatus.request_sent);
             result.add(friend);
@@ -2006,7 +1877,7 @@ public class DatabaseManager {
         FollowingPhotoquest pattern = new FollowingPhotoquest();
         pattern.setUserId(userId);
         pattern.setPhotoquestId(photoquestId);
-        return DBUtilities.getObjectByPattern(persistenceManager, pattern);
+        return mapper.getObjectByPattern(pattern);
     }
 
     private FollowingPhotoquest getFollowingPhotoquestOrThrow(long userId, long photoquestId) {
@@ -2032,7 +1903,8 @@ public class DatabaseManager {
         followingPhotoquest.setUserId(signedInUserId);
         followingPhotoquest.setPhotoquestId(photoquestId);
 
-        return makePersistent(followingPhotoquest);
+        insert(followingPhotoquest);
+        return followingPhotoquest;
     }
 
     public FollowingPhotoquest followPhotoquest(HttpServletRequest request, long photoquestId) {
@@ -2045,10 +1917,11 @@ public class DatabaseManager {
         Long signedInUserId = signedInUser.getId();
 
         FollowingPhotoquest followingPhotoquest = getFollowingPhotoquestOrThrow(signedInUserId, photoquestId);
-        deletePersistent(followingPhotoquest);
+        delete(followingPhotoquest);
     }
 
-    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, long userId, OffsetLimit offsetLimit,
+    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, long userId,
+                                                          OffsetLimit offsetLimit,
                                                           RatingOrder order) {
         Collection<Photoquest> result =
                 advancedRequestsManager.getFollowingPhotoquests(userId, order, offsetLimit);
@@ -2064,7 +1937,7 @@ public class DatabaseManager {
         PerformedPhotoquest pattern = new PerformedPhotoquest();
         pattern.setUserId(userId);
 
-        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        return mapper.getCountByPattern(pattern);
     }
 
     public Collection<Photoquest> getPerformedPhotoquests(HttpServletRequest request, long userId,
@@ -2085,7 +1958,7 @@ public class DatabaseManager {
         FollowingPhotoquest pattern = new FollowingPhotoquest();
         pattern.setUserId(userId);
 
-        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        return mapper.getCountByPattern(pattern);
     }
 
     private Relationship followUser(long fromUserId, long toUserId) {
@@ -2093,7 +1966,8 @@ public class DatabaseManager {
         relationship.setFromUserId(fromUserId);
         relationship.setToUserId(toUserId);
         relationship.setType(Relationship.FOLLOWS);
-        return makePersistent(relationship);
+        insert(relationship);
+        return relationship;
     }
 
     private void unfollowUser(long fromUserId, long toUserId) {
@@ -2102,11 +1976,11 @@ public class DatabaseManager {
         relationship.setToUserId(toUserId);
         relationship.setType(Relationship.FOLLOWS);
 
-        if(DBUtilities.getObjectByPattern(persistenceManager, relationship) == null){
+        if(mapper.getObjectByPattern(relationship) == null){
             throw new UserIsNotFollowingException();
         }
 
-        deletePersistent(relationship);
+        delete(relationship);
     }
 
     private void setAvatarAndRelation(HttpServletRequest request, Collection<User> users, RelationStatus status) {
@@ -2118,9 +1992,11 @@ public class DatabaseManager {
 
     private Collection<User> getFollowers(
             HttpServletRequest request,
-            long followingUserId, OffsetLimit offsetLimit) {
-        Collection<User> users =
-                getUsersByIdes(getRelationsIdesOf(followingUserId, offsetLimit, Relationship.FOLLOWS, false));
+            long followingUserId,
+            OffsetLimit offsetLimit,
+            RatingOrder order) {
+        Collection<User> users = getUsersByToUserIdInRelation(followingUserId, Relationship.FOLLOWS,
+                offsetLimit, order);
         setAvatarAndRelation(request, users, RelationStatus.followed);
 
         return users;
@@ -2128,22 +2004,28 @@ public class DatabaseManager {
 
     private Collection<User> getFollowingUsers(
             HttpServletRequest request,
-            long followerUserId, OffsetLimit offsetLimit) {
-        Collection<User> users =
-                getUsersByIdes(getRelationsIdesOf(followerUserId, offsetLimit, Relationship.FOLLOWS, true));
+            long followerUserId,
+            OffsetLimit offsetLimit,
+            RatingOrder order) {
+        Collection<User> users = getUsersByFromUserIdInRelation(followerUserId, Relationship.FOLLOWS,
+                offsetLimit, order);
         setAvatarAndRelation(request, users, RelationStatus.follows);
 
         return users;
     }
 
-    public Collection<User> getFollowingUsers(HttpServletRequest request, OffsetLimit offsetLimit) {
+    public Collection<User> getFollowingUsers(HttpServletRequest request,
+                                              OffsetLimit offsetLimit,
+                                              RatingOrder order) {
         User signedInUser = getSignedInUserOrThrow(request);
-        return getFollowingUsers(request, signedInUser.getId(), offsetLimit);
+        return getFollowingUsers(request, signedInUser.getId(), offsetLimit, order);
     }
 
-    public Collection<User> getFollowers(HttpServletRequest request, OffsetLimit offsetLimit) {
+    public Collection<User> getFollowers(HttpServletRequest request,
+                                         OffsetLimit offsetLimit,
+                                         RatingOrder order) {
         User signedInUser = getSignedInUserOrThrow(request);
-        return getFollowers(request, signedInUser.getId(), offsetLimit);
+        return getFollowers(request, signedInUser.getId(), offsetLimit, order);
     }
 
     public void unfollowUser(HttpServletRequest request, long toUserId) {
@@ -2151,63 +2033,56 @@ public class DatabaseManager {
         unfollowUser(fromUserId, toUserId);
     }
 
-    private Feed createFeedFromAction(HttpServletRequest request, Action action, boolean includeUser) {
-        Feed feed = new Feed();
-        feed.setAddingDate(action.getAddingDate());
+    private void fillActions(HttpServletRequest request, Iterable<Action> actions) {
+        for(Action action : actions){
+            fillAction(request, action);
+        }
+    }
 
-        Long photoId = action.getPhotoId();
-        if (photoId != null) {
-            Photo photo = getPhotoByIdOrThrow(photoId);
+    private void fillAction(HttpServletRequest request, Action action) {
+
+        Photo photo = action.getPhoto();
+        if (photo != null) {
             initPhotoUrl(photo, request);
             initYourLikeParameter(request, photo);
-            feed.setPhoto(photo);
         }
 
-        Photoquest photoquest = getPhotoQuestByIdOrThrow(action.getPhotoquestId());
-        feed.setPhotoquest(photoquest);
-
-        if (includeUser) {
-            User user = getUserByIdOrThrow(action.getUserId());
-            feed.setUser(user);
+        User user = action.getUser();
+        if (user != null) {
             setAvatar(request, user);
         }
-
-        return feed;
     }
 
-    private List<Feed> actionsToFeeds(HttpServletRequest request,
-                                      Iterable<Action> actions, boolean includeUser) {
-        List<Feed> feeds = new ArrayList<Feed>();
-        for(Action action : actions){
-            feeds.add(createFeedFromAction(request, action, includeUser));
-        }
-
-        return feeds;
-    }
-
-    public List<Feed> getNews(HttpServletRequest request, OffsetLimit offsetLimit) {
+    public Collection<Action> getNews(HttpServletRequest request, OffsetLimit offsetLimit) {
         User signedInUser = getSignedInUserOrThrow(request);
         Collection<Action> actions = advancedRequestsManager.getNews(signedInUser.getId(), offsetLimit);
-        return actionsToFeeds(request, actions, true);
+        fillActions(request, actions);
+        return actions;
     }
 
     public long getNewsCount(HttpServletRequest request) {
         User signedInUser = getSignedInUserOrThrow(request);
-        return advancedRequestsManager.getNewsCount(signedInUser.getId());
+        Feed feed = new Feed();
+        feed.setUserId(signedInUser.getId());
+        return mapper.getCountByPattern(feed);
     }
 
-    public List<Feed> getUserNews(HttpServletRequest request, long userId, OffsetLimit offsetLimit) {
+    public List<Action> getUserNews(HttpServletRequest request, long userId, OffsetLimit offsetLimit) {
         Action pattern = new Action();
         pattern.setUserId(userId);
-        Collection<Action> actions = DBUtilities.queryByPattern(persistenceManager, pattern, offsetLimit,
-                ADDING_DATE_ORDERING);
-        return actionsToFeeds(request, actions, false);
+        SelectParams params = new SelectParams();
+        params.foreignFieldsToFill = Arrays.asList("photoquest", "photo");
+        params.offsetLimit = offsetLimit;
+        params.ordering = "id desc";
+        List<Action> actions = mapper.queryByPattern(pattern, params);
+        fillActions(request, actions);
+        return actions;
     }
 
     public long getUserNewsCount(long userId) {
         Action pattern = new Action();
         pattern.setUserId(userId);
-        return DBUtilities.queryCountByPattern(persistenceManager, pattern);
+        return mapper.getCountByPattern(pattern);
     }
 
     public void clearRatingAndViews() {
@@ -2215,12 +2090,24 @@ public class DatabaseManager {
     }
 
     public void initDatabase() {
-        advancedRequestsManager.initDatabase();
+        OutputStream progressStream = null;
+        try {
+            progressStream = new FileOutputStream("progress.txt");
+        } catch (FileNotFoundException e) {
+
+        }
+        MysqlTablesCreator tablesCreator = new MysqlTablesCreator(mapper);
+        tablesCreator.updateAndCreateTables("com.tiksem.pq.data", progressStream, "\n");
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        persistenceManager.close();
+    public void clearDatabase() throws IOException {
+        new MysqlTablesCreator(mapper).clearDatabase();
+        if(!IOUtilities.deleteDirectory(new File("images"))){
+            throw new IOException("Unable to delete images");
+        }
+    }
+
+    public void dropTables() {
+        new MysqlTablesCreator(mapper).dropTables();
     }
 }

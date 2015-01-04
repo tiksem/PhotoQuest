@@ -1,25 +1,24 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.mysqljava.annotations.*;
 import com.utils.framework.google.places.Language;
 
-import javax.jdo.annotations.Index;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.annotations.Serialized;
 import java.util.EnumMap;
 import java.util.Map;
 
 /**
  * Created by CM on 12/1/2014.
  */
-@PersistenceCapable
+@Table
 public class Location {
     @PrimaryKey
     private String id;
-    @Index
+    @Stored
+    @NotNull
     private String countryCode;
 
     @Serialized
+    @NotNull
     private Map<Language, LocationInfo> info;
 
     public String getId() {
@@ -48,5 +47,13 @@ public class Location {
 
     public LocationInfo getInfo(Language language) {
         return info.get(language);
+    }
+
+    public Map<Language, LocationInfo> getInfo() {
+        return info;
+    }
+
+    public void setInfo(Map<Language, LocationInfo> info) {
+        this.info = info;
     }
 }
