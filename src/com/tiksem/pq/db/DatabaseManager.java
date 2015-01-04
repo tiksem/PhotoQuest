@@ -17,6 +17,7 @@ import com.utils.framework.randomuser.Gender;
 import com.utils.framework.randomuser.RandomUserGenerator;
 import com.utils.framework.randomuser.Response;
 import com.utils.framework.strings.Strings;
+import org.apache.commons.io.FileUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.Cookie;
@@ -1292,7 +1293,7 @@ public class DatabaseManager {
         like = like(request, like, photo.getUserId());
 
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
-        incrementLikesCount(request, photo, photoquest);
+        incrementLikesCount(photo, photoquest);
         updatePhotoquestAvatar(photoquest);
 
         return like;
@@ -1307,12 +1308,12 @@ public class DatabaseManager {
 
         like = like(request, like, comment.getUserId());
 
-        incrementLikesCount(request, comment);
+        incrementLikesCount(comment);
 
         return like;
     }
 
-    private void incrementLikesCount(HttpServletRequest request, Likable... likables) {
+    private void incrementLikesCount(Likable... likables) {
         for (Likable likable : likables) {
             likable.incrementLikesCount();
         }
@@ -1320,12 +1321,12 @@ public class DatabaseManager {
         replaceAll(likables);
     }
 
-    private void decrementLikesCount(HttpServletRequest request, Likable... likables) {
+    private void decrementLikesCount(Likable... likables) {
         for (Likable likable : likables) {
             likable.decrementLikesCount();
         }
 
-        replaceAll(request, likables);
+        replaceAll(likables);
     }
 
     private Like like(HttpServletRequest request, Like like, long toUserId) {
@@ -1345,7 +1346,8 @@ public class DatabaseManager {
 
         User toUser = getUserByIdOrThrow(toUserId);
         toUser.incrementUnreadRepliesCount();
-        insertAll(reply, toUser);
+        insert(reply);
+        replace(toUser);
 
         like.setUser(signedInUser);
 
@@ -1363,7 +1365,7 @@ public class DatabaseManager {
 
         if(commentId != null){
             Comment comment = getCommentByIdOrThrow(commentId);
-            decrementLikesCount(request, comment);
+            decrementLikesCount(comment);
         } else {
             if(photoId == null){
                 throw new RuntimeException("WTF?");
@@ -1371,7 +1373,7 @@ public class DatabaseManager {
 
             Photo photo = getPhotoByIdOrThrow(photoId);
             Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
-            decrementLikesCount(request, photo, photoquest);
+            decrementLikesCount(photo, photoquest);
             updatePhotoquestAvatar(photoquest);
         }
 
@@ -2114,9 +2116,7 @@ public class DatabaseManager {
 
     public void clearDatabase() throws IOException {
         new MysqlTablesCreator(mapper).clearDatabase();
-        if(!IOUtilities.removeDirectory(new File("images"))) {
-            throw new IOException("Unable to delete images");
-        }
+        FileUtils.deleteDirectory(new File("images"));
     }
 
     public void dropTables() {

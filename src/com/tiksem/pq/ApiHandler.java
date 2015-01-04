@@ -215,8 +215,8 @@ public class ApiHandler {
                  @RequestParam(value = "size", required = false) Integer height,
                  OutputStream outputStream)
             throws IOException {
+        InputStream inputStream = null;
         try {
-            InputStream inputStream = null;
             if (size == null) {
                 inputStream = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
             } else {
@@ -226,6 +226,10 @@ public class ApiHandler {
             IOUtils.copyLarge(inputStream, outputStream, new byte[1024 * 64]);
         } catch (Throwable e) {
             throw new RuntimeException(e);
+        } finally {
+            if(inputStream != null){
+                inputStream.close();
+            }
         }
     }
 

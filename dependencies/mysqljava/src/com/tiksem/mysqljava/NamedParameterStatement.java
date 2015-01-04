@@ -111,11 +111,7 @@ public class NamedParameterStatement {
      * @throws IllegalArgumentException if the parameter does not exist
      */
     private int[] getIndexes(String name) {
-        int[] indexes = (int[]) indexMap.get(name);
-        if (indexes == null) {
-            throw new IllegalArgumentException("Parameter not found: " + name);
-        }
-        return indexes;
+        return  (int[]) indexMap.get(name);
     }
 
 
@@ -130,11 +126,13 @@ public class NamedParameterStatement {
      */
     public void setObject(String name, Object value) throws SQLException {
         int[] indexes = getIndexes(name);
-        for (int i = 0; i < indexes.length; i++) {
-            if (value instanceof InputStream) {
-                statement.setBlob(indexes[i], (InputStream) value);
-            } else {
-                statement.setObject(indexes[i], value);
+        if (indexes != null) {
+            for (int i = 0; i < indexes.length; i++) {
+                if (value instanceof InputStream) {
+                    statement.setBlob(indexes[i], (InputStream) value);
+                } else {
+                    statement.setObject(indexes[i], value);
+                }
             }
         }
     }

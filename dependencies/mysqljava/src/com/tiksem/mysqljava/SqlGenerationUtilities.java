@@ -561,13 +561,13 @@ public class SqlGenerationUtilities {
             String primaryKeyName = primaryKey.getName();
             where = "`" + primaryKeyName + "` = :" + primaryKeyName;
         } else {
-            where = generatePatternWhereClosure(object);
+            where = generatePatternWhereClosure(object, fields);
             if(whereTransformer != null){
                 where = whereTransformer.get(where);
             }
         }
 
-        String result = "DELETE FROM " + object.getClass().getSimpleName();
+        String result = "DELETE FROM " + quotedClassName(object.getClass());
         if(!Strings.isEmpty(where)){
             result += " WHERE " + where;
         }

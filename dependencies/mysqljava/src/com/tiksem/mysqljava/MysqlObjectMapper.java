@@ -491,7 +491,7 @@ public class MysqlObjectMapper {
 
     public void deleteAll(Iterable<Object> objects) {
         for(Object object : objects){
-            List<Field> fields = Reflection.getAllFields(object);
+            List<Field> fields = SqlGenerationUtilities.getFields(object);
             Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
             String sql = SqlGenerationUtilities.delete(object, fields);
             executeNonSelectSQL(sql, args);
