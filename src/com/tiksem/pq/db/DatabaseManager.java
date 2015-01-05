@@ -4,6 +4,7 @@ import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.MysqlTablesCreator;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.mysqljava.SelectParams;
+import com.tiksem.pq.AsyncTaskManager;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.Likable;
 import com.tiksem.pq.data.response.ReplyResponse;
@@ -1285,16 +1286,21 @@ public class DatabaseManager {
     }
 
     public Like likePhoto(HttpServletRequest request, long photoId) {
-        Photo photo = getPhotoByIdOrThrow(photoId);
+        final Photo photo = getPhotoByIdOrThrow(photoId);
 
         Like like = new Like();
         like.setPhotoId(photoId);
 
         like = like(request, like, photo.getUserId());
 
-        Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
-        incrementLikesCount(photo, photoquest);
-        updatePhotoquestAvatar(photoquest);
+        final Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+        AsyncTaskManager.getInstance().executeAsync(new Runnable() {
+            @Override
+            public void run() {
+                incrementLikesCount(photo, photoquest);
+                updatePhotoquestAvatar(photoquest);
+            }
+        });
 
         return like;
     }
@@ -1329,7 +1335,7 @@ public class DatabaseManager {
         replaceAll(likables);
     }
 
-    private Like like(HttpServletRequest request, Like like, long toUserId) {
+    private Like like(HttpServletRequest request, final Like like, final long toUserId) {
         User signedInUser = getSignedInUserOrThrow(request);
         like.setUserId(signedInUser.getId());
 
@@ -1339,15 +1345,20 @@ public class DatabaseManager {
 
         insert(like);
 
-        Reply reply = new Reply();
-        reply.setId(like.getId());
-        reply.setUserId(toUserId);
-        reply.setType(Reply.LIKE);
+        AsyncTaskManager.getInstance().executeAsync(new Runnable() {
+            @Override
+            public void run() {
+                Reply reply = new Reply();
+                reply.setId(like.getId());
+                reply.setUserId(toUserId);
+                reply.setType(Reply.LIKE);
 
-        User toUser = getUserByIdOrThrow(toUserId);
-        toUser.incrementUnreadRepliesCount();
-        insert(reply);
-        replace(toUser);
+                User toUser = getUserByIdOrThrow(toUserId);
+                toUser.incrementUnreadRepliesCount();
+                insert(reply);
+                replace(toUser);
+            }
+        });
 
         like.setUser(signedInUser);
 
@@ -1360,32 +1371,39 @@ public class DatabaseManager {
             throw new PermissionDeniedException("Unable to unlike like owned by another user");
         }
 
-        Long photoId = like.getPhotoId();
-        Long commentId = like.getCommentId();
+        final Long photoId = like.getPhotoId();
+        final Long commentId = like.getCommentId();
 
-        if(commentId != null){
-            Comment comment = getCommentByIdOrThrow(commentId);
-            decrementLikesCount(comment);
-        } else {
-            if(photoId == null){
-                throw new RuntimeException("WTF?");
+        AsyncTaskManager.getInstance().executeAsync(new Runnable() {
+            @Override
+            public void run() {
+                if(commentId != null){
+                    Comment comment = getCommentByIdOrThrow(commentId);
+                    decrementLikesCount(comment);
+                } else {
+                    if(photoId == null){
+                        throw new RuntimeException("WTF?");
+                    }
+
+                    Photo photo = getPhotoByIdOrThrow(photoId);
+                    Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+                    decrementLikesCount(photo, photoquest);
+                    updatePhotoquestAvatar(photoquest);
+                }
             }
+        });
 
-            Photo photo = getPhotoByIdOrThrow(photoId);
-            Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
-            decrementLikesCount(photo, photoquest);
-            updatePhotoquestAvatar(photoquest);
-        }
-
-        Reply reply = getReplyByLikeId(likeId);
-
-        List<Object> forDel = new ArrayList<Object>();
-        forDel.add(like);
+        final Reply reply = getReplyByLikeId(likeId);
         if(reply != null){
-            forDel.add(reply);
+            AsyncTaskManager.getInstance().executeAsync(new Runnable() {
+                @Override
+                public void run() {
+                    delete(reply);
+                }
+            });
         }
 
-        deleteAll(forDel);
+        delete(like);
     }
 
     private Dialog updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
@@ -1573,7 +1591,9 @@ public class DatabaseManager {
         signedInUser.incrementSentRequestsCount();
         friend.incrementReceivedRequestsCount();
 
-        replaceAll(friendRequest, signedInUser, friend);
+
+        replaceAll(signedInUser, friend);
+        insert(friendRequest);
         return friendRequest;
     }
 
@@ -1621,7 +1641,8 @@ public class DatabaseManager {
         reply.setUserId(friend.getId());
 
         friend.incrementUnreadRepliesCount();
-        replaceAll(request, friend, reply);
+        replace(friend);
+        insert(reply);
     }
 
     private void declineFriendRequest(HttpServletRequest request, long userId) {

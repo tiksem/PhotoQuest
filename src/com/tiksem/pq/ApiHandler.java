@@ -12,6 +12,7 @@ import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.test.Eblo;
 import com.tiksem.pq.test.EbloInfo;
 import com.utils.framework.strings.Strings;
+import com.utils.framework.system.SystemUtilities;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -35,8 +37,17 @@ public class ApiHandler {
     @Autowired
     private HttpServletRequest request;
 
+    @Autowired
+    private HttpSession httpSession;
+
     private DatabaseManager getDatabaseManager() {
-        return new DatabaseManager();
+        DatabaseManager databaseManager = (DatabaseManager) httpSession.getAttribute("db");
+        if(databaseManager == null){
+            databaseManager = new DatabaseManager();
+            httpSession.setAttribute("db", databaseManager);
+        }
+
+        return databaseManager;
     }
     
     @RequestMapping("/")
@@ -493,14 +504,23 @@ public class ApiHandler {
 
     @RequestMapping("/like")
     public @ResponseBody Object like(@RequestParam(value = "photoId", required = false) Long photoId,
-                                     @RequestParam(value = "commentId", required = false) Long commentId){
-        checkLikeCommentParams(photoId, commentId);
+                                     @RequestParam(value = "commentId", required = false) Long commentId) {
+        long currentTimeMillis = System.currentTimeMillis();
+        long creationTime = 0;
+        try {
+            checkLikeCommentParams(photoId, commentId);
 
-        DatabaseManager databaseManager = getDatabaseManager();
-        if(photoId != null){
-            return databaseManager.likePhoto(request, photoId);
-        } else {
-            return databaseManager.likeComment(request, commentId);
+            DatabaseManager databaseManager = getDatabaseManager();
+            creationTime = System.currentTimeMillis() - currentTimeMillis;
+            if (photoId != null) {
+                return databaseManager.likePhoto(request, photoId);
+            } else {
+                return databaseManager.likeComment(request, commentId);
+            }
+        } finally {
+            long a = System.currentTimeMillis() - currentTimeMillis;
+            a++;
+            creationTime++;
         }
     }
 
@@ -574,5 +594,21 @@ public class ApiHandler {
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql) {
         MysqlObjectMapper mapper = new MysqlObjectMapper();
         return mapper.executeSelectSql(sql);
+    }
+
+    @RequestMapping("/test")
+    public @ResponseBody Object executeSQL(@RequestParam("sql") String sql,
+                                           @RequestParam("count") int count) {
+        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        final long time = System.currentTimeMillis();
+        for (int i = 0; i < count; i++) {
+            mapper.executeNonSelectSQL(sql);
+        }
+
+        return new HashMap<String, Object>() {
+            {
+                put("time", System.currentTimeMillis() - time);
+            }
+        };
     }
 }
