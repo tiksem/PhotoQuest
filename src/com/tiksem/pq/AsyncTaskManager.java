@@ -1,6 +1,5 @@
 package com.tiksem.pq;
 
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -10,7 +9,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class AsyncTaskManager {
     private static AsyncTaskManager instance;
-    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 1,
+    private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors(), 1000,
+            100000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+
+    private ThreadPoolExecutor lowPriorityExecutor = new ThreadPoolExecutor(1, 1,
             100000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
     public synchronized static AsyncTaskManager getInstance() {
@@ -23,5 +26,9 @@ public class AsyncTaskManager {
 
     public void executeAsync(Runnable runnable) {
         threadPoolExecutor.execute(runnable);
+    }
+
+    public void executeLowPriorityAsyncTask(Runnable runnable) {
+        lowPriorityExecutor.execute(runnable);
     }
 }

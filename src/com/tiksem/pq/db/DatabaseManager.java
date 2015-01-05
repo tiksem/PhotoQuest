@@ -1441,24 +1441,30 @@ public class DatabaseManager {
         return dialog;
     }
 
-    private Message addMessage(User fromUser, User toUser, String messageText) {
+    private Message addMessage(User fromUser, final User toUser, String messageText) {
         toUser.incrementUnreadMessagesCount();
 
-        long fromUserId = fromUser.getId();
-        long toUserId = toUser.getId();
+        final long fromUserId = fromUser.getId();
+        final long toUserId = toUser.getId();
 
-        Message message = new Message();
+        final Message message = new Message();
         message.setFromUserId(fromUserId);
         message.setToUserId(toUserId);
         message.setMessage(messageText);
 
         insert(message);
 
-        Dialog dialog = updateDialog(fromUserId, toUserId, message.getAddingDate(), message.getId());
-        message.setDialogId(dialog.getId());
-        replace(message);
+        AsyncTaskManager.getInstance().executeAsync(new Runnable() {
+            @Override
+            public void run() {
+                Dialog dialog = updateDialog(fromUserId, toUserId, message.getAddingDate(), message.getId());
+                message.setDialogId(dialog.getId());
+                replace(message);
 
-        replace(toUser);
+                replace(toUser);
+            }
+        });
+
         return message;
     }
 
@@ -1518,7 +1524,7 @@ public class DatabaseManager {
         Message pattern = new Message();
         pattern.setDialogId(dialog.getId());
 
-        Collection<Message> messages = mapper.queryByPattern(pattern, offsetLimit);
+        Collection<Message> messages = mapper.queryByPattern(pattern, offsetLimit, "id desc");
         List forUpdate = new ArrayList();
 
         int readMessagesCount = 0;

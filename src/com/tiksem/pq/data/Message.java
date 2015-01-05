@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tiksem.mysqljava.annotations.*;
 
 /**
@@ -12,6 +13,7 @@ public class Message {
     private Long id;
 
     @Index(indexType = IndexType.HASH)
+    @JsonIgnore
     private Long dialogId;
 
     @Stored

@@ -546,6 +546,37 @@ public class SqlGenerationUtilities {
         return delete(object, fields, null);
     }
 
+    public static String incrementOrDecrement(Object object,
+                                              List<Field> fields,
+                                              String incrementFieldName,
+                                              boolean increment) {
+        Field primaryKey = Reflection.getFieldWithAnnotation(fields, PrimaryKey.class);
+        Object id = null;
+        if (primaryKey != null) {
+            id = Reflection.getFieldValueUsingGetter(object, primaryKey);
+        }
+        String where = null;
+
+        if(id != null){
+            String primaryKeyName = primaryKey.getName();
+            if(primaryKeyName.equals(incrementFieldName)){
+                throw new IllegalArgumentException("incrementFieldName should not be " +
+                        "PrimaryKey");
+            }
+
+            where = "`" + primaryKeyName + "` = :" + primaryKeyName;
+        } else {
+            where = generatePatternWhereClosure(object, fields);
+        }
+
+        String result = "DELETE FROM " + quotedClassName(object.getClass());
+        if(!Strings.isEmpty(where)){
+            result += " WHERE " + where;
+        }
+
+        return result;
+    }
+
     public static String delete(Object object,
                                 List<Field> fields,
                               CollectionUtils.Transformer<String, String>
