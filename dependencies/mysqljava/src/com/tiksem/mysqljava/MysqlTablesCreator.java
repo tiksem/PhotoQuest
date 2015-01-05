@@ -40,11 +40,7 @@ public class MysqlTablesCreator {
         }
     }
 
-    public void updateAndCreateTables(String packageName, OutputStream progress, String endOfLine) {
-        this.progress = progress;
-        this.endOfLine = endOfLine;
-
-        List<Class<?>> classesInPackage = Reflection.findClassesInPackage(packageName);
+    public void updateAndCreateTables(List<Class<?>> classesInPackage, OutputStream progress, String endOfLine) {
         classesInPackage = CollectionUtils.findAll(classesInPackage, new Predicate<Class<?>>() {
             @Override
             public boolean check(Class<?> item) {
@@ -76,6 +72,14 @@ public class MysqlTablesCreator {
             writeProgress(aClass.getSimpleName());
         }
         writeProgress("Success!");
+    }
+
+    public void updateAndCreateTables(String packageName, OutputStream progress, String endOfLine) {
+        this.progress = progress;
+        this.endOfLine = endOfLine;
+
+        List<Class<?>> classesInPackage = Reflection.findClassesInPackage(packageName);
+        updateAndCreateTables(classesInPackage, progress, endOfLine);
     }
 
     public void createTable(Class aClass) {

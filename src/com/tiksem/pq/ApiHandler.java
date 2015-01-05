@@ -11,6 +11,8 @@ import com.tiksem.pq.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.tiksem.pq.test.Eblo;
 import com.tiksem.pq.test.EbloInfo;
+import com.utils.framework.CollectionUtils;
+import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
 import com.utils.framework.system.SystemUtilities;
 import org.apache.commons.io.IOUtils;
@@ -534,6 +536,17 @@ public class ApiHandler {
     public @ResponseBody Object initDatabase() {
         getDatabaseManager().initDatabase();
         return new Success();
+    }
+
+    @RequestMapping("/getTables")
+    public @ResponseBody Object getTables() {
+        return CollectionUtils.transform(Reflection.findClassesInPackage("com.tiksem.pq.data"),
+                new CollectionUtils.Transformer<Class<?>, String>() {
+                    @Override
+                    public String get(Class<?> aClass) {
+                        return aClass.getSimpleName();
+                    }
+                });
     }
 
     @RequestMapping("/clearDatabase")

@@ -2142,7 +2142,28 @@ public class DatabaseManager {
 
         }
         MysqlTablesCreator tablesCreator = new MysqlTablesCreator(mapper);
-        tablesCreator.updateAndCreateTables("com.tiksem.pq.data", progressStream, "\n");
+        tablesCreator.updateAndCreateTables(Arrays.asList(
+                Action.class,
+                Comment.class,
+                Dialog.class,
+                Feed.class,
+                FollowingPhotoquest.class,
+                Likable.class,
+                Like.class,
+                Location.class,
+                Message.class,
+                PerformedPhotoquest.class,
+                Photo.class,
+                Photoquest.class,
+                PhotoquestSearch.class,
+                PhotoquestView.class,
+                PhotoView.class,
+                ProfileView.class,
+                Relationship.class,
+                RelationStatus.class,
+                Reply.class,
+                User.class
+        ), progressStream, "\n");
     }
 
     public void clearDatabase() throws IOException {
