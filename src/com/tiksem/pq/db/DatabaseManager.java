@@ -1433,8 +1433,8 @@ public class DatabaseManager {
             dialog.setUser1Id(user2Id);
             mapper.updateUsingPattern(pattern, dialog);
         } else {
-            Long maxId = mapper.max(Dialog.class, "id", 0l);
-            dialog.setId(maxId);
+            long maxId = mapper.max(Dialog.class, "id", 0l);
+            dialog.setId(maxId + 1);
             insert(dialog);
             dialog.setUser2Id(user1Id);
             dialog.setUser1Id(user2Id);
