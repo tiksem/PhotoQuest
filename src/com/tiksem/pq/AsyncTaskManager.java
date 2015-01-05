@@ -15,7 +15,7 @@ public class AsyncTaskManager {
 
     public synchronized static AsyncTaskManager getInstance() {
         if(instance == null){
-            return new AsyncTaskManager();
+            instance = new AsyncTaskManager();
         }
 
         return instance;
