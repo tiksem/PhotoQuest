@@ -352,6 +352,21 @@ public class MysqlObjectMapper {
         }
     }
 
+    public void changeValue(Object object, String fieldName, int diff) {
+        List<Field> fields = SqlGenerationUtilities.getFields(object);
+        Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
+        String sql = SqlGenerationUtilities.changeValue(object, fields, fieldName, diff);
+        executeNonSelectSQL(sql);
+    }
+
+    public void increment(Object object, String fieldName) {
+        changeValue(object, fieldName, 1);
+    }
+
+    public void decrement(Object object, String fieldName) {
+        changeValue(object, fieldName, -1);
+    }
+
     public <T> T getObjectWithMaxFieldByPattern(T pattern, String fieldName, T defaultValue) {
         List<T> objects = queryByPattern(pattern, new OffsetLimit(0, 1), fieldName + " desc");
         if(objects.isEmpty()){

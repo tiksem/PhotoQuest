@@ -1335,6 +1335,10 @@ public class DatabaseManager {
         replaceAll(likables);
     }
 
+    private void incrementUnreadRepliesCount(User user) {
+        mapper.increment(user, "unreadRepliesCount");
+    }
+
     private Like like(HttpServletRequest request, final Like like, final long toUserId) {
         User signedInUser = getSignedInUserOrThrow(request);
         like.setUserId(signedInUser.getId());
@@ -1354,9 +1358,8 @@ public class DatabaseManager {
                 reply.setType(Reply.LIKE);
 
                 User toUser = getUserByIdOrThrow(toUserId);
-                toUser.incrementUnreadRepliesCount();
+                incrementUnreadRepliesCount(toUser);
                 insert(reply);
-                replace(toUser);
             }
         });
 

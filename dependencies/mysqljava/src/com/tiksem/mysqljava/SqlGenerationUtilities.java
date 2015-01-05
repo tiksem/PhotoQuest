@@ -4,13 +4,9 @@ import com.tiksem.mysqljava.annotations.*;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
-import org.springframework.integration.ip.util.RegexUtils;
-import sun.misc.Regexp;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Created by CM on 12/27/2014.
@@ -423,22 +419,23 @@ public class SqlGenerationUtilities {
             throw new IllegalArgumentException("resultClasses are empty");
         }
 
-        Set<Class> resultClassesSet = new HashSet<Class>(resultClasses);
         Set<Class> fromClasses = new HashSet<Class>(resultClasses);
 
-        List<String> foreignWhereParts = new ArrayList<String>();
+        List<String> foreignJoinParts = new ArrayList<String>();
 
         for(Foreign foreign : foreigns){
             ForeignKey foreignKey = Reflection.getAnnotationOrThrow(foreign.foreignField, ForeignKey.class);
             String parentFieldName = foreignKey.field();
             Class parent = foreignKey.parent();
-            fromClasses.add(parent);
-            fromClasses.add(foreign.childClass);
-            resultClassesSet.add(parent);
+            String parentName = parent.getSimpleName();
 
-            String part = quotedClassName(parent) + "." + parentFieldName + "=" +
-                    quotedClassName(foreign.childClass) + "." + foreign.foreignField.getName();
-            foreignWhereParts.add(part);
+            String foreignFieldName = foreign.foreignField.getName();
+            String parentAlias = parentName + "_" +
+                    foreignFieldName;
+            String part = "RIGHT JOIN " + quotedClassName(parent) + " AS " + parentAlias + " ON " +
+                    quotedClassName(foreign.childClass) + "." + foreignFieldName + "=" + parentAlias +
+                    "." + parentFieldName;
+            foreignJoinParts.add(part);
         }
 
         String from = Strings.join(", ", CollectionUtils.transform(fromClasses,
@@ -449,33 +446,18 @@ public class SqlGenerationUtilities {
             }
         })).toString();
 
-        String selectResult = Strings.join(", ",
-                CollectionUtils.transform(resultClassesSet,
-                        new CollectionUtils.Transformer<Class, CharSequence>() {
-                            @Override
-                            public CharSequence get(Class aClass) {
-                                return quotedClassName(aClass) + ".*";
-                            }
-                        })).toString();
-
         String where = "";
         if (pattern != null) {
             where = generatePatternWhereClosure(pattern, getFields(pattern));
-        }
-
-        if(!foreignWhereParts.isEmpty()){
-            if (!Strings.isEmpty(where)) {
-                where = "(" + where + ") AND (" + Strings.join(" AND ", foreignWhereParts) + ")";
-            } else {
-                where = Strings.join(" AND ", foreignWhereParts).toString();
-            }
         }
 
         if(selectParams.whereTransformer != null){
             where = selectParams.whereTransformer.get(where);
         }
 
-        String query = "SELECT " + selectResult + " FROM " + from;
+        String query = "SELECT * FROM " + from;
+        query += " " + Strings.join(" ", foreignJoinParts) + " ";
+
         if(!Strings.isEmpty(where)){
             query += " WHERE " + where;
         }
@@ -546,10 +528,10 @@ public class SqlGenerationUtilities {
         return delete(object, fields, null);
     }
 
-    public static String incrementOrDecrement(Object object,
-                                              List<Field> fields,
-                                              String incrementFieldName,
-                                              boolean increment) {
+    public static String changeValue(Object object,
+                                     List<Field> fields,
+                                     String fieldToChange,
+                                     int value) {
         Field primaryKey = Reflection.getFieldWithAnnotation(fields, PrimaryKey.class);
         Object id = null;
         if (primaryKey != null) {
@@ -559,8 +541,8 @@ public class SqlGenerationUtilities {
 
         if(id != null){
             String primaryKeyName = primaryKey.getName();
-            if(primaryKeyName.equals(incrementFieldName)){
-                throw new IllegalArgumentException("incrementFieldName should not be " +
+            if(primaryKeyName.equals(fieldToChange)){
+                throw new IllegalArgumentException("fieldToChange should not be " +
                         "PrimaryKey");
             }
 
@@ -569,7 +551,10 @@ public class SqlGenerationUtilities {
             where = generatePatternWhereClosure(object, fields);
         }
 
-        String result = "DELETE FROM " + quotedClassName(object.getClass());
+        String result = "UPDATE " + quotedClassName(object.getClass());
+        fieldToChange = Strings.quote(fieldToChange, "`");
+        result += " SET " + fieldToChange + " = " + fieldToChange + " + " + value;
+
         if(!Strings.isEmpty(where)){
             result += " WHERE " + where;
         }
