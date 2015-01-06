@@ -328,13 +328,6 @@ public class MysqlTablesCreator {
             indexesMapKeysIterator.remove();
             indexesClassMap.remove(indexName);
 
-            boolean sameIndexType = index.getINDEX_TYPE().equalsIgnoreCase(multipleIndex.indexType().toString());
-            if(!sameIndexType){
-                dropIndex(indexName, tableName);
-                addIndex(tableName, multipleIndex);
-                continue;
-            }
-
             boolean indexUnique = index.getNON_UNIQUE().equals("0");
             if(indexUnique != multipleIndex.isUnique()){
                 dropIndex(indexName, tableName);
@@ -369,10 +362,6 @@ public class MysqlTablesCreator {
         out.indexType = SqlGenerationUtilities.getIndexType(field);
 
         if(out.isUnique != currentIsUnique){
-            return true;
-        }
-
-        if(!index.getINDEX_TYPE().equals(out.indexType.toString())){
             return true;
         }
 
