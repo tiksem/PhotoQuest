@@ -410,16 +410,22 @@ public class SqlGenerationUtilities {
         return sql;
     }
 
-    public static String select(List<Class> resultClasses,
+    public static String select(List<Class> fromClasses,
+                                List<Foreign> foreigns,
+                                Object pattern,
+                                SelectParams selectParams) {
+        return select(fromClasses, null, foreigns, pattern, selectParams);
+    }
+
+    public static String select(List<Class> fromClasses,
+                                List<String> resultClasses,
                                 List<Foreign> foreigns,
                                 Object pattern,
                                 SelectParams selectParams
                                 ) {
-        if(resultClasses.isEmpty()){
-            throw new IllegalArgumentException("resultClasses are empty");
+        if(fromClasses.isEmpty()){
+            throw new IllegalArgumentException("fromClasses are empty");
         }
-
-        Set<Class> fromClasses = new HashSet<Class>(resultClasses);
 
         List<String> foreignJoinParts = new ArrayList<String>();
 
@@ -455,7 +461,20 @@ public class SqlGenerationUtilities {
             where = selectParams.whereTransformer.get(where);
         }
 
-        String query = "SELECT * FROM " + from;
+        String result;
+        if(resultClasses == null || resultClasses.isEmpty()){
+            result = "*";
+        } else {
+            result = Strings.join(", ", CollectionUtils.transform(resultClasses,
+                    new CollectionUtils.Transformer<String, CharSequence>() {
+                @Override
+                public CharSequence get(String aClass) {
+                    return "`" + aClass + "`.*";
+                }
+            })).toString();
+        }
+
+        String query = "SELECT " + result + " FROM " + from;
         query += " " + Strings.join(" ", foreignJoinParts) + " ";
 
         if(!Strings.isEmpty(where)){

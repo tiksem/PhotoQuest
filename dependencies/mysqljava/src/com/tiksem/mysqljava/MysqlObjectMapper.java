@@ -215,7 +215,7 @@ public class MysqlObjectMapper {
 
     public <T, Foreign> List<T> queryByForeignPattern(
             Foreign pattern,
-            Class<T> resultClass,
+            Class resultClass,
             String foreignFieldName,
             SelectParams selectParams) {
         List<String> foreignFieldNames = selectParams.foreignFieldsToFill;
@@ -226,8 +226,18 @@ public class MysqlObjectMapper {
         foreign.childClass = pattern.getClass();
         foreigns.add(foreign);
 
+        if(selectParams.ordering != null && !selectParams.ordering.contains(".")){
+            selectParams.ordering = "`" + resultClass.getSimpleName() + "_" +
+                    foreignFieldName +
+                    "`." + selectParams.ordering;
+        }
+
         String sql =
-                SqlGenerationUtilities.select(Arrays.<Class>asList(resultClass), foreigns, pattern, selectParams);
+                SqlGenerationUtilities.select(
+                        Arrays.<Class>asList(pattern.getClass()),
+                        foreigns,
+                        pattern,
+                        selectParams);
         return getListFromPattern(sql, pattern, resultClass,
                 selectParams.foreignFieldsToFill);
     }

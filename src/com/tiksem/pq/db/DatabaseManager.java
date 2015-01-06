@@ -1038,7 +1038,7 @@ public class DatabaseManager {
         SelectParams selectParams = new SelectParams();
         selectParams.ordering = getPeopleOrderBy(order) + " desc";
         selectParams.offsetLimit = offsetLimit;
-        return mapper.queryByForeignPattern(relationship, User.class, "fromUserId", selectParams);
+        return mapper.queryByForeignPattern(relationship, User.class, "toUserId", selectParams);
     }
 
     public List<User> getUsersByToUserIdInRelation(long toUserId, int relationType,
@@ -1608,7 +1608,7 @@ public class DatabaseManager {
         if(relationship.getType() == Relationship.FRIEND_REQUEST){
             fromUser.decrementSentRequestsCount();
             toUser.decrementReceivedRequestsCount();
-            replaceAll(request, fromUser, toUser);
+            replaceAll(fromUser, toUser);
         }
 
         delete(relationship);
