@@ -1857,6 +1857,7 @@ public class DatabaseManager {
             }
 
             replyResponse.setType(type);
+            replyResponse.setAddingDate(reply.getAddingDate());
             setAvatar(request, user);
             replyResponse.setUser(user);
             replyResponses.add(replyResponse);

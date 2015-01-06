@@ -12,6 +12,7 @@ public class ReplyResponse {
     private Comment comment;
     private User user;
     private Like like;
+    private long addingDate;
 
     public ReplyResponse() {
     }
@@ -46,5 +47,13 @@ public class ReplyResponse {
 
     public void setLike(Like like) {
         this.like = like;
+    }
+
+    public long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(long addingDate) {
+        this.addingDate = addingDate;
     }
 }
