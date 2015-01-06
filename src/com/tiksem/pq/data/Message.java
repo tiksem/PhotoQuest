@@ -21,7 +21,7 @@ public class Message {
     @Stored
     private Long toUserId;
 
-    @Stored
+    @Stored(type = "VARCHAR(255)")
     private String message;
 
     @Stored

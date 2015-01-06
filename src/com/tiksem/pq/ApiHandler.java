@@ -452,6 +452,10 @@ public class ApiHandler {
     public @ResponseBody Object sendMessage(
             @RequestParam(value = "toUserId", required = true) Long toUserId,
             @RequestParam(value = "message", required = true) String message) {
+        if(message.length() > 255){
+            throw new IllegalArgumentException("message.length > 255");
+        }
+
         return getDatabaseManager().addMessage(request, toUserId, message);
     }
 
