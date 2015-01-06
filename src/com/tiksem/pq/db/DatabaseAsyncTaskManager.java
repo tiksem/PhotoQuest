@@ -22,7 +22,7 @@ public class DatabaseAsyncTaskManager {
     private class ThreadFactoryImpl implements ThreadFactory {
         @Override
         public Thread newThread(Runnable r) {
-            Thread thread = new Thread();
+            Thread thread = new Thread(r);
             databaseManagers.put(thread, new DatabaseManager());
             return thread;
         }
