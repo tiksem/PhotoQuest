@@ -45,10 +45,12 @@ public class DatabaseManager {
     private ImageManager imageManager = new FileSystemImageManager("images", "magic");
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
+    private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
 
     public DatabaseManager() {
         mapper = new MysqlObjectMapper();
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
+        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
     }
 
     private <T> T replace(T object) {
@@ -1291,7 +1293,7 @@ public class DatabaseManager {
         like = like(request, like, photo.getUserId());
 
         final Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
-        DatabaseAsyncTaskManager.getInstance().executeAsyncTask(new Task() {
+        asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
                 databaseManager.incrementLikesCount(photo, photoquest);
@@ -1342,7 +1344,7 @@ public class DatabaseManager {
 
         insert(like);
 
-        DatabaseAsyncTaskManager.getInstance().executeAsyncTask(new Task() {
+        asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
                 Reply reply = new Reply();
@@ -1370,14 +1372,14 @@ public class DatabaseManager {
         final Long photoId = like.getPhotoId();
         final Long commentId = like.getCommentId();
 
-        DatabaseAsyncTaskManager.getInstance().executeAsyncTask(new Task() {
+        asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
-                if(commentId != null){
+                if (commentId != null) {
                     Comment comment = databaseManager.getCommentByIdOrThrow(commentId);
                     databaseManager.decrementLikesCount(comment);
                 } else {
-                    if(photoId == null){
+                    if (photoId == null) {
                         throw new RuntimeException("WTF?");
                     }
 
@@ -1391,7 +1393,7 @@ public class DatabaseManager {
 
         final Reply reply = getReplyByLikeId(likeId);
         if(reply != null){
-            DatabaseAsyncTaskManager.getInstance().executeAsyncTask(new Task() {
+            asyncTaskHandler.execute(new Task() {
                 @Override
                 public void run(DatabaseManager databaseManager) {
                     databaseManager.delete(reply);
@@ -1450,7 +1452,7 @@ public class DatabaseManager {
 
         insert(message);
 
-        DatabaseAsyncTaskManager.getInstance().executeAsyncTask(new Task() {
+        asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
                 Dialog dialog = databaseManager.updateDialog(

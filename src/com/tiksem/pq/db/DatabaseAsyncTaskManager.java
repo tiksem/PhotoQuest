@@ -1,6 +1,8 @@
 package com.tiksem.pq.db;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Queue;
 import java.util.WeakHashMap;
 import java.util.concurrent.*;
 
@@ -13,11 +15,8 @@ public class DatabaseAsyncTaskManager {
             Runtime.getRuntime().availableProcessors(), 1000,
             100000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
-    private WeakHashMap<Thread, DatabaseManager> databaseManagers =
-            new WeakHashMap<Thread, DatabaseManager>();
-
-    private ThreadPoolExecutor lowPriorityExecutor = new ThreadPoolExecutor(1, 1,
-            100000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+    private Map<Thread, DatabaseManager> databaseManagers =
+            Collections.synchronizedMap(new WeakHashMap<Thread, DatabaseManager>());
 
     private class ThreadFactoryImpl implements ThreadFactory {
         @Override
@@ -36,10 +35,35 @@ public class DatabaseAsyncTaskManager {
         return instance;
     }
 
+    public class Handler {
+        private Queue<Task> queue = new ConcurrentLinkedQueue<Task>();
+        private int threadHashCode = System.identityHashCode(Thread.currentThread());
+
+        public void execute(final Task task) {
+            if(System.identityHashCode(Thread.currentThread()) != threadHashCode){
+                throw new IllegalStateException("Only one thread can use handler");
+            }
+
+            if(queue.isEmpty()){
+                executeOnExecutor(threadPoolExecutor, new Task() {
+                    @Override
+                    public void run(DatabaseManager databaseManager) {
+                        queue.add(task);
+                        while (!queue.isEmpty()) {
+                            Task task = queue.remove();
+                            task.run(databaseManager);
+                        }
+                    }
+                });
+            } else {
+                queue.add(task);
+            }
+        }
+    }
+
     private DatabaseAsyncTaskManager() {
         ThreadFactory threadFactory = new ThreadFactoryImpl();
         threadPoolExecutor.setThreadFactory(threadFactory);
-        lowPriorityExecutor.setThreadFactory(threadFactory);
     }
 
     private void executeOnExecutor(Executor executor, final Task task) {
@@ -53,11 +77,7 @@ public class DatabaseAsyncTaskManager {
         });
     }
 
-    public void executeAsyncTask(final Task task) {
-        executeOnExecutor(threadPoolExecutor, task);
-    }
-
-    public void executeLowPriorityAsyncTask(final Task task) {
-        executeOnExecutor(lowPriorityExecutor, task);
+    public Handler createHandler() {
+        return new Handler();
     }
 }

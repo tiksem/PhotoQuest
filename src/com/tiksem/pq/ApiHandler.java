@@ -43,12 +43,7 @@ public class ApiHandler {
     private HttpSession httpSession;
 
     private DatabaseManager getDatabaseManager() {
-        DatabaseManager databaseManager = (DatabaseManager) httpSession.getAttribute("db");
-        if(databaseManager == null){
-            databaseManager = new DatabaseManager();
-            httpSession.setAttribute("db", databaseManager);
-        }
-
+        DatabaseManager databaseManager = new DatabaseManager();
         return databaseManager;
     }
     
