@@ -457,6 +457,14 @@ public class SqlGenerationUtilities {
             where = generatePatternWhereClosure(pattern, getFields(pattern));
         }
 
+        if(selectParams.additionalWhereClosure != null){
+            if(!Strings.isEmpty(where)){
+                where = "(" + where + ") AND (" + selectParams.additionalWhereClosure + ")";
+            } else {
+                where = selectParams.additionalWhereClosure;
+            }
+        }
+
         if(selectParams.whereTransformer != null){
             where = selectParams.whereTransformer.get(where);
         }

@@ -1254,12 +1254,7 @@ public class DatabaseManager {
         selectParams.ordering = "id desc";
 
         if (afterId != null) {
-            selectParams.whereTransformer = new CollectionUtils.Transformer<String, String>() {
-                @Override
-                public String get(String where) {
-                    return "(" + where + ") AND id > " + afterId;
-                }
-            };
+            selectParams.additionalWhereClosure = "id > " + afterId;
         }
 
         Collection<Comment> comments = mapper.queryByPattern(commentPattern, selectParams);
@@ -1277,9 +1272,9 @@ public class DatabaseManager {
     }
 
     public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId,
-                                                             Long startingDate,
+                                                             Long afterId,
                                                              OffsetLimit offsetLimit) {
-        Collection<Comment> comments = getCommentsOnPhoto(request, photoId, startingDate, offsetLimit);
+        Collection<Comment> comments = getCommentsOnPhoto(request, photoId, afterId, offsetLimit);
         fillCommentsData(request, comments);
         return comments;
     }
@@ -1498,31 +1493,35 @@ public class DatabaseManager {
         return dialog;
     }
 
-    public Collection<Message> getMessagesByDialogId(HttpServletRequest request, long dialogId,
-                                                 OffsetLimit offsetLimit) {
-        Dialog dialog = getDialogByIdOrThrow(dialogId);
-        return getDialogMessages(request, dialog, offsetLimit);
-    }
-
     public Collection<Message> getMessagesWithUser(HttpServletRequest request, long userId,
-                                                     OffsetLimit offsetLimit) {
+                                                     OffsetLimit offsetLimit, Long afterId) {
         Dialog dialog = new Dialog();
         dialog.setUser1Id(userId);
+        dialog.setUser2Id(getSignedInUserOrThrow(request).getId());
         dialog = mapper.getObjectByPattern(dialog);
         if(dialog == null){
             return new ArrayList<Message>();
         }
 
-        return getDialogMessages(request, dialog, offsetLimit);
+        return getDialogMessages(request, dialog, offsetLimit, afterId);
     }
 
-    public Collection<Message> getDialogMessages(HttpServletRequest request, Dialog dialog,
-                                                 OffsetLimit offsetLimit) {
+    public Collection<Message> getDialogMessages(HttpServletRequest request,
+                                                 Dialog dialog,
+                                                 OffsetLimit offsetLimit,
+                                                 Long afterId) {
         User signedInUser = getSignedInUserOrThrow(request);
         Message pattern = new Message();
         pattern.setDialogId(dialog.getId());
 
-        Collection<Message> messages = mapper.queryByPattern(pattern, offsetLimit, "id desc");
+        SelectParams params = new SelectParams();
+        params.ordering = "id desc";
+        params.offsetLimit = offsetLimit;
+        if (afterId != null) {
+            params.additionalWhereClosure = "id > " + afterId;
+        }
+
+        Collection<Message> messages = mapper.queryByPattern(pattern, params);
         List forUpdate = new ArrayList();
 
         int readMessagesCount = 0;

@@ -10,6 +10,7 @@ import java.util.List;
  */
 public class SelectParams {
     public CollectionUtils.Transformer<String, String> whereTransformer;
+    public String additionalWhereClosure;
     public String ordering;
     public OffsetLimit offsetLimit = new OffsetLimit();
     public List<String> foreignFieldsToFill = new ArrayList<String>();

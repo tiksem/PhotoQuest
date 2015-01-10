@@ -462,11 +462,12 @@ public class ApiHandler {
 
     @RequestMapping("/messages")
     public @ResponseBody Object getMessagesWithUser(@RequestParam(value = "userId", required = true) Long userId,
+                                                    @RequestParam(value = "afterId", required = false) Long afterId,
                                                OffsetLimit offsetLimit) {
         DatabaseManager databaseManager = getDatabaseManager();
         User user = databaseManager.getUserByIdOrThrow(userId);
         Collection<Message> result =
-                databaseManager.getMessagesWithUser(request, userId, offsetLimit);
+                databaseManager.getMessagesWithUser(request, userId, offsetLimit, afterId);
         databaseManager.setAvatar(request, user);
         DialogMessages dialogMessages = new DialogMessages();
         dialogMessages.messages = result;
@@ -489,11 +490,11 @@ public class ApiHandler {
 
     @RequestMapping("/getCommentsOnPhoto")
     public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId,
-                                                   @RequestParam(value = "startingDate", required = false)
-                                                   Long startingDate,
+                                                   @RequestParam(value = "afterId", required = false)
+                                                   Long afterId,
                                                    OffsetLimit offsetLimit){
         Collection<Comment> comments = getDatabaseManager().
-                getCommentsOnPhotoAndFillData(request, photoId, startingDate, offsetLimit);
+                getCommentsOnPhotoAndFillData(request, photoId, afterId, offsetLimit);
         return new CommentsList(comments);
     }
 
