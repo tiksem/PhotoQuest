@@ -81,7 +81,7 @@ public class AdvancedRequestsManager {
         Map<String, Object> args = new HashMap<String, Object>();
         offsetLimit.addToMap(args);
         args.put("query", query);
-        return sqlFileExecutor.executeSQLQuery(query, args, Photoquest.class);
+        return sqlFileExecutor.executeSQLQuery(query, args, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
     }
 
     public static class SearchUsersParams {

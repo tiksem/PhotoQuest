@@ -302,6 +302,14 @@ public class DatabaseManager {
 
     public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
         setAvatar(request, photoquests);
+
+        for (Photoquest photoquest : photoquests) {
+            User user = photoquest.getUser();
+            if(user != null){
+                setAvatar(request, user);
+            }
+        }
+
         setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
     }
 
@@ -973,11 +981,15 @@ public class DatabaseManager {
 
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
                                                  RatingOrder order) {
-        String orderString = getPhotoOrderBy(order);
+        String orderString = getPhotoOrderBy(order) + " desc";
+
+        SelectParams params = new SelectParams();
+        params.offsetLimit = offsetLimit;
+        params.ordering = orderString;
+        params.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
 
         Collection<Photoquest> result =
-                mapper.queryAllObjects(Photoquest.class,
-                        offsetLimit, orderString);
+                mapper.queryAllObjects(Photoquest.class, params);
         initPhotoquestsInfo(request, result);
 
         return result;

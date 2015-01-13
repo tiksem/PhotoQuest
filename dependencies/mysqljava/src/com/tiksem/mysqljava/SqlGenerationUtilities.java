@@ -438,7 +438,7 @@ public class SqlGenerationUtilities {
             String foreignFieldName = foreign.foreignField.getName();
             String parentAlias = parentName + "_" +
                     foreignFieldName;
-            String part = "RIGHT JOIN " + quotedClassName(parent) + " AS " + parentAlias + " ON " +
+            String part = "LEFT JOIN " + quotedClassName(parent) + " AS " + parentAlias + " ON " +
                     quotedClassName(foreign.childClass) + "." + foreignFieldName + "=" + parentAlias +
                     "." + parentFieldName;
             foreignJoinParts.add(part);
@@ -491,8 +491,9 @@ public class SqlGenerationUtilities {
 
         if(selectParams.ordering != null){
             String ordering = selectParams.ordering;
-            if(pattern != null && !ordering.contains(".")){
-                ordering = quotedClassName(pattern.getClass()) + "." + ordering;
+            if(!ordering.contains(".")){
+                Class aClass = pattern != null ? pattern.getClass() : fromClasses.get(0);
+                ordering = quotedClassName(aClass) + "." + ordering;
             }
 
             query += " ORDER BY " + ordering;

@@ -32,6 +32,9 @@ public class Photoquest implements WithAvatar, Likable {
     @Stored
     private Long avatarId;
 
+    @ForeignValue(idField = "userId")
+    private User user;
+
     @Stored
     @AddingDate
     private Long addingDate;
@@ -148,5 +151,13 @@ public class Photoquest implements WithAvatar, Likable {
 
     public void setIsFollowing(Boolean isFollowing) {
         this.isFollowing = isFollowing;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

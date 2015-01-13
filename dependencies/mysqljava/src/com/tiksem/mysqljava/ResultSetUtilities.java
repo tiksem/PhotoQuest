@@ -2,6 +2,7 @@ package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.ForeignKey;
 import com.tiksem.mysqljava.annotations.ForeignValue;
+import com.tiksem.mysqljava.annotations.PrimaryKey;
 import com.tiksem.mysqljava.annotations.Serialized;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Predicate;
@@ -183,9 +184,14 @@ public class ResultSetUtilities {
         Field idField = Reflection.getFieldByNameOrThrow(aClass, idFieldName);
         ForeignKey foreignKey = Reflection.getAnnotationOrThrow(idField, ForeignKey.class);
         Class parentClass = foreignKey.parent();
+
         String parentClassName = parentClass.getSimpleName().toLowerCase();
 
         Map<String, Object> parentValues = map.get(parentClassName);
+        if(parentValues.get(foreignKey.field()) == null){
+            return;
+        }
+
         Object foreignObject = Reflection.getOrCreateFieldValue(object, foreignField);
 
         Reflection.setFieldsFromMap(foreignObject, parentValues);
