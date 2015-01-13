@@ -558,7 +558,7 @@ public class SqlGenerationUtilities {
     public static String changeValue(Object object,
                                      List<Field> fields,
                                      String fieldToChange,
-                                     int value) {
+                                     long value) {
         Field primaryKey = Reflection.getFieldWithAnnotation(fields, PrimaryKey.class);
         Object id = null;
         if (primaryKey != null) {

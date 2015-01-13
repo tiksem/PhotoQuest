@@ -1,5 +1,7 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.pq.exceptions.ExceptionWithData;
+
 /**
  * Created by CM on 11/7/2014.
  */
@@ -7,6 +9,7 @@ public class ExceptionResponse {
     public String error;
     public String message;
     public String cause;
+    public Object data;
 
     public ExceptionResponse(Throwable throwable) {
         error = throwable.getClass().getCanonicalName();
@@ -16,6 +19,10 @@ public class ExceptionResponse {
         if(throwableCause != null){
             cause = throwableCause.getClass().getCanonicalName() + " "
                     + throwable.getMessage();
+        }
+
+        if(throwable instanceof ExceptionWithData){
+            data = ((ExceptionWithData) throwable).getData();
         }
     }
 

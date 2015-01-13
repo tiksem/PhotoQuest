@@ -362,7 +362,11 @@ public class MysqlObjectMapper {
         }
     }
 
-    public void changeValue(Object object, String fieldName, int diff) {
+    public void changeValue(Object object, String fieldName, long diff) {
+        if(diff == 0){
+            return;
+        }
+
         List<Field> fields = SqlGenerationUtilities.getFields(object);
         Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
         String sql = SqlGenerationUtilities.changeValue(object, fields, fieldName, diff);

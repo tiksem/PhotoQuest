@@ -219,16 +219,27 @@ public class ApiHandler {
     public void
     getImageById(@PathVariable Long id,
                  @RequestParam(value = "size", required = false) Integer size,
-                 @RequestParam(value = "size", required = false) Integer width,
-                 @RequestParam(value = "size", required = false) Integer height,
+                 @RequestParam(value = "maxWidth", required = false) Integer maxWidth,
+                 @RequestParam(value = "maxHeight", required = false) Integer maxHeight,
                  OutputStream outputStream)
             throws IOException {
         InputStream inputStream = null;
         try {
+            DatabaseManager databaseManager = getDatabaseManager();
             if (size == null) {
-                inputStream = getDatabaseManager().getBitmapDataByPhotoIdOrThrow(id);
+                inputStream = databaseManager.getBitmapDataByPhotoIdOrThrow(id);
             } else {
-                inputStream = getDatabaseManager().getThumbnailByPhotoIdOrThrow(id, size);
+                if(maxWidth != null){
+                    if(maxHeight == null){
+                        throw new IllegalArgumentException("Specify maxHeight");
+                    }
+
+                    inputStream = databaseManager.getBitmapDataByPhotoIdOrThrow(id, maxWidth, maxHeight);
+                } else if(maxHeight != null) {
+                    throw new IllegalArgumentException("Specify maxWidth");
+                } else {
+                    inputStream = databaseManager.getThumbnailByPhotoIdOrThrow(id, size);
+                }
             }
 
             IOUtils.copyLarge(inputStream, outputStream, new byte[1024 * 64]);
@@ -240,6 +251,13 @@ public class ApiHandler {
             }
         }
     }
+
+    @RequestMapping("/deletePhoto")
+    public @ResponseBody Object deletePhoto(@RequestParam(value = "id") Long id) {
+        getDatabaseManager().deletePhoto(id);
+        return new Success();
+    }
+
 
     @RequestMapping("/getPhotoquests")
     public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit,

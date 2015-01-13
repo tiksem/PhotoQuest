@@ -635,6 +635,19 @@ public class DatabaseManager {
         return photo;
     }
 
+    public void deletePhoto(long id) {
+        Photo photo = getPhotoByIdOrThrow(id);
+        Long photoquestId = photo.getPhotoquestId();
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+
+        imageManager.deleteImage(id);
+        delete(photo);
+
+        long likesCount = photo.getLikesCount();
+        mapper.changeValue(photoquest, "likesCount", -likesCount);
+        updatePhotoquestAvatar(photoquest);
+    }
+
     public Message getMessageById(long id) {
         return mapper.getObjectById(Message.class, id);
     }
@@ -654,6 +667,15 @@ public class DatabaseManager {
 
     public InputStream getBitmapDataByPhotoIdOrThrow(long id) {
         InputStream result = getBitmapDataByPhotoId(id);
+        if(result == null){
+            throw new ResourceNotFoundException();
+        }
+
+        return result;
+    }
+
+    public InputStream getBitmapDataByPhotoIdOrThrow(long id, int maxWidth, int maxHeight) {
+        InputStream result = imageManager.getImageById(id, maxWidth, maxHeight);
         if(result == null){
             throw new ResourceNotFoundException();
         }
