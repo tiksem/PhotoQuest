@@ -366,7 +366,7 @@ public class MysqlObjectMapper {
         List<Field> fields = SqlGenerationUtilities.getFields(object);
         Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
         String sql = SqlGenerationUtilities.changeValue(object, fields, fieldName, diff);
-        executeNonSelectSQL(sql);
+        executeNonSelectSQL(sql, args);
     }
 
     public void increment(Object object, String fieldName) {
