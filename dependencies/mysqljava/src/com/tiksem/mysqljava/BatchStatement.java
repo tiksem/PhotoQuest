@@ -1,5 +1,6 @@
 package com.tiksem.mysqljava;
 
+import com.utils.framework.CollectionUtils;
 import com.utils.framework.collections.map.ListValuesMultiMap;
 import com.utils.framework.collections.map.MultiMap;
 
@@ -14,12 +15,15 @@ public abstract class BatchStatement {
     private final List<Object> objects;
     private MultiMap<String, Map<String, Object>> sqlArgsMap =
             new ListValuesMultiMap<String, Map<String, Object>>();
+    private Map<String, Class> sqlClassMap = new HashMap<String, Class>();
+    private Map<Class, Integer> affectedRows = new HashMap<Class, Integer>();
 
     public BatchStatement(List<Object> objects) {
         this.objects = objects;
         for(Object object : objects){
             StatementInfo info = prepareStatementForObject(object);
             sqlArgsMap.put(info.sql, info.args);
+            sqlClassMap.put(info.sql, object.getClass());
         }
     }
 
@@ -27,6 +31,7 @@ public abstract class BatchStatement {
         List<NamedParameterStatement> statements = new ArrayList<NamedParameterStatement>();
         int[] statementObjectsCount = new int[objects.size()];
         int statementIndex = 0;
+
         for(Map.Entry<String, Collection<Map<String, Object>>> entry : sqlArgsMap.getMap().entrySet()){
             String sql = entry.getKey();
             try {
@@ -52,22 +57,32 @@ public abstract class BatchStatement {
         try {
             int index = 0;
             statementIndex = 0;
-            for(NamedParameterStatement statement : statements){
+            for(NamedParameterStatement statement : statements) {
                 int start = index;
 
+                int count;
                 if (statementObjectsCount[statementIndex] > 1) {
                     int[] replaceResult = statement.executeBatch();
+                    count = 0;
                     for (int i : replaceResult) {
-                        if(i != 1){
+                        if (i != 1) {
                             onNotOneRowInserted(objects.get(index));
                         }
                         index++;
+                        count++;
                     }
                 } else {
-                    if (statement.executeUpdate() != 1) {
+                    count = statement.executeUpdate();
+                    if (count != 1) {
                         onNotOneRowInserted(objects.get(index));
                     }
+
                     index++;
+                }
+
+                if (count > 0) {
+                    Class aClass = sqlClassMap.get(statement.getQuery());
+                    CollectionUtils.changeValue(affectedRows, aClass, count);
                 }
 
                 List<Object> objects = this.objects.subList(start, index);
@@ -94,5 +109,9 @@ public abstract class BatchStatement {
     protected abstract StatementInfo prepareStatementForObject(final Object object);
     protected void onStatementExecutionFinished(List<Object> objects, NamedParameterStatement statement) {
 
+    }
+
+    public Map<Class, Integer> getAffectedRows() {
+        return affectedRows;
     }
 }

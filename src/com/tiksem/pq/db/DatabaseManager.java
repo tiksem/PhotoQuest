@@ -45,11 +45,13 @@ public class DatabaseManager {
     private ImageManager imageManager = new FileSystemImageManager("images", "magic");
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
+    private CountManager countManager;
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
 
     public DatabaseManager() {
         mapper = new MysqlObjectMapper();
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
+        countManager = new CountManager(mapper);
         asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
     }
 
@@ -67,27 +69,33 @@ public class DatabaseManager {
     }
 
     private void insert(Object object) {
-        mapper.insert(object);
+        insertAll(Arrays.asList(object));
     }
 
     private void insertAll(Object... objects) {
-        mapper.insertAll(objects);
+        insertAll(Arrays.asList(objects));
     }
 
-    private void insertAll(Iterator<Object> objects) {
-        mapper.insertAll(objects);
+    private void insertAll(Iterable<Object> objects) {
+        Map<Class, Integer> affected =  mapper.insertAll(objects);
+        for(Map.Entry<Class, Integer> entry : affected.entrySet()){
+            countManager.changeCount(entry.getKey(), entry.getValue());
+        }
     }
 
     private void delete(Object pattern) {
-        mapper.delete(pattern);
+        deleteAll(Arrays.asList(pattern));
     }
 
     private void deleteAll(Object... objects) {
-        mapper.deleteAll(objects);
+        deleteAll(Arrays.asList(objects));
     }
 
     private void deleteAll(Iterable<Object> objects) {
-        mapper.deleteAll(objects);
+        Map<Class, Integer> affected = mapper.deleteAll(objects);
+        for(Map.Entry<Class, Integer> entry : affected.entrySet()){
+            countManager.changeCount(entry.getKey(), -entry.getValue());
+        }
     }
 
     public User getUserById(long id) {

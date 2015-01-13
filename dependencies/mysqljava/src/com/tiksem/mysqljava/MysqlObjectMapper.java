@@ -38,24 +38,38 @@ public class MysqlObjectMapper {
         }
     }
 
-    public boolean executeNonSelectSQL(String sql) {
+    public int executeNonSelectSQL(String sql) {
+        Statement statement;
         try {
-            Statement statement = connection.createStatement();
-            return statement.execute(sql);
+            statement = connection.createStatement();
+            statement.execute(sql);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
+        try {
+            return statement.getUpdateCount();
+        } catch (SQLException e) {
+            return -1;
+        }
     }
 
-    public boolean executeNonSelectSQL(String sql, Map<String, Object> args) {
+    public int executeNonSelectSQL(String sql, Map<String, Object> args) {
+        NamedParameterStatement statement;
         try {
-            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            statement = new NamedParameterStatement(connection, sql);
             if (args != null) {
                 statement.setObjects(args);
             }
-            return statement.execute();
+            statement.execute();
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+
+        try {
+            return statement.getUpdateCount();
+        } catch (SQLException e) {
+            return -1;
         }
     }
 
@@ -73,6 +87,16 @@ public class MysqlObjectMapper {
             }
 
             return null;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ResultSet executeSelectSqlGetResultSet(String sql, Map<String, Object> args) {
+        try {
+            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            statement.setObjects(args);
+            return statement.executeQuery();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -421,9 +445,9 @@ public class MysqlObjectMapper {
         return queryAllObjects(aClass, selectParams);
     }
 
-    public long getAllObjectsCount(Class aClass) {
+    public long getAllObjectsCount(String tableName) {
         try {
-            String sql = SqlGenerationUtilities.count(aClass);
+            String sql = SqlGenerationUtilities.count(tableName);
             Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(sql);
             resultSet.next();
@@ -431,6 +455,10 @@ public class MysqlObjectMapper {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public long getAllObjectsCount(Class aClass) {
+        return getAllObjectsCount(aClass.getSimpleName());
     }
 
     public long getObjectPosition(Object object, Object pattern, String orderBy, boolean desc) {
@@ -482,17 +510,18 @@ public class MysqlObjectMapper {
         }
     }
 
-    public void insertAll(List<Object> objects) {
+    public Map<Class, Integer> insertAll(List<Object> objects) {
         InsertStatement insertStatement = new InsertStatement(objects);
         insertStatement.execute(connection);
+        return insertStatement.getAffectedRows();
     }
 
     public void insert(Object object) {
         insertAll(Collections.singletonList(object));
     }
 
-    public void insertAll(Object... objects) {
-        insertAll(Arrays.asList(objects));
+    public Map<Class, Integer> insertAll(Object... objects) {
+        return insertAll(Arrays.asList(objects));
     }
 
     public void replace(Object object) {
@@ -518,21 +547,27 @@ public class MysqlObjectMapper {
         executeNonSelectSQL(sql, args);
     }
 
-    public void deleteAll(Iterable<Object> objects) {
+    public Map<Class, Integer> deleteAll(Iterable<Object> objects) {
+        Map<Class, Integer> map = new HashMap<Class, Integer>();
         for(Object object : objects){
-            List<Field> fields = SqlGenerationUtilities.getFields(object);
-            Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
-            String sql = SqlGenerationUtilities.delete(object, fields);
-            executeNonSelectSQL(sql, args);
+            int count = delete(object);
+            if(count > 0){
+                CollectionUtils.changeValue(map, object.getClass(), count);
+            }
         }
+
+        return map;
     }
 
     public void deleteAll(Object... objects) {
         deleteAll(Arrays.asList(objects));
     }
 
-    public void delete(Object object) {
-        deleteAll(Arrays.asList(object));
+    public int delete(Object object) {
+        List<Field> fields = SqlGenerationUtilities.getFields(object);
+        Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
+        String sql = SqlGenerationUtilities.delete(object, fields);
+        return executeNonSelectSQL(sql, args);
     }
 
     @Override

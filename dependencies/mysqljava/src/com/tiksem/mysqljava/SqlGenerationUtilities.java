@@ -696,6 +696,10 @@ public class SqlGenerationUtilities {
         return sql;
     }
 
+    public static String count(String tableName) {
+        return  "SELECT count(*) FROM " + Strings.quote(tableName, "`");
+    }
+
     public static String count(Class aClass) {
         return  "SELECT count(*) FROM " + quotedClassName(aClass);
     }

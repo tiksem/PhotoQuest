@@ -14,6 +14,7 @@ public class NamedParameterStatement {
      * Maps parameter names to arrays of ints which are the parameter indices.
      */
     private final Map indexMap;
+    private String query;
 
 
     public NamedParameterStatement(Connection connection, String query, int arg) throws
@@ -26,8 +27,13 @@ public class NamedParameterStatement {
     public NamedParameterStatement(Connection connection, String query) throws
             SQLException {
         indexMap = new HashMap();
+        this.query = query;
         String parsedQuery = parse(query, indexMap);
         statement = connection.prepareStatement(parsedQuery);
+    }
+
+    public String getQuery() {
+        return query;
     }
 
     /**
@@ -236,6 +242,9 @@ public class NamedParameterStatement {
         return statement.executeQuery();
     }
 
+    public int getUpdateCount() throws SQLException {
+        return statement.getUpdateCount();
+    }
 
     /**
      * Executes the statement, which must be an SQL INSERT, UPDATE or DELETE
