@@ -7,4 +7,4 @@ SELECT * FROM user
       namedData LIKE :query
     LIMIT 0, 200
   ) as sel ON sel.userId = user.ID
-ORDER BY :orderBy DESC LIMIT :offset, :limit
+ORDER BY :orderBy LIMIT :offset, :limit

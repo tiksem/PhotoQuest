@@ -4,6 +4,7 @@ import com.tiksem.mysqljava.annotations.AddingDate;
 import com.tiksem.mysqljava.annotations.ModificationDate;
 import com.tiksem.mysqljava.annotations.OnPrepareForStorage;
 import com.tiksem.mysqljava.annotations.PrimaryKey;
+import com.tiksem.mysqljava.help.SqlGenerationUtilities;
 import com.utils.framework.Reflection;
 
 import java.lang.reflect.Field;

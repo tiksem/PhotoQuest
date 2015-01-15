@@ -1,11 +1,11 @@
 package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.*;
+import com.tiksem.mysqljava.help.SqlGenerationUtilities;
 import com.tiksem.mysqljava.metadata.ColumnInfo;
 import com.tiksem.mysqljava.metadata.ForeignKeyInfo;
 import com.tiksem.mysqljava.metadata.IndexInfo;
 import com.utils.framework.CollectionUtils;
-import com.utils.framework.Equals;
 import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;

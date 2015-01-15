@@ -13,12 +13,13 @@ import com.utils.framework.Reflection;
         @MultipleIndex(fields = {"location", "nameData"}),
         @MultipleIndex(fields = {"location", "gender", "nameData"}),
         @MultipleIndex(fields = {"gender", "nameData"}),
-        @MultipleIndex(fields = {"location", "gender", "rating"}),
-        @MultipleIndex(fields = {"gender", "rating"}),
-        @MultipleIndex(fields = {"location", "rating"}),
+        @MultipleIndex(fields = {"location", "gender", "rating", "id"}),
+        @MultipleIndex(fields = {"gender", "rating", "id"}),
+        @MultipleIndex(fields = {"location", "rating", "id"}),
         @MultipleIndex(fields = {"location", "gender", "id"}),
         @MultipleIndex(fields = {"gender", "id"}),
-        @MultipleIndex(fields = {"location", "id"})
+        @MultipleIndex(fields = {"location", "id"}),
+        @MultipleIndex(fields = {"rating", "id"})
 })
 @Table
 public class User implements WithAvatar {
@@ -72,7 +73,7 @@ public class User implements WithAvatar {
     @NotNull
     private String countryCode;
 
-    @Index
+    @Stored
     @NotNull
     private Long rating;
 

@@ -1,5 +1,7 @@
-package com.tiksem.mysqljava;
+package com.tiksem.mysqljava.help;
 
+import com.tiksem.mysqljava.OffsetLimit;
+import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.mysqljava.annotations.*;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
@@ -371,7 +373,7 @@ public class SqlGenerationUtilities {
         public Field foreignField;
     }
 
-    private static String quotedClassName(Class aClass) {
+    static String quotedClassName(Class aClass) {
         return Strings.quote(aClass.getSimpleName(), "`");
     }
 
@@ -387,7 +389,7 @@ public class SqlGenerationUtilities {
         return select(Arrays.<Class>asList(pattern.getClass()), foreigns, pattern, selectParams);
     }
 
-    public static String getPosition(Object pattern, Class aClass, String orderBy, boolean desc) {
+    public static String getPosition(Object pattern, Class aClass, String orderBy, List<Field> orderByFieldsOut) {
         String tableName = quotedClassName(aClass);
         String sql = "SELECT count(*) FROM " + tableName;
         String where = null;
@@ -395,19 +397,42 @@ public class SqlGenerationUtilities {
             where = generatePatternWhereClosure(pattern);
         }
 
-        String orderingWhere;
-        if (desc) {
-            orderingWhere = orderBy + " > :" + orderBy;
-        } else {
-            orderingWhere = orderBy + " < :" + orderBy;
-        }
+        PositionOrderByGenerator orderByGenerator = new PositionOrderByGenerator(orderBy, aClass, orderByFieldsOut);
+        String orderingWhere = orderByGenerator.generateWhere();
 
         sql += " WHERE (" + orderingWhere + ")";
         if(!Strings.isEmpty(where)){
             sql += " AND (" + where + ")";
         }
 
+        sql += " ORDER BY " + orderBy;
+
         return sql;
+    }
+
+    public static String reverseOrderBy(String orderBy) {
+        orderBy = orderBy.replace("desc", "ASC");
+        orderBy = orderBy.replace("asc", "DESC");
+        return orderBy.toLowerCase();
+    }
+
+    public static String nextPrev(Object pattern, String orderBy, List<Foreign> foreigns,
+                                  boolean next, List<Field> orderByFieldsOut) {
+
+
+        SelectParams params = new SelectParams();
+        PositionOrderByGenerator orderByGenerator = new PositionOrderByGenerator(orderBy, pattern.getClass(),
+                orderByFieldsOut);
+        orderByGenerator.setReverse(next);
+        params.additionalWhereClosure = orderByGenerator.generateWhere();
+        params.offsetLimit = new OffsetLimit(0, 1);
+
+        if(!next){
+            orderBy = reverseOrderBy(orderBy);
+        }
+
+        params.ordering = orderBy;
+        return select(pattern, foreigns, params);
     }
 
     public static String select(List<Class> fromClasses,
@@ -429,15 +454,22 @@ public class SqlGenerationUtilities {
 
         List<String> foreignJoinParts = new ArrayList<String>();
 
+        Class orderByClass = null;
+        if (selectParams.ordering != null) {
+            orderByClass = pattern != null ? pattern.getClass() : fromClasses.get(0);
+        }
+
         for(Foreign foreign : foreigns){
             ForeignKey foreignKey = Reflection.getAnnotationOrThrow(foreign.foreignField, ForeignKey.class);
             String parentFieldName = foreignKey.field();
             Class parent = foreignKey.parent();
+
             String parentName = parent.getSimpleName();
 
             String foreignFieldName = foreign.foreignField.getName();
             String parentAlias = parentName + "_" +
                     foreignFieldName;
+
             String part = "LEFT JOIN " + quotedClassName(parent) + " AS " + parentAlias + " ON " +
                     quotedClassName(foreign.childClass) + "." + foreignFieldName + "=" + parentAlias +
                     "." + parentFieldName;
@@ -490,13 +522,25 @@ public class SqlGenerationUtilities {
         }
 
         if(selectParams.ordering != null){
-            String ordering = selectParams.ordering;
-            if(!ordering.contains(".")){
-                Class aClass = pattern != null ? pattern.getClass() : fromClasses.get(0);
-                ordering = quotedClassName(aClass) + "." + ordering;
+            String[] orderCriteria = selectParams.ordering.split(", *");
+            List<String> orderByParts = new ArrayList<String>();
+
+            for(String order : orderCriteria){
+                if(order.contains(".")){
+                    orderByParts.add(order);
+                    continue;
+                }
+
+                String[] args = order.split(" +", 2);
+                String param = args[0];
+                String part = quotedClassName(orderByClass) + "." + param;
+                if(args.length > 1){
+                    part += " " + args[1];
+                }
+                orderByParts.add(part);
             }
 
-            query += " ORDER BY " + ordering;
+            query += " ORDER BY " + Strings.join(", ", orderByParts);
         }
 
         if (selectParams.offsetLimit != null) {

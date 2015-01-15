@@ -8,4 +8,4 @@ SELECT * FROM user
       AND gender = :gender
     LIMIT 0, 200
   ) as sel ON sel.userId = user.ID
-ORDER BY :orderBy DESC LIMIT :offset, :limit
+ORDER BY :orderBy LIMIT :offset, :limit

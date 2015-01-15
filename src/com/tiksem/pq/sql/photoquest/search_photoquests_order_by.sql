@@ -8,4 +8,4 @@ SELECT * FROM photoquest
           AND photoquest.ID = photoquestsearch.photoquestId
         ORDER BY relevance desc LIMIT 0, 100
   ) as sel ON sel.photoquestId = photoquest.ID
-ORDER BY :orderBy DESC LIMIT :offset, :limit
+ORDER BY :orderBy LIMIT :offset, :limit

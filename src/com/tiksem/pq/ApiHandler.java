@@ -353,9 +353,15 @@ public class ApiHandler {
     public @ResponseBody Object getPhotoById(@RequestParam("id") Long id,
                                              @RequestParam(value = "userId", required = false) Long userId,
                                              @RequestParam(value = "photoquestId", required = false)
-                                             Long photoquestId){
+                                             Long photoquestId,
+                                             @RequestParam(value = "category", required = false, defaultValue = "all")
+                                             PhotoCategory category){
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.getPhotoAndFillInfo(request, id, userId, photoquestId);
+        DatabaseManager.PhotoFillParams params = new DatabaseManager.PhotoFillParams();
+        params.category = category;
+        params.photoquestId = photoquestId;
+        params.userId = userId;
+        return databaseManager.getPhotoAndFillInfo(request, id, params);
     }
 
     @RequestMapping("/getPhotoPosition")
@@ -395,6 +401,43 @@ public class ApiHandler {
         return new PhotosList(photos);
     }
 
+    @RequestMapping("/getFiendsPhotosOfPhotoquest")
+    public @ResponseBody Object getFiendsPhotosOfPhotoquest(@RequestParam("id") Long photoquestId,
+                                                      @RequestParam(value = "order", required = false,
+                                                              defaultValue = "newest")
+                                                      RatingOrder order,
+                                                      OffsetLimit offsetLimit){
+        Collection<Photo> photos = getDatabaseManager().
+                getPhotosOfFriendsByPhotoquest(request, photoquestId, order, offsetLimit);
+        return new PhotosList(photos);
+    }
+
+    @RequestMapping("/getFiendsPhotosOfPhotoquestCount")
+    public @ResponseBody Object getFiendsPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
+        long count = getDatabaseManager().
+                getPhotosOfFriendsByPhotoquestCount(request, photoquestId);
+        return new CountResponse(count);
+    }
+
+    @RequestMapping("/getUserPhotosOfPhotoquest")
+    public @ResponseBody Object getUserPhotosOfPhotoquest(@RequestParam("id") Long photoquestId,
+                                                            @RequestParam(value = "order", required = false,
+                                                                    defaultValue = "newest")
+                                                            RatingOrder order,
+                                                            OffsetLimit offsetLimit){
+        Collection<Photo> photos = getDatabaseManager().
+                getPhotosOfSignedInUserByPhotoquest(request, photoquestId, order, offsetLimit);
+        return new PhotosList(photos);
+    }
+
+    @RequestMapping("/getUserPhotosOfPhotoquestCount")
+    public @ResponseBody Object getUserPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
+        long count = getDatabaseManager().
+                getPhotosOfSignedInUserByPhotoquestCount(request, photoquestId);
+        return new CountResponse(count);
+    }
+
+
     @RequestMapping("/getNextPrevPhotoOfPhotoquest")
     public @ResponseBody Object getNextPrevPhotoOfPhotoquest(@RequestParam("photoquestId") Long photoquestId,
                                                          @RequestParam("photoId") Long photoId,
@@ -403,6 +446,27 @@ public class ApiHandler {
                                                               defaultValue = "newest")
                                                       RatingOrder order){
         return getDatabaseManager().getNextPrevPhotoOfPhotoquest(request, photoquestId, photoId, order, next);
+    }
+
+    @RequestMapping("/getNextPrevPhotoOfFriendsInPhotoquest")
+    public @ResponseBody Object getNextPrevPhotoOfFriendsInPhotoquest(@RequestParam("photoquestId") Long photoquestId,
+                                                             @RequestParam("photoId") Long photoId,
+                                                             @RequestParam("next") boolean next,
+                                                             @RequestParam(value = "order", required = false,
+                                                                     defaultValue = "newest")
+                                                             RatingOrder order){
+        return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(request, photoquestId, photoId, order, next);
+    }
+
+    @RequestMapping("/getNextPrevPhotoOfUserInPhotoquest")
+    public @ResponseBody Object getNextPrevPhotoOfUserInPhotoquest(@RequestParam("photoquestId") Long photoquestId,
+                                                                      @RequestParam("photoId") Long photoId,
+                                                                      @RequestParam("next") boolean next,
+                                                                      @RequestParam(value = "order", required = false,
+                                                                              defaultValue = "newest")
+                                                                      RatingOrder order){
+        return getDatabaseManager().getNextPrevPhotoOfSignedInUserInPhotoquest
+                (request, photoquestId, photoId, order, next);
     }
 
     @RequestMapping("/getNextPrevPhotoOfUser")

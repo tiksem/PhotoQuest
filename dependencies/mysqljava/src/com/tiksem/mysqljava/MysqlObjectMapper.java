@@ -1,11 +1,10 @@
 package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.*;
+import com.tiksem.mysqljava.help.SqlGenerationUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;
-import com.utils.framework.collections.map.ListValuesMultiMap;
-import com.utils.framework.collections.map.MultiMap;
 
 import java.lang.reflect.Field;
 import java.sql.*;
@@ -162,9 +161,18 @@ public class MysqlObjectMapper {
     }
 
     private ResultSet getResultSetFromPattern(String sql, List<Field> fields, Object pattern) {
+        return getResultSetFromPattern(sql, fields, pattern, null);
+    }
+
+    private ResultSet getResultSetFromPattern(String sql, List<Field> fields, Object pattern,
+                                              Map<String, Object> additionalArgs) {
         try {
             NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
             Map<String, Object> args = ResultSetUtilities.getArgs(pattern, fields);
+            if(additionalArgs != null){
+                args.putAll(additionalArgs);
+            }
+
             statement.setObjects(args);
             return statement.executeQuery();
         } catch (SQLException e) {
@@ -191,10 +199,15 @@ public class MysqlObjectMapper {
 
     private <T> List<T> getListFromPattern(String sql, Object pattern, Class resultClass,
                                            final List<String> foreignFields) {
+        return getListFromPattern(sql, pattern, resultClass, foreignFields, null);
+    }
+
+    private <T> List<T> getListFromPattern(String sql, Object pattern, Class resultClass,
+                                           final List<String> foreignFields, Map<String, Object> additionalArgs) {
         final List<Field> resultFields = SqlGenerationUtilities.getFields(resultClass);
         List<Field> fields = SqlGenerationUtilities.getFields(pattern);
 
-        ResultSet resultSet = getResultSetFromPattern(sql, fields, pattern);
+        ResultSet resultSet = getResultSetFromPattern(sql, fields, pattern, additionalArgs);
 
         List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
                 new ResultSetUtilities.FieldsProvider() {
@@ -421,6 +434,38 @@ public class MysqlObjectMapper {
         return queryAllObjects(aClass, selectParams);
     }
 
+    public <T> T getNextPrev(T pattern, Object object, String orderBy, List<String> foreigns, boolean next,
+                             boolean allowCircle) {
+        List<SqlGenerationUtilities.Foreign> foreignList = getForeignsFromClass(foreigns, pattern.getClass());
+        List<Field> orderByFields = new ArrayList<Field>();
+        String sql = SqlGenerationUtilities.nextPrev(pattern, orderBy, foreignList, next, orderByFields);
+
+        Map<String, Object> args = ResultSetUtilities.getArgs(object, orderByFields);
+        List<T> list = getListFromPattern(sql, pattern, pattern.getClass(), foreigns, args);
+        if(list.isEmpty()){
+            if (!allowCircle) {
+                return null;
+            } else {
+                if(!next){
+                    orderBy = SqlGenerationUtilities.reverseOrderBy(orderBy);
+                }
+
+                SelectParams params = new SelectParams();
+                params.ordering = orderBy;
+                params.foreignFieldsToFill = foreigns;
+                params.offsetLimit = new OffsetLimit(0, 1);
+                list = queryByPattern(pattern, params);
+                if(list.isEmpty()){
+                    return null;
+                }
+
+                return list.get(0);
+            }
+        }
+
+        return list.get(0);
+    }
+
     public long getAllObjectsCount(Class aClass) {
         try {
             String sql = SqlGenerationUtilities.count(aClass);
@@ -433,11 +478,12 @@ public class MysqlObjectMapper {
         }
     }
 
-    public long getObjectPosition(Object object, Object pattern, String orderBy, boolean desc) {
-        String sql = SqlGenerationUtilities.getPosition(pattern, object.getClass(), orderBy, desc);
+    public long getObjectPosition(Object object, Object pattern, String orderBy) {
+        List<Field> orderByFields = new ArrayList<Field>();
+        String sql = SqlGenerationUtilities.getPosition(pattern, object.getClass(), orderBy, orderByFields);
         Map<String, Object> args = ResultSetUtilities.getArgs(pattern,
                 SqlGenerationUtilities.getFields(pattern));
-        args.put(orderBy, Reflection.getFieldValueUsingGetter(object, orderBy));
+        args.putAll(ResultSetUtilities.getArgs(object, SqlGenerationUtilities.getFields(object)));
         return executeCountQuery(sql, args);
     }
 

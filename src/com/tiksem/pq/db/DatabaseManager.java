@@ -10,7 +10,7 @@ import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
-import com.utils.framework.CollectionUtils;
+import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.randomuser.Gender;
@@ -313,6 +313,50 @@ public class DatabaseManager {
         setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
     }
 
+    public List<Photo> getPhotosOfFriendsByPhotoquest(HttpServletRequest request,
+                                                      long photoquestId,
+                                                      RatingOrder order,
+                                                      OffsetLimit offsetLimit) {
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+        User signedInUser = getSignedInUserOrThrow(request);
+        String orderBy = getPhotoOrderBy(order);
+        List<Photo> photos = advancedRequestsManager.getPhotosOfFriendsByPhotoquest(signedInUser.getId(),
+                photoquestId, orderBy, offsetLimit);
+        initPhotosOfPhotoquestInfo(photos, photoquest, request);
+        return photos;
+    }
+
+    public long getPhotosOfFriendsByPhotoquestCount(HttpServletRequest request, long photoquestId) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        return advancedRequestsManager.getPhotosOfFriendsByPhotoquestCount(signedInUser.getId(),
+                photoquestId);
+    }
+
+    public List<Photo> getPhotosOfSignedInUserByPhotoquest(HttpServletRequest request,
+                                                           long photoquestId,
+                                                           RatingOrder order,
+                                                           OffsetLimit offsetLimit) {
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+        User signedInUser = getSignedInUserOrThrow(request);
+        String orderBy = getPhotoOrderBy(order);
+        Photo pattern = new Photo();
+        pattern.setUserId(signedInUser.getId());
+        pattern.setPhotoquestId(photoquestId);
+        List<Photo> photos = mapper.queryByPattern(pattern, offsetLimit, orderBy);
+        initPhotosOfPhotoquestInfo(photos, photoquest, request);
+        return photos;
+    }
+
+    public long getPhotosOfSignedInUserByPhotoquestCount(HttpServletRequest request,
+                                                           long photoquestId) {
+        getPhotoQuestByIdOrThrow(photoquestId);
+        User signedInUser = getSignedInUserOrThrow(request);
+        Photo pattern = new Photo();
+        pattern.setUserId(signedInUser.getId());
+        pattern.setPhotoquestId(photoquestId);
+        return mapper.getCountByPattern(pattern);
+    }
+
     public Collection<Photoquest> searchPhotoquests(final HttpServletRequest request, String query, OffsetLimit offsetLimit) {
         List<Photoquest> photoquests = advancedRequestsManager.getPhotoquestsByQuery(query, offsetLimit);
         initPhotoquestsInfo(request, photoquests);
@@ -508,7 +552,7 @@ public class DatabaseManager {
                                         OffsetLimit offsetLimit,
                                         RatingOrder order) {
         Collection<User> users = mapper.queryAllObjects(User.class, offsetLimit,
-                getPeopleOrderBy(order) + " desc");
+                getPeopleOrderBy(order));
 
         setUsersInfo(request, users);
 
@@ -786,42 +830,13 @@ public class DatabaseManager {
         Photo photo = getPhotoByIdOrThrow(photoId);
         Photo pattern = patternProvider.getPattern();
 
-        long count = mapper.getCountByPattern(pattern);
-        if(count == 0){
-            throw new PhotoNotFoundException("Photo was not found in result set");
-        } else if(count == 1) {
-            setPhotoInfo(request, photo);
-            return photo;
-        }
+        Photo nextPhoto = mapper.getNextPrev(pattern, photo, orderString, MysqlObjectMapper.ALL_FOREIGN,
+                next, true);
+        setPhotoInfo(request, nextPhoto);
 
-        long position = mapper.getObjectPosition(photo, pattern, orderString, true);
+        nextPhoto.setShowNextPrevButtons(true);
 
-        if(next){
-            position++;
-        } else {
-            position--;
-        }
-
-        if(position < 0){
-            position = count - 1;
-        } else if(position >= count) {
-            position = 0;
-        }
-
-        SelectParams params = new SelectParams();
-        params.ordering = orderString + " desc";
-        params.offsetLimit = new OffsetLimit(position, 1);
-        params.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
-
-        Collection<Photo> result = mapper.queryByPattern(pattern, params);
-        if(result.isEmpty()){
-            throw new PhotoNotFoundException("Photo was not found in result set");
-        }
-
-        photo = result.iterator().next();
-        setPhotoInfo(request, photo);
-        photo.setShowNextPrevButtons(true);
-        return photo;
+        return nextPhoto;
     }
 
     public Photo getNextPrevPhotoOfPhotoquest(HttpServletRequest request, final long photoQuestId, long photoId,
@@ -848,6 +863,49 @@ public class DatabaseManager {
         }, next);
     }
 
+    public Photo getNextPrevPhotoOfSignedInUserInPhotoquest(final HttpServletRequest request,
+                                                            final long photoquestId, long photoId,
+                                        RatingOrder order, boolean next) {
+        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+            @Override
+            public Photo getPattern() {
+                User signedInUser = getSignedInUserOrThrow(request);
+                Photo pattern = new Photo();
+                pattern.setUserId(signedInUser.getId());
+                pattern.setPhotoquestId(photoquestId);
+                return pattern;
+            }
+        }, next);
+    }
+
+    public Photo getNextPrevPhotoOfFriendsInPhotoquest(final HttpServletRequest request,
+                                                       final long photoquestId, long photoId,
+                                                       RatingOrder order, boolean next) {
+        String orderBy;
+        if(order == RatingOrder.newest){
+            orderBy = "id";
+        } else if(order == RatingOrder.hottest) {
+            orderBy = "viewsCount";
+        } else {
+            orderBy = "likesCount";
+        }
+
+        Photo photo = getPhotoByIdOrThrow(photoId);
+        Object orderByValue = Reflection.getFieldValueUsingGetter(photo, orderBy);
+
+        User signedInUser = getSignedInUserOrThrow(request);
+        return advancedRequestsManager.getNextPrevPhotoOfFriends(signedInUser.getId(), photoquestId, orderByValue,
+                orderBy, next);
+    }
+
+    private void initPhotosOfPhotoquestInfo(Collection<Photo> photos, Photoquest photoquest,
+                                            HttpServletRequest request) {
+        initPhotosUrl(photos, request);
+
+        initYourLikeParameter(request, photos);
+        addPhotoquestViewIfNeed(request, photoquest);
+    }
+
     public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId,
                                                    OffsetLimit offsetLimit, RatingOrder order) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
@@ -858,10 +916,7 @@ public class DatabaseManager {
         String orderString = getPhotoOrderBy(order);
 
         Collection<Photo> photos = mapper.queryByPattern(photoPattern, offsetLimit, orderString);
-        initPhotosUrl(photos, request);
-
-        initYourLikeParameter(request, photos);
-        addPhotoquestViewIfNeed(request, photoquest);
+        initPhotosOfPhotoquestInfo(photos, photoquest, request);
 
         return photos;
 
@@ -929,13 +984,13 @@ public class DatabaseManager {
         String orderString;
         switch (order) {
             case hottest:
-                orderString = "viewsCount";
+                orderString = "viewsCount desc, id desc";
                 break;
             case rated:
-                orderString = "likesCount";
+                orderString = "likesCount desc, id desc";
                 break;
             default:
-                orderString = "id";
+                orderString = "id desc";
                 break;
         }
 
@@ -948,10 +1003,10 @@ public class DatabaseManager {
             case hottest:
                 throw new UnsupportedOperationException("hottest is not supported yet");
             case rated:
-                orderString = "rating";
+                orderString = "rating desc, id desc";
                 break;
             default:
-                orderString = "id";
+                orderString = "id desc";
                 break;
         }
 
@@ -981,7 +1036,7 @@ public class DatabaseManager {
 
     public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
                                                  RatingOrder order) {
-        String orderString = getPhotoOrderBy(order) + " desc";
+        String orderString = getPhotoOrderBy(order);
 
         SelectParams params = new SelectParams();
         params.offsetLimit = offsetLimit;
@@ -1072,7 +1127,7 @@ public class DatabaseManager {
         relationship.setFromUserId(fromUserId);
 
         SelectParams selectParams = new SelectParams();
-        selectParams.ordering = getPeopleOrderBy(order) + " desc";
+        selectParams.ordering = getPeopleOrderBy(order);
         selectParams.offsetLimit = offsetLimit;
         return mapper.queryByForeignPattern(relationship, User.class, "toUserId", selectParams);
     }
@@ -1085,7 +1140,7 @@ public class DatabaseManager {
         relationship.setToUserId(toUserId);
 
         SelectParams selectParams = new SelectParams();
-        selectParams.ordering = getPeopleOrderBy(order) + " desc";
+        selectParams.ordering = getPeopleOrderBy(order);
         selectParams.offsetLimit = offsetLimit;
         return mapper.queryByForeignPattern(relationship, User.class, "fromUserId", selectParams);
     }
@@ -1213,19 +1268,6 @@ public class DatabaseManager {
         reply.setType(Reply.COMMENT);
         reply.setId(commentId);
         return mapper.getObjectByPattern(reply);
-    }
-
-    private void addLikesAndRepliesToDeleteStack(List<Object> deleteStack, Comment comment, OffsetLimit offsetLimit) {
-        Long commentId = comment.getId();
-        Collection<Like> likes = getCommentLikes(commentId, offsetLimit);
-        for(Like like : likes){
-            Reply reply = getReplyByLikeId(like.getId());
-            if(reply != null){
-                deleteStack.add(reply);
-            }
-        }
-
-        deleteStack.addAll(likes);
     }
 
     public void deleteComment(long commentId) {
@@ -1781,10 +1823,16 @@ public class DatabaseManager {
     private long getPhotoInPhotoquestPosition(Photo photo, RatingOrder order) {
         Photo pattern = new Photo();
         pattern.setPhotoquestId(photo.getPhotoquestId());
-        return mapper.getObjectPosition(photo, pattern, getPhotoOrderBy(order), true);
+        return mapper.getObjectPosition(photo, pattern, getPhotoOrderBy(order));
     }
 
-    public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId, Long userId, Long photoquestId) {
+    public static class PhotoFillParams {
+        public Long userId;
+        public Long photoquestId;
+        public PhotoCategory category;
+    }
+
+    public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId, PhotoFillParams params) {
         Photo photo = mapper.getObjectById(Photo.class, photoId, MysqlObjectMapper.ALL_FOREIGN);
         if(photo == null){
             throw new PhotoNotFoundException(photoId);
@@ -1817,10 +1865,23 @@ public class DatabaseManager {
 
         setPhotoInfo(request, photo);
 
-        if(userId != null){
-            photo.setShowNextPrevButtons(getPhotosOfUserCount(userId) > 1);
-        } else if(photoquestId != null) {
-            photo.setShowNextPrevButtons(getPhotosOfPhotoquestCount(photoquestId) > 1);
+        if(params.userId != null){
+            photo.setShowNextPrevButtons(getPhotosOfUserCount(params.userId) > 1);
+        } else {
+            Long photoquestId = params.photoquestId;
+            if(photoquestId != null) {
+                long count;
+                PhotoCategory category = params.category;
+                if(category == PhotoCategory.all){
+                    count = getPhotosOfPhotoquestCount(photoquestId);
+                } else if(category == PhotoCategory.friends) {
+                    count = getPhotosOfFriendsByPhotoquestCount(request, photoquestId);
+                } else {
+                    count = getPhotosOfSignedInUserByPhotoquestCount(request, photoquestId);
+                }
+
+                photo.setShowNextPrevButtons(count > 1);
+            }
         }
 
         return photo;

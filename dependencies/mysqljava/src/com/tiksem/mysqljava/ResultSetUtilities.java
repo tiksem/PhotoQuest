@@ -2,8 +2,8 @@ package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.ForeignKey;
 import com.tiksem.mysqljava.annotations.ForeignValue;
-import com.tiksem.mysqljava.annotations.PrimaryKey;
 import com.tiksem.mysqljava.annotations.Serialized;
+import com.tiksem.mysqljava.help.SqlGenerationUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;

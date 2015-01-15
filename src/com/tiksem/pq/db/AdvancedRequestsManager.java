@@ -3,6 +3,7 @@ package com.tiksem.pq.db;
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.pq.data.Action;
+import com.tiksem.pq.data.Photo;
 import com.tiksem.pq.data.Photoquest;
 import com.tiksem.pq.data.User;
 import com.utils.framework.CollectionUtils;
@@ -108,7 +109,7 @@ public class AdvancedRequestsManager {
             user.setGender(params.gender);
             user.setLocation(params.location);
             if (!getCount) {
-                return mapper.queryByPattern(user, offsetLimit, params.orderBy + " desc");
+                return mapper.queryByPattern(user, offsetLimit, params.orderBy);
             } else {
                 return mapper.getCountByPattern(user);
             }
@@ -158,6 +159,43 @@ public class AdvancedRequestsManager {
         mapper.executeNonSelectSQL(CLEAR_PHOTOQUESTS_VIEWS);
         mapper.executeNonSelectSQL(CLEAR_PHOTOS_VIEWS);
         mapper.executeNonSelectSQL(CLEAR_USERS_RATING);
+    }
+
+    public Photo getNextPrevPhotoOfFriends(long userId,
+                                           long photoquestId,
+                                           Object orderByValue,
+                                           String orderBy,
+                                           boolean next) {
+        String operator = next ? "<" : ">";
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("operator", operator);
+        args.put("orderBy", orderBy);
+        args.put("orderByValue", orderByValue);
+        args.put("photoquestId", photoquestId);
+        args.put("userId", userId);
+        List<Photo> photos = sqlFileExecutor.executeSQLQuery("photo/next_prev_photo_of_friends.sql", args, Photo.class);
+        if(photos.isEmpty()){
+            return null;
+        }
+
+        return photos.get(0);
+    }
+
+    public List<Photo> getPhotosOfFriendsByPhotoquest(long userId, long photoquestId, String orderBy,
+                                                      OffsetLimit offsetLimit) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        offsetLimit.addToMap(args);
+        args.put("userId", userId);
+        args.put("orderBy", orderBy);
+        args.put("photoquestId", photoquestId);
+        return sqlFileExecutor.executeSQLQuery("photo/photos_of_friends.sql", args, Photo.class);
+    }
+
+    public long getPhotosOfFriendsByPhotoquestCount(long userId, long photoquestId) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("userId", userId);
+        args.put("photoquestId", photoquestId);
+        return sqlFileExecutor.executeCountQuery("photo/photos_of_friends_count.sql", args);
     }
 
     public void insertActionFeed(Action action) {

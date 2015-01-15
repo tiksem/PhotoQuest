@@ -2,12 +2,12 @@ package com.tiksem.mysqljava;
 
 import com.tiksem.mysqljava.annotations.*;
 import com.tiksem.mysqljava.exceptions.ObjectReplacementFailed;
+import com.tiksem.mysqljava.help.SqlGenerationUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Predicate;
 import com.utils.framework.Reflection;
 
 import java.lang.reflect.Field;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 

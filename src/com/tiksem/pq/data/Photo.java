@@ -8,10 +8,11 @@ import com.tiksem.mysqljava.annotations.*;
 
 @Table
 @MultipleIndexes(indexes = {
-        @MultipleIndex(fields = {"photoquestId", "likesCount"}),
-        @MultipleIndex(fields = {"photoquestId", "viewsCount"}),
-        @MultipleIndex(fields = {"userId", "likesCount"}),
-        @MultipleIndex(fields = {"userId", "viewsCount"})
+        @MultipleIndex(fields = {"photoquestId", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "likesCount", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "viewsCount", "id"}),
+        @MultipleIndex(fields = {"userId", "likesCount", "id"}),
+        @MultipleIndex(fields = {"userId", "viewsCount", "id"})
 })
 public class Photo implements Likable {
     public static final String IMAGE_URL_PATH = "/image/";
