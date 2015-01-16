@@ -660,11 +660,7 @@ public class DatabaseManager {
 
     public Photo changeAvatar(HttpServletRequest request, MultipartFile file) throws IOException {
         Photoquest photoquest = getOrCreateSystemPhotoQuest(AVATAR_QUEST_NAME);
-        Photo result = addPhotoToPhotoquest(request, photoquest.getId(), file, null, false);
-        User signedInUser = getSignedInUserOrThrow(request);
-        signedInUser.setAvatarId(result.getId());
-        replace(signedInUser);
-        return result;
+        return addPhotoToPhotoquest(request, photoquest.getId(), file, null, false);
     }
 
     public Photo addPhotoToPhotoquest(HttpServletRequest request,
@@ -673,22 +669,29 @@ public class DatabaseManager {
                                       boolean follow) throws IOException {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
 
+        Photo photo;
         if (!file.isEmpty()) {
-            Photo photo = new Photo();
+            photo = new Photo();
             photo.setPhotoquestId(photoquestId);
             photo.setMessage(message);
             InputStream inputStream = file.getInputStream();
             photo = addPhoto(request, photo, inputStream);
             updatePhotoquestAvatar(photoquest);
 
-            if(follow){
+            if (follow) {
                 followPhotoquest(request, photoquestId);
             }
-
-            return photo;
         } else {
             throw new FileIsEmptyException();
         }
+
+        if (photoquest.getName().equals(AVATAR_QUEST_NAME)) {
+            User signedInUser = getSignedInUserOrThrow(request);
+            signedInUser.setAvatarId(photo.getId());
+            replace(signedInUser);
+        }
+
+        return photo;
     }
 
     public Photo getPhotoById(long id) {
