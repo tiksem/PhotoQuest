@@ -47,6 +47,9 @@ public class DatabaseManager {
     private AdvancedRequestsManager advancedRequestsManager;
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
 
+    // do not use directly
+    private User _signedInUser;
+
     public DatabaseManager() {
         mapper = new MysqlObjectMapper();
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
@@ -180,6 +183,10 @@ public class DatabaseManager {
     }
 
     public User getSignedInUser(HttpServletRequest request) {
+        if(_signedInUser != null){
+            return _signedInUser;
+        }
+
         Cookie[] cookies = request.getCookies();
         Cookie loginCookie = HttpUtilities.getCookie("login", cookies);
         if (loginCookie == null) {
@@ -194,6 +201,7 @@ public class DatabaseManager {
         User user = getUserByLoginAndPassword(loginCookie.getValue(),
                 passwordCookie.getValue());
 
+        _signedInUser = user;
         return user;
     }
 
@@ -648,6 +656,15 @@ public class DatabaseManager {
         action.setPhotoId(photo.getId());
         action.setUserId(photo.getUserId());
         insertAction(action);
+    }
+
+    public Photo changeAvatar(HttpServletRequest request, MultipartFile file) throws IOException {
+        Photoquest photoquest = getOrCreateSystemPhotoQuest(AVATAR_QUEST_NAME);
+        Photo result = addPhotoToPhotoquest(request, photoquest.getId(), file, null, false);
+        User signedInUser = getSignedInUserOrThrow(request);
+        signedInUser.setAvatarId(result.getId());
+        replace(signedInUser);
+        return result;
     }
 
     public Photo addPhotoToPhotoquest(HttpServletRequest request,

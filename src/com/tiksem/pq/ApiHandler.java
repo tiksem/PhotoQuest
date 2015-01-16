@@ -71,15 +71,14 @@ public class ApiHandler {
         return new Success();
     }
 
-    @RequestMapping(value = "/register", method = RequestMethod.POST)
+    @RequestMapping(value = "/register", method = RequestMethod.GET)
     public @ResponseBody Object register(@RequestParam(value="login", required=true) String login,
                                       @RequestParam(value="password", required=true) String password,
                                       @RequestParam(value="name", required=true) String name,
                                       @RequestParam(value="lastName", required=true) String lastName,
                                       @RequestParam(value="location", required=true) String location,
-                                      @RequestParam(value="gender", required=true) boolean gender,
-                                      @RequestParam("file") MultipartFile avatar,
-                                      HttpServletResponse response) throws IOException {
+                                      @RequestParam(value="gender", required=true) boolean gender)
+            throws IOException {
         User user = new User();
         user.setLogin(login);
         user.setPassword(password);
@@ -87,7 +86,7 @@ public class ApiHandler {
         user.setLocation(location);
         user.setGender(gender);
 
-        return getDatabaseManager().registerUser(request, user, avatar);
+        return getDatabaseManager().registerUser(request, user, (InputStream)null);
     }
 
     @RequestMapping(value = "/editProfile", method = RequestMethod.GET)
@@ -212,6 +211,13 @@ public class ApiHandler {
         message = HttpUtilities.reencodePostParamString(message);
         DatabaseManager databaseManager = getDatabaseManager();
         return databaseManager.addPhotoToPhotoquest(request, id, file, message, follow);
+    }
+
+    @RequestMapping(value="/changeAvatar", method= RequestMethod.POST)
+    public @ResponseBody Object changeAvatar(@RequestParam(value = "file", required = true) MultipartFile file)
+            throws IOException {
+        DatabaseManager databaseManager = getDatabaseManager();
+        return databaseManager.changeAvatar(request, file);
     }
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
