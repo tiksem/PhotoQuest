@@ -191,7 +191,12 @@ public class ApiHandler {
             @RequestParam(value = "follow", required = false, defaultValue = "false") boolean follow,
             @RequestParam(value = "tags", required = false, defaultValue = "") String tagsString) {
         tagsString = tagsString.toLowerCase();
-        List<String> tags = Arrays.asList(tagsString.split(" +"));
+        List<String> tags;
+        if (!Strings.isEmpty(tagsString)) {
+            tags = Arrays.asList(tagsString.split(" +"));
+        } else {
+            tags = Collections.emptyList();
+        }
         for(String tag : tags){
             if(!TAG_PATTERN.matcher(tag).matches()){
                 throw new IllegalArgumentException("Wrong tag, should match [A-Za-z]{3,20} pattern");
