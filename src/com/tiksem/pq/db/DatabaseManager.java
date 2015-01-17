@@ -640,7 +640,13 @@ public class DatabaseManager {
         photo.setUserId(userId);
 
         insert(photo);
-        imageManager.saveImage(photo.getId(), bitmapData);
+        try {
+            imageManager.saveImage(photo.getId(), bitmapData);
+        } catch (ImageSizeException e) {
+            delete(photo);
+            throw e;
+        }
+
         getOrCreatePerformedPhotoquest(userId, photo.getPhotoquestId());
 
         commitAddPhotoAction(photo);

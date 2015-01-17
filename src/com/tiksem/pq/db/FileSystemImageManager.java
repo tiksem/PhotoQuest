@@ -2,6 +2,7 @@ package com.tiksem.pq.db;
 
 import com.tiksem.pq.exceptions.AspectMaxFactorRatioException;
 import com.tiksem.pq.exceptions.AspectRatioData;
+import com.tiksem.pq.exceptions.SmallImageException;
 import com.utils.framework.imagemagick.ImageMagickExecutor;
 import com.utils.framework.imagemagick.Size;
 import com.utils.framework.strings.Strings;
@@ -22,6 +23,8 @@ public class FileSystemImageManager implements ImageManager {
     private static final double MAX_ASPECT_RATIO_K = 5.0;
     private static final int MAX_WIDTH = 900;
     private static final int MAX_HEIGHT = 900;
+    private static final int MIN_WIDTH = 300;
+    private static final int MIN_HEIGHT = 300;
 
     private String imageDirectory;
     private ImageMagickExecutor imageMagickExecutor;
@@ -102,6 +105,13 @@ public class FileSystemImageManager implements ImageManager {
     private void fixDimensions(String path) throws IOException {
         ImageMagickExecutor.Image image = imageMagickExecutor.getImage(path);
         Size size = image.getSize();
+
+        if (size.width < MIN_WIDTH || size.height < MIN_HEIGHT) {
+            File file = new File(path);
+            FileUtils.forceDelete(file);
+            throw new SmallImageException(MIN_WIDTH, MIN_HEIGHT);
+        }
+
         double aspectRatioK;
         if(size.width > size.height){
             aspectRatioK = (double)size.width / size.height;
@@ -110,6 +120,8 @@ public class FileSystemImageManager implements ImageManager {
         }
 
         if(aspectRatioK > MAX_ASPECT_RATIO_K){
+            File file = new File(path);
+            FileUtils.forceDelete(file);
             throw new AspectMaxFactorRatioException(
                     new AspectRatioData(size.width, size.height, MAX_ASPECT_RATIO_K));
         }
