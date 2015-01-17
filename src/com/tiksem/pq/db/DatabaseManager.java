@@ -700,6 +700,8 @@ public class DatabaseManager {
             replace(signedInUser);
         }
 
+        initPhotoUrl(photo, request);
+
         return photo;
     }
 
