@@ -213,7 +213,9 @@ public class ApiHandler {
                                                              required = false) boolean follow,
                                                  @RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
-        message = HttpUtilities.reencodePostParamString(message);
+        if (message != null) {
+            message = HttpUtilities.reencodePostParamString(message);
+        }
         DatabaseManager databaseManager = getDatabaseManager();
         return databaseManager.addPhotoToPhotoquest(request, id, file, message, follow);
     }
