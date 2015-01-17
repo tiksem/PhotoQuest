@@ -78,11 +78,13 @@ public class AdvancedRequestsManager {
                 MysqlObjectMapper.ALL_FOREIGN);
     }
 
-    public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit) {
+    public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit, String orderBy) {
         Map<String, Object> args = new HashMap<String, Object>();
         offsetLimit.addToMap(args);
         args.put("query", query);
-        return sqlFileExecutor.executeSQLQuery(query, args, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
+        args.put("orderBy", orderBy);
+        String sqlFile = "photoquest/search_photoquests_order_by.sql";
+        return sqlFileExecutor.executeSQLQuery(sqlFile, args, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
     }
 
     public static class SearchUsersParams {

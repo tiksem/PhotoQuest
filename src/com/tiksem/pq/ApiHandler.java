@@ -274,7 +274,7 @@ public class ApiHandler {
         if(Strings.isEmpty(filter)){
             photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit, order);
         } else {
-            photoquests = getDatabaseManager().searchPhotoquests(request, filter, offsetLimit);
+            photoquests = getDatabaseManager().searchPhotoquests(request, filter, offsetLimit, order);
         }
         return new PhotoquestsList(photoquests);
     }

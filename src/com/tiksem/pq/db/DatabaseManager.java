@@ -365,8 +365,11 @@ public class DatabaseManager {
         return mapper.getCountByPattern(pattern);
     }
 
-    public Collection<Photoquest> searchPhotoquests(final HttpServletRequest request, String query, OffsetLimit offsetLimit) {
-        List<Photoquest> photoquests = advancedRequestsManager.getPhotoquestsByQuery(query, offsetLimit);
+    public Collection<Photoquest> searchPhotoquests(final HttpServletRequest request, String query,
+                                                    OffsetLimit offsetLimit, RatingOrder order) {
+        String ordering = getPhotoOrderBy(order);
+        List<Photoquest> photoquests = advancedRequestsManager.getPhotoquestsByQuery(query, offsetLimit,
+                ordering);
         initPhotoquestsInfo(request, photoquests);
         return photoquests;
     }
