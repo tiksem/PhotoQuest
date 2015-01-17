@@ -1727,7 +1727,7 @@ public class DatabaseManager {
         delete(friendRequest);
         fromUser.decrementSentRequestsCount();
         toUser.decrementReceivedRequestsCount();
-        replaceAll(request, fromUser, toUser);
+        replaceAll(fromUser, toUser);
         return friendRequest;
     }
 
