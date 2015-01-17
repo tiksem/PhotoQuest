@@ -1192,7 +1192,7 @@ public class DatabaseManager {
         if (fillFriendShipData) {
             for(User friend : friends){
                 friend.setRelation(RelationStatus.friend);
-                setAvatar(request, friend);
+                setUserInfo(request, friend);
             }
         }
 
@@ -2024,7 +2024,7 @@ public class DatabaseManager {
 
         for(Relationship friendRequest : friendRequests){
             User friend = received ? friendRequest.getFromUser() : friendRequest.getToUser();
-            setAvatar(request, friend);
+            setUserInfo(request, friend);
             friend.setRelation(received ? RelationStatus.request_received : RelationStatus.request_sent);
             result.add(friend);
         }
