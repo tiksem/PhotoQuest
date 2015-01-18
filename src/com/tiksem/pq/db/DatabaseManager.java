@@ -43,6 +43,7 @@ public class DatabaseManager {
     private MysqlObjectMapper mapper;
 
     private ImageManager imageManager = new FileSystemImageManager("images", "magic");
+    private CaptchaManager captchaManager;
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
@@ -54,6 +55,7 @@ public class DatabaseManager {
         mapper = new MysqlObjectMapper();
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
         asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
+        captchaManager = new DatabaseCaptchaManager(mapper);
     }
 
     private <T> T replace(T object) {
@@ -777,6 +779,20 @@ public class DatabaseManager {
         }
 
         return result;
+    }
+
+    public InputStream getCaptchaImage(long key) {
+        return captchaManager.getCaptchaImage(key);
+    }
+
+    public long getNewCaptcha() {
+        return captchaManager.saveCaptcha();
+    }
+
+    public void checkCaptcha(long key, String answer) {
+        if(!captchaManager.checkCaptcha(key, answer)){
+            throw new InvalidCaptchaException();
+        }
     }
 
     private void initPhotoUrl(Photo photo, HttpServletRequest request) {
@@ -2310,7 +2326,8 @@ public class DatabaseManager {
                 Relationship.class,
                 RelationStatus.class,
                 Reply.class,
-                User.class
+                User.class,
+                CaptchaInfo.class
         ), progressStream, "\n");
     }
 

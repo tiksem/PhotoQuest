@@ -102,7 +102,7 @@ public class FileSystemImageManager implements ImageManager {
         }
     }
 
-    private void fixDimensions(String path) throws IOException {
+    protected void fixDimensions(String path) throws IOException {
         ImageMagickExecutor.Image image = imageMagickExecutor.getImage(path);
         Size size = image.getSize();
 

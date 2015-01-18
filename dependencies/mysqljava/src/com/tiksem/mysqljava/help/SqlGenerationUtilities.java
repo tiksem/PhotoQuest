@@ -658,6 +658,8 @@ public class SqlGenerationUtilities {
         String result = "DELETE FROM " + quotedClassName(object.getClass());
         if(!Strings.isEmpty(where)){
             result += " WHERE " + where;
+        } else {
+            throw new IllegalArgumentException("Delete without where closure");
         }
 
         return result;

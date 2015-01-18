@@ -84,8 +84,13 @@ public class ApiHandler {
                                       @RequestParam(value="name", required=true) String name,
                                       @RequestParam(value="lastName", required=true) String lastName,
                                       @RequestParam(value="location", required=true) String location,
-                                      @RequestParam(value="gender", required=true) boolean gender)
+                                      @RequestParam(value="gender", required=true) boolean gender,
+                                      @RequestParam(value="captcha", required=true) long captcha,
+                                      @RequestParam(value="answer", required=true) String answer)
             throws IOException {
+        DatabaseManager databaseManager = getDatabaseManager();
+        databaseManager.checkCaptcha(captcha, answer);
+
         User user = new User();
         user.setLogin(login);
         user.setPassword(password);
@@ -93,7 +98,7 @@ public class ApiHandler {
         user.setLocation(location);
         user.setGender(gender);
 
-        return getDatabaseManager().registerUser(request, user, (InputStream)null);
+        return databaseManager.registerUser(request, user, (InputStream) null);
     }
 
     @RequestMapping(value = "/editProfile", method = RequestMethod.GET)
@@ -272,12 +277,36 @@ public class ApiHandler {
         }
     }
 
+    @RequestMapping(value = "/captcha/{id}", method = RequestMethod.GET,
+            headers = "Accept=image/jpeg, image/jpg, image/png, image/gif")
+    public void
+    getCaptchaById(@PathVariable long id,
+                 OutputStream outputStream)
+            throws IOException {
+        InputStream inputStream = null;
+        try {
+            DatabaseManager databaseManager = getDatabaseManager();
+            inputStream = databaseManager.getCaptchaImage(id);
+            IOUtils.copyLarge(inputStream, outputStream, new byte[1024 * 64]);
+        } finally {
+            if(inputStream != null){
+                inputStream.close();
+            }
+        }
+    }
+
     @RequestMapping("/deletePhoto")
     public @ResponseBody Object deletePhoto(@RequestParam(value = "id") Long id) {
         getDatabaseManager().deletePhoto(id);
         return new Success();
     }
 
+    @RequestMapping("/getCaptcha")
+    public @ResponseBody Object getCaptcha() {
+        return new Object(){
+            public long id = getDatabaseManager().getNewCaptcha();
+        };
+    }
 
     @RequestMapping("/getPhotoquests")
     public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit,
