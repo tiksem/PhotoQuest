@@ -1,20 +1,14 @@
 package com.tiksem.pq;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
-import com.tiksem.mysqljava.MysqlTablesCreator;
 import com.tiksem.mysqljava.OffsetLimit;
-import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.db.*;
-import com.tiksem.pq.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
-import com.tiksem.pq.test.Eblo;
-import com.tiksem.pq.test.EbloInfo;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
-import com.utils.framework.system.SystemUtilities;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -43,6 +37,13 @@ public class ApiHandler {
     private HttpSession httpSession;
 
     private DatabaseManager getDatabaseManager() {
+        long delay = Settings.getInstance().getRequestDelay();
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         DatabaseManager databaseManager = new DatabaseManager();
         return databaseManager;
     }
@@ -68,6 +69,12 @@ public class ApiHandler {
     @ResponseBody public Object logout(HttpServletResponse response) {
         HttpUtilities.removeCookie(response, "login");
         HttpUtilities.removeCookie(response, "password");
+        return new Success();
+    }
+
+    @RequestMapping("/updateSettings")
+    @ResponseBody public Object updateSettings() {
+        Settings.getInstance().update();
         return new Success();
     }
 

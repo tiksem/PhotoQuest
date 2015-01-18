@@ -2,6 +2,7 @@ package com.tiksem.pq;
 
 import com.tiksem.pq.db.DatabaseManager;
 import org.apache.commons.io.IOUtils;
+import org.springframework.context.annotation.Scope;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.io.IOException;
  */
 @EnableScheduling
 @Component
+@Scope("singleton")
 public class SchedulingTasks {
     private DatabaseManager databaseManager = new DatabaseManager();
 
