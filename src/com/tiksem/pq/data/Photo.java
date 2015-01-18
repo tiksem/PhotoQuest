@@ -9,6 +9,9 @@ import com.tiksem.mysqljava.annotations.*;
 @Table
 @MultipleIndexes(indexes = {
         @MultipleIndex(fields = {"photoquestId", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "userId", "likesCount", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "userId", "viewsCount", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "userId", "id"}),
         @MultipleIndex(fields = {"photoquestId", "likesCount", "id"}),
         @MultipleIndex(fields = {"photoquestId", "viewsCount", "id"}),
         @MultipleIndex(fields = {"userId", "likesCount", "id"}),

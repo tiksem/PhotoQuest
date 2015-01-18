@@ -894,6 +894,30 @@ public class DatabaseManager {
         }, next);
     }
 
+    public Photo getNextPrevAvatar(HttpServletRequest request,
+                                   long userId, long photoId, RatingOrder order, boolean next) {
+        Photoquest photoquest = getPhotoQuestByName(AVATAR_QUEST_NAME);
+        return getNextPrevPhotoOfUserInPhotoquest(request, userId, photoId, photoquest.getId(),
+                order, next);
+    }
+
+    public Photo getNextPrevPhotoOfUserInPhotoquest(HttpServletRequest request,
+                                                    final long userId,
+                                                    long photoId,
+                                                    final long photoquestId,
+                                                    RatingOrder order,
+                                                    boolean next) {
+        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+            @Override
+            public Photo getPattern() {
+                Photo pattern = new Photo();
+                pattern.setUserId(userId);
+                pattern.setPhotoquestId(photoquestId);
+                return pattern;
+            }
+        }, next);
+    }
+
     public Photo getNextPrevPhotoOfSignedInUserInPhotoquest(final HttpServletRequest request,
                                                             final long photoquestId, long photoId,
                                         RatingOrder order, boolean next) {

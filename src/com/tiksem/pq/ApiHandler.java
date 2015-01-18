@@ -374,7 +374,7 @@ public class ApiHandler {
                                              @RequestParam(value = "userId", required = false) Long userId,
                                              @RequestParam(value = "photoquestId", required = false)
                                              Long photoquestId,
-                                             @RequestParam(value = "category", required = false, defaultValue = "all")
+                                             @RequestParam(value = "category", required = false)
                                              PhotoCategory category){
         DatabaseManager databaseManager = getDatabaseManager();
         DatabaseManager.PhotoFillParams params = new DatabaseManager.PhotoFillParams();
@@ -497,6 +497,16 @@ public class ApiHandler {
                                                                      defaultValue = "newest")
                                                              RatingOrder order){
         return getDatabaseManager().getNextPrevPhotoOfUser(request, userId, photoId, order, next);
+    }
+
+    @RequestMapping("/getNextPrevAvatar")
+    public @ResponseBody Object getNextPrevAvatar(@RequestParam("userId") Long userId,
+                                                       @RequestParam("photoId") Long photoId,
+                                                       @RequestParam("next") boolean next,
+                                                       @RequestParam(value = "order", required = false,
+                                                               defaultValue = "newest")
+                                                       RatingOrder order){
+        return getDatabaseManager().getNextPrevAvatar(request, userId, photoId, order, next);
     }
 
     @RequestMapping("/getPhotosOfPhotoquestCount")
