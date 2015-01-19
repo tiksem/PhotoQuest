@@ -301,6 +301,11 @@ public class ApiHandler {
         return new Success();
     }
 
+    @RequestMapping("/setAvatar")
+    public @ResponseBody Object setAvatar(@RequestParam(value = "photoId") Long id) {
+        return getDatabaseManager().setAvatar(request, id);
+    }
+
     @RequestMapping("/getCaptcha")
     public @ResponseBody Object getCaptcha() {
         return new Object(){

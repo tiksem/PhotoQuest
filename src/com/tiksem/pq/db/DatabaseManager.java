@@ -669,6 +669,21 @@ public class DatabaseManager {
         insertAction(action);
     }
 
+    public Photo setAvatar(HttpServletRequest request, long photoId) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        Photo photo = getPhotoByIdOrThrow(photoId);
+        Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+        if(!photoquest.getName().equals(AVATAR_QUEST_NAME)){
+            throw new IllegalArgumentException("The photo is not in avatar photoquest");
+        }
+
+        signedInUser.setAvatarId(photo.getId());
+        replace(signedInUser);
+        initPhotoUrl(photo, request);
+
+        return photo;
+    }
+
     public Photo changeAvatar(HttpServletRequest request, MultipartFile file) throws IOException {
         Photoquest photoquest = getOrCreateSystemPhotoQuest(AVATAR_QUEST_NAME);
         return addPhotoToPhotoquest(request, photoquest.getId(), file, null, false);
