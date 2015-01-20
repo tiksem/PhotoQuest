@@ -138,9 +138,18 @@ public class ApiHandler {
             @RequestParam(value = "gender", required = false) Boolean gender,
             OffsetLimit offsetLimit,
             @RequestParam(value = "order", required = false, defaultValue = "newest")
-            RatingOrder order) {
+            RatingOrder order,
+            @RequestParam(value = "afterId", required = false) Long afterId,
+            @RequestParam(value = "afterRating", required = false) Long afterRating) {
+        AdvancedRequestsManager.SearchUsersParams params = new AdvancedRequestsManager.SearchUsersParams();
+        params.afterId = afterId;
+        params.afterRating = afterRating;
+        params.location = location;
+        params.gender = gender;
+        params.query = filter;
+
         Collection<User> users
-                = getDatabaseManager().searchUsers(request, filter, location, gender, offsetLimit, order);
+                = getDatabaseManager().searchUsers(request, params, offsetLimit, order);
 
         return new UsersList(users);
     }

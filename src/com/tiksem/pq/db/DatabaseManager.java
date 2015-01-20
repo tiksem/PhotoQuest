@@ -594,17 +594,11 @@ public class DatabaseManager {
     }
 
     public Collection<User> searchUsers(HttpServletRequest request,
-                                        String queryString,
-                                        String location,
-                                        Boolean gender,
+                                        AdvancedRequestsManager.SearchUsersParams params,
                                         OffsetLimit offsetLimit,
                                         RatingOrder order) {
-        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
-        args.gender = gender;
-        args.query = queryString;
-        args.location = location;
-        args.orderBy = getPeopleOrderBy(order);
-        Collection<User> users = advancedRequestsManager.searchUsers(args, offsetLimit);
+        params.orderBy = getPeopleOrderBy(order);
+        Collection<User> users = advancedRequestsManager.searchUsers(params, offsetLimit);
         setUsersInfoAndRelationStatus(request, users);
 
         return users;

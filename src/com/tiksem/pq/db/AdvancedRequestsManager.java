@@ -2,6 +2,7 @@ package com.tiksem.pq.db;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
+import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.Action;
 import com.tiksem.pq.data.Photo;
 import com.tiksem.pq.data.Photoquest;
@@ -12,6 +13,7 @@ import com.utils.framework.collections.iterator.AbstractIterator;
 import com.utils.framework.strings.Strings;
 
 import javax.jdo.PersistenceManager;
+import java.lang.reflect.Field;
 import java.util.*;
 
 /**
@@ -92,6 +94,8 @@ public class AdvancedRequestsManager {
         public Boolean gender;
         public String location;
         public String orderBy;
+        public Long afterId;
+        public Long afterRating;
     }
 
     public <T> List<T> searchUsers(SearchUsersParams params,
@@ -106,15 +110,37 @@ public class AdvancedRequestsManager {
     private Object searchUsersOrGetCount(SearchUsersParams params,
                                              OffsetLimit offsetLimit,
                                              boolean getCount) {
+        String offsetCondition = "";
+        if(!getCount){
+            if(params.afterRating != null){
+                offsetCondition += "rating > " + params.afterRating;
+                if(params.afterId != null){
+                    offsetCondition += " AND id > " + params.afterId;
+                }
+            } else if(params.afterId != null) {
+                offsetCondition += "id > " + params.afterId;
+            }
+        }
+
         if(Strings.isEmpty(params.query)){
             User user = new User();
             user.setGender(params.gender);
             user.setLocation(params.location);
             if (!getCount) {
-                return mapper.queryByPattern(user, offsetLimit, params.orderBy);
+                SelectParams selectParams = new SelectParams();
+                selectParams.offsetLimit = offsetLimit;
+                selectParams.ordering = params.orderBy;
+                if (!offsetCondition.isEmpty()) {
+                    selectParams.additionalWhereClosure = offsetCondition;
+                }
+                return mapper.queryByPattern(user, selectParams);
             } else {
                 return mapper.getCountByPattern(user);
             }
+        }
+
+        if(Strings.isEmpty(offsetCondition)){
+            offsetCondition = "1=1";
         }
 
         String[] queryParts = params.query.split(" +");
@@ -142,8 +168,10 @@ public class AdvancedRequestsManager {
 
         sqlFile += getCount ? "user/search/count/" : "user/search/";
 
-        Map<String, Object> args = Reflection.objectToPropertyMap(params);
+        List<Field> fields = Reflection.getAllFieldsExcluding(params, "afterId", "afterRating");
+        Map<String, Object> args = Reflection.fieldsToPropertyMap(params, fields);
         offsetLimit.addToMap(args);
+        args.put("offsetCondition", offsetCondition);
         if (!getCount) {
             return sqlFileExecutor.executeSQLQuery(sqlFile, args, User.class);
         } else {
