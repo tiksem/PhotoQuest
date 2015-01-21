@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.tiksem.mysqljava.FieldsCheckingUtilities;
 import com.tiksem.mysqljava.annotations.*;
 import com.tiksem.mysqljava.annotations.NotNull;

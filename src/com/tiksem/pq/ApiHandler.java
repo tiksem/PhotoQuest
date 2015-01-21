@@ -4,6 +4,9 @@ import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
+import com.tiksem.pq.data.response.android.MobileFeedList;
+import com.tiksem.pq.data.response.android.MobilePhotoquestList;
+import com.tiksem.pq.data.response.android.MobileUserList;
 import com.tiksem.pq.db.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -47,7 +51,36 @@ public class ApiHandler {
         DatabaseManager databaseManager = new DatabaseManager();
         return databaseManager;
     }
-    
+
+    private boolean isMobileClient() {
+        Cookie mobile = HttpUtilities.getCookie("mobile", request.getCookies());
+        return mobile != null && mobile.getValue().equals("true");
+    }
+
+    private Object getUsersResponse(Collection<User> users) {
+        if(isMobileClient()){
+            return new MobileUserList(users);
+        } else {
+            return new UsersList(users);
+        }
+    }
+
+    private Object getPhotoquestsResponse(Collection<Photoquest> photoquests) {
+        if(isMobileClient()){
+            return new MobilePhotoquestList(photoquests);
+        } else {
+            return new PhotoquestsList(photoquests);
+        }
+    }
+
+    private Object getFeedResponse(Collection<Action> actions) {
+        if(isMobileClient()){
+            return new MobileFeedList(actions);
+        } else {
+            return new FeedList(actions);
+        }
+    }
+
     @RequestMapping("/")
     public String index() {
         return "redirect:/index.html";
@@ -56,11 +89,17 @@ public class ApiHandler {
     @RequestMapping("/login")
     public @ResponseBody Object login(@RequestParam(value="login", required=true) String login,
                                       @RequestParam(value="password", required=true) String password,
+                                      @RequestParam(value="mobile", required=false, defaultValue = "false")
+                                      boolean mobile,
                                       HttpServletResponse response){
         User user = getDatabaseManager().loginOrThrow(request, login, password);
 
         response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("login", login));
         response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("password", password));
+
+        if(mobile){
+            response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("mobile", "true"));
+        }
 
         return user;
     }
@@ -128,7 +167,7 @@ public class ApiHandler {
                                          String password) throws IOException {
 
         List<User> users = getDatabaseManager().registerRandomUsers(request, startId, count, password);
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/users")
@@ -142,7 +181,7 @@ public class ApiHandler {
         Collection<User> users
                 = getDatabaseManager().searchUsers(request, filter, location, gender, offsetLimit, order);
 
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/getUsersCount")
@@ -168,33 +207,33 @@ public class ApiHandler {
     public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit,
                 RatingOrder.newest, true);
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/followers")
     public @ResponseBody Object getFollowers(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getFollowers(request, offsetLimit,
                 RatingOrder.newest);
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/getFollowingUsers")
     public @ResponseBody Object getFollowingUsers(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getFollowingUsers(request, offsetLimit,
                 RatingOrder.newest);
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/getReceivedFriendRequests")
     public @ResponseBody Object getReceivedFriendRequests(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getReceivedFriendRequests(request, offsetLimit);
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/getSentFriendRequests")
     public @ResponseBody Object getSentFriendRequests(OffsetLimit offsetLimit) {
         Collection<User> users = getDatabaseManager().getSentFriendRequests(request, offsetLimit);
-        return new UsersList(users);
+        return getUsersResponse(users);
     }
 
     @RequestMapping("/createPhotoquest")
@@ -324,7 +363,7 @@ public class ApiHandler {
         } else {
             photoquests = getDatabaseManager().searchPhotoquests(request, filter, offsetLimit, order);
         }
-        return new PhotoquestsList(photoquests);
+        return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getCreatedPhotoquests")
@@ -335,7 +374,7 @@ public class ApiHandler {
         Collection<Photoquest> photoquests =
                 getDatabaseManager().getPhotoquestsCreatedByUser(request, userId, offsetLimit, order);
 
-        return new PhotoquestsList(photoquests);
+        return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getCreatedPhotoquestsCount")
@@ -353,7 +392,7 @@ public class ApiHandler {
         Collection<Photoquest> photoquests =
                 getDatabaseManager().getPerformedPhotoquests(request, userId, offsetLimit, order);
 
-        return new PhotoquestsList(photoquests);
+        return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getPerformedPhotoquestsCount")
@@ -370,7 +409,7 @@ public class ApiHandler {
             OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests =
                 getDatabaseManager().getFollowingPhotoquests(request, userId, offsetLimit, order);
-        return new PhotoquestsList(photoquests);
+        return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getFollowingPhotoquestsCount")
@@ -733,7 +772,7 @@ public class ApiHandler {
             news = getDatabaseManager().getUserNews(request, userId, offsetLimit);
         }
 
-        return new FeedList(news);
+        return getFeedResponse(news);
     }
 
     @RequestMapping("/getNewsCount")
