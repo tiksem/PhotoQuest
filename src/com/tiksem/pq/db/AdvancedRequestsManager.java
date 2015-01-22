@@ -125,7 +125,7 @@ public class AdvancedRequestsManager {
             query = params.query;
         }
 
-        params.query = query;
+        params.query = query + "%";
 
         String sqlFile;
         if(params.location != null){
@@ -140,10 +140,12 @@ public class AdvancedRequestsManager {
             sqlFile = "search_users_by_query.sql";
         }
 
-        sqlFile += getCount ? "user/search/count/" : "user/search/";
+        sqlFile = getCount ? "user/search/count/" + sqlFile : "user/search/" + sqlFile;
 
         Map<String, Object> args = Reflection.objectToPropertyMap(params);
-        offsetLimit.addToMap(args);
+        if (!getCount) {
+            offsetLimit.addToMap(args);
+        }
         if (!getCount) {
             return sqlFileExecutor.executeSQLQuery(sqlFile, args, User.class);
         } else {

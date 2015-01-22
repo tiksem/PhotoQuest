@@ -4,7 +4,7 @@ SELECT * FROM user
     SELECT user.id as userId
     FROM user
     WHERE
-      namedData LIKE :query
+      nameData LIKE :query
       AND gender = :gender
     LIMIT 0, 200
   ) as sel ON sel.userId = user.ID

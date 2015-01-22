@@ -1,6 +1,6 @@
 SELECT count(*)
 FROM user
 WHERE
-  namedData LIKE :query
+  nameData LIKE :query
   AND location = :location
 LIMIT 0, 200

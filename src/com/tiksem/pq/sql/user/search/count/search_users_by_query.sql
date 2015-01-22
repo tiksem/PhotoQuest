@@ -1,5 +1,5 @@
 SELECT count(*)
 FROM user
 WHERE
-  namedData LIKE :query
+  nameData LIKE :query
 LIMIT 0, 200
