@@ -4,3 +4,9 @@
 [submodule "web/WEB-INF/resources"]
 	path = web/WEB-INF/resources
 	url = https://privetgnil@code.google.com/p/yabivdulres/
+[submodule "dependencies/jsonutils"]
+	path = dependencies/jsonutils
+	url = https://privetgnil@code.google.com/p/jsvdulloc/
+[submodule "dependencies/vkapi"]
+	path = dependencies/vkapi
+	url = https://privetgnil@code.google.com/p/vksdfsadfasdf/

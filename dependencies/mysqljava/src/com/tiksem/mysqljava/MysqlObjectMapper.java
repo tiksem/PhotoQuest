@@ -586,4 +586,12 @@ public class MysqlObjectMapper {
         super.finalize();
         connection.close();
     }
+
+    public void close() {
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

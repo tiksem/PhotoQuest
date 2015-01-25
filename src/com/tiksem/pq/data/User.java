@@ -66,10 +66,6 @@ public class User implements WithAvatar {
     @NotNull
     private Long receivedRequestsCount;
 
-    @Stored
-    @NotNull
-    private String location;
-
     @Stored(type = "CHAR(2)")
     @NotNull
     private String countryCode;
@@ -81,6 +77,10 @@ public class User implements WithAvatar {
     @NotNull
     @Stored
     private Boolean gender;
+
+    @Stored
+    @NotNull
+    private Integer cityId;
 
     private String avatar;
 
@@ -95,6 +95,14 @@ public class User implements WithAvatar {
     }
 
     public User() {
+    }
+
+    public Integer getCityId() {
+        return cityId;
+    }
+
+    public void setCityId(Integer cityId) {
+        this.cityId = cityId;
     }
 
     public String getLogin() {
@@ -317,14 +325,6 @@ public class User implements WithAvatar {
 
     public void setUnreadRepliesCount(Long unreadRepliesCount) {
         this.unreadRepliesCount = unreadRepliesCount;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
     }
 
     public String getCountryCode() {

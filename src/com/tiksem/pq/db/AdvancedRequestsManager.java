@@ -6,12 +6,11 @@ import com.tiksem.pq.data.Action;
 import com.tiksem.pq.data.Photo;
 import com.tiksem.pq.data.Photoquest;
 import com.tiksem.pq.data.User;
-import com.utils.framework.CollectionUtils;
+import com.tiksem.pq.db.help.PeopleSearcher;
+import com.tiksem.pq.db.help.SearchUsersParams;
 import com.utils.framework.Reflection;
-import com.utils.framework.collections.iterator.AbstractIterator;
 import com.utils.framework.strings.Strings;
 
-import javax.jdo.PersistenceManager;
 import java.util.*;
 
 /**
@@ -87,70 +86,15 @@ public class AdvancedRequestsManager {
         return sqlFileExecutor.executeSQLQuery(sqlFile, args, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
     }
 
-    public static class SearchUsersParams {
-        public String query;
-        public Boolean gender;
-        public String location;
-        public String orderBy;
-    }
-
-    public <T> List<T> searchUsers(SearchUsersParams params,
+    public List<User> searchUsers(SearchUsersParams params,
                                    OffsetLimit offsetLimit) {
-        return (List<T>) searchUsersOrGetCount(params, offsetLimit, false);
+        PeopleSearcher searcher = new PeopleSearcher(mapper, sqlFileExecutor, params, offsetLimit);
+        return searcher.search();
     }
 
     public long getSearchUsersCount(SearchUsersParams params) {
-        return (Long)searchUsersOrGetCount(params, null, true);
-    }
-
-    private Object searchUsersOrGetCount(SearchUsersParams params,
-                                             OffsetLimit offsetLimit,
-                                             boolean getCount) {
-        if(Strings.isEmpty(params.query)){
-            User user = new User();
-            user.setGender(params.gender);
-            user.setLocation(params.location);
-            if (!getCount) {
-                return mapper.queryByPattern(user, offsetLimit, params.orderBy);
-            } else {
-                return mapper.getCountByPattern(user);
-            }
-        }
-
-        String[] queryParts = params.query.split(" +");
-        String query;
-        if(queryParts.length > 1){
-            query = queryParts[0] + " " + queryParts[1];
-        } else {
-            query = params.query;
-        }
-
-        params.query = query + "%";
-
-        String sqlFile;
-        if(params.location != null){
-            if(params.gender != null){
-                sqlFile = "search_users_by_gender_location_and_query.sql";
-            } else {
-                sqlFile = "search_users_by_location_and_query.sql";
-            }
-        } else if(params.gender != null) {
-            sqlFile = "search_users_by_gender_and_query.sql";
-        } else {
-            sqlFile = "search_users_by_query.sql";
-        }
-
-        sqlFile = getCount ? "user/search/count/" + sqlFile : "user/search/" + sqlFile;
-
-        Map<String, Object> args = Reflection.objectToPropertyMap(params);
-        if (!getCount) {
-            offsetLimit.addToMap(args);
-        }
-        if (!getCount) {
-            return sqlFileExecutor.executeSQLQuery(sqlFile, args, User.class);
-        } else {
-            return sqlFileExecutor.executeCountQuery(sqlFile, args);
-        }
+        PeopleSearcher searcher = new PeopleSearcher(mapper, sqlFileExecutor, params, null);
+        return searcher.getCount();
     }
 
     public void deleteComment(long commentId) {

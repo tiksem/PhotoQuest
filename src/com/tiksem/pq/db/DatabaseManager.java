@@ -5,18 +5,22 @@ import com.tiksem.mysqljava.MysqlTablesCreator;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
+import com.tiksem.pq.data.City;
 import com.tiksem.pq.data.Likable;
 import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
+import com.tiksem.pq.db.help.SearchUsersParams;
 import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
+import com.utils.framework.google.places.Language;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.randomuser.Gender;
 import com.utils.framework.randomuser.RandomUserGenerator;
 import com.utils.framework.randomuser.Response;
 import com.utils.framework.strings.Strings;
+import com.vkapi.location.*;
 import org.apache.commons.io.FileUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -386,58 +390,61 @@ public class DatabaseManager {
         return getPhotoquestsCreatedByUserCount(getSignedInUserOrThrow(request).getId());
     }
 
-    private Location getLocationById(String id) {
-        return mapper.getObjectById(Location.class, id);
+    private City getCityById(int id) {
+        return mapper.getObjectById(City.class, id);
     }
 
-    private Location getLocationByIdOrThrow(String id) {
-        Location location = getLocationById(id);
-        if(location == null){
-            throw new LocationNotFoundException(id);
+    private City getCityByIdOrThrow(int id) {
+        City city = getCityById(id);
+        if(city == null){
+            throw new CityNotFoundException(id);
         }
 
-        return location;
+        return city;
     }
 
-    private Location addLocation(String placeId, City city) {
-        Location location = new Location();
-        location.setId(placeId);
-        location.setCountryCode(city.countryCode);
-        LocationInfo locationInfo = new LocationInfo();
-        locationInfo.setCity(city.name);
-        locationInfo.setCountry(city.country);
-        location.setInfo(Language.en, locationInfo);
-        insert(location);
-        return location;
-    }
-
-    public void updateLocation(User user) throws IOException {
-        String locationId = user.getLocation();
-        Location location = getLocationById(locationId);
-        if(location == null){
-            City city = getCityOrThrow(locationId);
-            location = addLocation(locationId, city);
+    private City getCityByIdOrGetFromVk(short countryId, int id) throws VkException {
+        City city = getCityById(id);
+        if(city == null){
+            VkCity enCity = VkLocationApi.getCityById(id, com.vkapi.location.Language.en);
+            VkCity ruCity = VkLocationApi.getCityById(id, com.vkapi.location.Language.ru);
+            city = new City();
+            city.setRusName(ruCity.title);
+            city.setId(id);
+            city.setCountryId(countryId);
+            city.setEngName(enCity.title);
+            insert(city);
         }
 
-        user.setCountryCode(location.getCountryCode());
+        return city;
     }
 
-    private User registerUser(User user) throws IOException {
+    private User registerUser(User user, short countryId) throws IOException {
         String login = user.getLogin();
 
         if (getUserByLogin(login) != null) {
             throw new UserExistsRegisterException(login);
         }
 
-        updateLocation(user);
+        updateLocation(user, countryId, user.getCityId());
 
         insert(user);
         return user;
     }
 
+    private void updateLocation(User user, short countryId, int cityId) throws IOException {
+        Country country = Countries.getInstance().getById(countryId);
+        if(country == null){
+            throw new IllegalArgumentException("Unknown country");
+        }
+
+        VkCity cityById = VkLocationApi.getCityById(cityId, com.vkapi.location.Language.en);
+    }
+
     public User editProfile(HttpServletRequest request,
                             String name, String lastName,
-                            String location) throws IOException {
+                            Short countryId,
+                            Integer cityId) throws IOException {
         User user = getSignedInUserOrThrow(request);
 
         if (name != null) {
@@ -446,10 +453,9 @@ public class DatabaseManager {
         if (lastName != null) {
             user.setNameAndLastName(user.getName(), lastName);
         }
-        if (location != null) {
-            user.setLocation(location);
+        if (countryId != null && cityId != null) {
+            updateLocation(user, countryId, cityId);
         }
-        updateLocation(user);
         setUserInfo(request, user);
 
         return replace(user);
@@ -465,20 +471,8 @@ public class DatabaseManager {
         replace(user);
     }
 
-    public City getCityOrThrow(String location) throws IOException {
-        try {
-            City city = googlePlacesSearcher.getCityByPlaceId(location);
-            if(city == null){
-                throw new InvalidLocationException();
-            }
-
-            return city;
-        } catch (PlaceIsNotCityException e) {
-            throw new InvalidLocationException(e);
-        }
-    }
-
-    public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
+    public User registerUser(HttpServletRequest request, User user, short countryId, MultipartFile avatar)
+            throws IOException {
         InputStream avatarInputStream = null;
         try {
             avatarInputStream = avatar.getInputStream();
@@ -486,11 +480,12 @@ public class DatabaseManager {
             throw new RuntimeException(e);
         }
 
-        return registerUser(request, user, avatarInputStream);
+        return registerUser(request, user, countryId, avatarInputStream);
     }
 
-    public User registerUser(HttpServletRequest request, User user, InputStream avatar) throws IOException {
-        user = registerUser(user);
+    public User registerUser(HttpServletRequest request, User user, short countryId, InputStream avatar)
+            throws IOException {
+        user = registerUser(user, countryId);
 
         if (user.getLogin() == null) {
             throw new RuntimeException("WTF?");
@@ -587,22 +582,16 @@ public class DatabaseManager {
         }
     }
 
-    public long getUsersByLocationCount(String location) {
-        User pattern = new User();
-        pattern.setLocation(location);
-        return mapper.getCountByPattern(pattern);
-    }
-
     public Collection<User> searchUsers(HttpServletRequest request,
                                         String queryString,
-                                        String location,
+                                        Integer cityId,
                                         Boolean gender,
                                         OffsetLimit offsetLimit,
                                         RatingOrder order) {
-        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
+        SearchUsersParams args = new SearchUsersParams();
         args.gender = gender;
         args.query = queryString;
-        args.location = location;
+        args.cityId = cityId;
         args.orderBy = getPeopleOrderBy(order);
         Collection<User> users = advancedRequestsManager.searchUsers(args, offsetLimit);
         setUsersInfoAndRelationStatus(request, users);
@@ -610,11 +599,11 @@ public class DatabaseManager {
         return users;
     }
 
-    public long getSearchUsersCount(String queryString, String location, Boolean gender) {
-        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
+    public long getSearchUsersCount(String queryString, Integer cityId, Boolean gender) {
+        SearchUsersParams args = new SearchUsersParams();
         args.gender = gender;
         args.query = queryString;
-        args.location = location;
+        args.cityId = cityId;
         return advancedRequestsManager.getSearchUsersCount(args);
     }
 
@@ -1047,10 +1036,10 @@ public class DatabaseManager {
     }
 
     public void setUserInfo(HttpServletRequest request, User user) {
-        Location location = getLocationByIdOrThrow(user.getLocation());
-        LocationInfo locationInfo = location.getInfo(Language.en);
-        user.setCountry(locationInfo.getCountry());
-        user.setCity(locationInfo.getCity());
+        City city = getCityByIdOrThrow(user.getCityId());
+        Country country = Countries.getInstance().getById(city.getCountryId());
+        user.setCountry(country.getEngName());
+        user.setCity(city.getEngName());
         setAvatar(request, user);
     }
 
@@ -1872,11 +1861,15 @@ public class DatabaseManager {
 
             AutoCompleteResult location =
                     googlePlacesSearcher.performAutoCompleteCitiesSearch(userData.city).get(0);
-            user.setLocation(location.placeId);
+            Country country = Countries.getInstance().getCountryByName(location.country);
 
+            VkCity vkCity = VkLocationApi.getCities(location.city, country.getId(),
+                    com.vkapi.location.Language.en, 1).get(0);
+            City city = getCityByIdOrGetFromVk(country.getId(), vkCity.id);
+            user.setCityId(city.getId());
 
             InputStream avatar = IOUtilities.getBufferedInputStreamFromUrl(userData.largeAvatar);
-            user = registerUser(request, user, avatar);
+            user = registerUser(request, user, country.getId(), avatar);
             result.add(user);
         }
 
@@ -2329,7 +2322,8 @@ public class DatabaseManager {
                 FollowingPhotoquest.class,
                 Likable.class,
                 Like.class,
-                Location.class,
+                City.class,
+                Country.class,
                 Message.class,
                 PerformedPhotoquest.class,
                 Photo.class,

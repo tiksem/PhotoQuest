@@ -122,7 +122,8 @@ public class ApiHandler {
                                       @RequestParam(value="password", required=true) String password,
                                       @RequestParam(value="name", required=true) String name,
                                       @RequestParam(value="lastName", required=true) String lastName,
-                                      @RequestParam(value="location", required=true) String location,
+                                      @RequestParam(value="city", required=true) Integer cityId,
+                                      @RequestParam(value="country", required=true) Short countryId,
                                       @RequestParam(value="gender", required=true) boolean gender,
                                       @RequestParam(value="captcha", required=true) long captcha,
                                       @RequestParam(value="answer", required=true) String answer)
@@ -134,20 +135,21 @@ public class ApiHandler {
         user.setLogin(login);
         user.setPassword(password);
         user.setNameAndLastName(name, lastName);
-        user.setLocation(location);
+        user.setCityId(cityId);
         user.setGender(gender);
 
-        return databaseManager.registerUser(request, user, (InputStream) null);
+        return databaseManager.registerUser(request, user, countryId, (InputStream) null);
     }
 
     @RequestMapping(value = "/editProfile", method = RequestMethod.GET)
     public @ResponseBody Object editProfile(
                                          @RequestParam(value="name", required=false) String name,
                                          @RequestParam(value="lastName", required=false) String lastName,
-                                         @RequestParam(value="location", required=false) String location)
+                                         @RequestParam(value="city", required=false) Integer city,
+                                         @RequestParam(value="country", required=false) Short country)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.editProfile(request, name, lastName, location);
+        return databaseManager.editProfile(request, name, lastName, country, city);
     }
 
     @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
@@ -173,22 +175,22 @@ public class ApiHandler {
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers(
             @RequestParam(value = "filter", required = false) String filter,
-            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "city", required = false) Integer cityId,
             @RequestParam(value = "gender", required = false) Boolean gender,
             OffsetLimit offsetLimit,
             @RequestParam(value = "order", required = false, defaultValue = "newest")
             RatingOrder order) {
         Collection<User> users
-                = getDatabaseManager().searchUsers(request, filter, location, gender, offsetLimit, order);
+                = getDatabaseManager().searchUsers(request, filter, cityId, gender, offsetLimit, order);
 
         return getUsersResponse(users);
     }
 
     @RequestMapping("/getUsersCount")
     public @ResponseBody Object getAllUsersCount(@RequestParam(value = "filter", required = false) String filter,
-                                                 @RequestParam(value = "location", required = false) String location,
+                                                 @RequestParam(value = "city", required = false) Integer city,
                                                  @RequestParam(value = "gender", required = false) Boolean gender) {
-        long count = getDatabaseManager().getSearchUsersCount(filter, location, gender);
+        long count = getDatabaseManager().getSearchUsersCount(filter, city, gender);
 
         return new CountResponse(count);
     }
