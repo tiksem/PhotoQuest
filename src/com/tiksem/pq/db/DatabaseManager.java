@@ -14,7 +14,6 @@ import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
-import com.utils.framework.google.places.Language;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.randomuser.Gender;
 import com.utils.framework.randomuser.RandomUserGenerator;
@@ -51,6 +50,7 @@ public class DatabaseManager {
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
+    private LocationManager locationManager;
 
     // do not use directly
     private User _signedInUser;
@@ -60,6 +60,7 @@ public class DatabaseManager {
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
         asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
         captchaManager = new DatabaseCaptchaManager(mapper);
+        locationManager = new LocationManager(mapper);
     }
 
     private <T> T replace(T object) {
@@ -79,12 +80,8 @@ public class DatabaseManager {
         mapper.insert(object);
     }
 
-    private void insertAll(Object... objects) {
-        mapper.insertAll(objects);
-    }
-
-    private void insertAll(Iterator<Object> objects) {
-        mapper.insertAll(objects);
+    private void insert(Object... objects) {
+        mapper.insertAll(Arrays.asList(objects));
     }
 
     private void delete(Object pattern) {
@@ -1161,7 +1158,7 @@ public class DatabaseManager {
         friendship2.setFromUserId(user2.getId());
         friendship2.setToUserId(user1.getId());
 
-        insertAll(friendship1, friendship2);
+        insert(friendship1, friendship2);
     }
 
     public void addFriend(HttpServletRequest request, long userId) {
@@ -1863,7 +1860,7 @@ public class DatabaseManager {
                     googlePlacesSearcher.performAutoCompleteCitiesSearch(userData.city).get(0);
             Country country = Countries.getInstance().getCountryByName(location.country);
 
-            VkCity vkCity = VkLocationApi.getCities(location.city, country.getId(),
+            VkCity vkCity = VkLocationApi.searchCities(location.city, country.getId(),
                     com.vkapi.location.Language.en, 1).get(0);
             City city = getCityByIdOrGetFromVk(country.getId(), vkCity.id);
             user.setCityId(city.getId());
@@ -2347,5 +2344,11 @@ public class DatabaseManager {
 
     public void dropTables() {
         new MysqlTablesCreator(mapper).dropTables();
+    }
+
+    public void updateCitiesAndCountries() throws IOException {
+        OutputStream progressStream = new FileOutputStream("progress.txt");
+        locationManager.setProgressStream(progressStream);
+        locationManager.updateCitiesAndCountries();
     }
 }

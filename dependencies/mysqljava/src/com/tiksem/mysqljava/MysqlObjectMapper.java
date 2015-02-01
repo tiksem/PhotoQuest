@@ -528,8 +528,8 @@ public class MysqlObjectMapper {
         }
     }
 
-    public void insertAll(List<Object> objects) {
-        InsertStatement insertStatement = new InsertStatement(objects);
+    public <T extends Object> void insertAll(List<T> objects) {
+        InsertStatement insertStatement = new InsertStatement((List<Object>) objects);
         insertStatement.execute(connection);
     }
 
@@ -537,7 +537,7 @@ public class MysqlObjectMapper {
         insertAll(Collections.singletonList(object));
     }
 
-    public void insertAll(Object... objects) {
+    public void insert(Object... objects) {
         insertAll(Arrays.asList(objects));
     }
 

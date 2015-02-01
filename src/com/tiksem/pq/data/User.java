@@ -11,15 +11,15 @@ import com.utils.framework.Reflection;
  */
 
 @MultipleIndexes(indexes = {
-        @MultipleIndex(fields = {"location", "nameData"}),
-        @MultipleIndex(fields = {"location", "gender", "nameData"}),
+        @MultipleIndex(fields = {"cityId", "nameData"}),
+        @MultipleIndex(fields = {"cityId", "gender", "nameData"}),
         @MultipleIndex(fields = {"gender", "nameData"}),
-        @MultipleIndex(fields = {"location", "gender", "rating", "id"}),
+        @MultipleIndex(fields = {"cityId", "gender", "rating", "id"}),
         @MultipleIndex(fields = {"gender", "rating", "id"}),
-        @MultipleIndex(fields = {"location", "rating", "id"}),
-        @MultipleIndex(fields = {"location", "gender", "id"}),
+        @MultipleIndex(fields = {"cityId", "rating", "id"}),
+        @MultipleIndex(fields = {"cityId", "gender", "id"}),
         @MultipleIndex(fields = {"gender", "id"}),
-        @MultipleIndex(fields = {"location", "id"}),
+        @MultipleIndex(fields = {"cityId", "id"}),
         @MultipleIndex(fields = {"rating", "id"})
 })
 @Table

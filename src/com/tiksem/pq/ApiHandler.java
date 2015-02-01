@@ -811,4 +811,10 @@ public class ApiHandler {
             }
         };
     }
+
+    @RequestMapping("/updateCitiesAndCountries")
+    public @ResponseBody Object updateCitiesAndCountries() throws IOException {
+        getDatabaseManager().updateCitiesAndCountries();
+        return new Success();
+    }
 }

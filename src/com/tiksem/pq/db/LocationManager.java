@@ -1,35 +1,116 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
+import com.tiksem.pq.data.City;
 import com.tiksem.pq.data.Country;
+import com.utils.framework.CollectionUtils;
+import com.utils.framework.collections.iterator.AbstractIterator;
 import com.vkapi.location.Language;
+import com.vkapi.location.VkCity;
 import com.vkapi.location.VkCountry;
 import com.vkapi.location.VkLocationApi;
+import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.io.OutputStream;
+import java.util.*;
 
 /**
  * Created by CM on 1/22/2015.
  */
 public class LocationManager {
     private MysqlObjectMapper mapper;
+    private OutputStream progressStream;
 
     public LocationManager(MysqlObjectMapper mapper) {
         this.mapper = mapper;
+    }
+
+    public OutputStream getProgressStream() {
+        return progressStream;
+    }
+
+    public void setProgressStream(OutputStream progressStream) {
+        this.progressStream = progressStream;
     }
 
     public List<Country> getCountries() {
         return mapper.executeSQLQuery("SELECT * FROM country", Country.class);
     }
 
-    public void updateCountries() throws IOException {
-        List<Country> countries = getCountriesFromVk();
+    private void writeProgress(String progress) {
+        try {
+            IOUtils.write(progress + "\n", progressStream);
+        } catch (IOException e) {
 
+        }
+    }
+
+    public void updateCountries() throws IOException {
+        writeProgress("deleting countries...");
+        mapper.executeNonSelectSQL("DELETE FROM country");
+        writeProgress("inserting countries...");
+        List<Country> countries = getCountriesFromVk();
         mapper.insertAll(countries);
+
+    }
+
+    public void updateCities() {
+        writeProgress("deleting cities...");
+        mapper.executeNonSelectSQL("DELETE FROM city");
+        writeProgress("selecting countries...");
+        List<Country> countries = getCountries();
+        int citiesTotal = 0;
+        int countryIndex = 0;
+        for(final Country country : countries){
+            final Iterator<VkCity> enCities = VkLocationApi.getCities(country.getId(), Language.en).iterator();
+            final Iterator<VkCity> ruCities = VkLocationApi.getCities(country.getId(), Language.ru).iterator();
+
+            final Iterator<City> cityIterator = new AbstractIterator<City>(){
+                @Override
+                public City next() {
+                    VkCity en = enCities.next();
+                    VkCity ru = ruCities.next();
+                    if(en.id != ru.id){
+                        throw new RuntimeException("WTF?");
+                    }
+
+                    City city = new City();
+                    city.setId(en.id);
+                    city.setCountryId(country.getId());
+                    city.setRusName(ru.title);
+                    city.setEngName(en.title);
+
+                    return city;
+                }
+
+                @Override
+                public boolean hasNext() {
+                    return enCities.hasNext();
+                }
+            };
+
+            writeProgress("inserting cities of country " + country.getEngName() + "...");
+            while (cityIterator.hasNext()) {
+                List<City> cities = CollectionUtils.toList(new Iterable<City>() {
+                    @Override
+                    public Iterator<City> iterator() {
+                        return cityIterator;
+                    }
+                }, 500);
+                mapper.insertAll(cities);
+                citiesTotal += cities.size();
+                writeProgress(citiesTotal + " cities inserted");
+            }
+
+            writeProgress((countryIndex + 1) + " / " + countries.size() + " inserted");
+            countryIndex++;
+        }
+    }
+
+    public void updateCitiesAndCountries() throws IOException {
+        updateCountries();
+        updateCities();
     }
 
     private List<Country> getCountriesFromVk() throws IOException {

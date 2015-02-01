@@ -110,7 +110,12 @@ public class ResultSetUtilities {
                 }
             } else {
                 if (resultSet.getObject(index + 1) != null) {
-                    value = resultSet.getObject(index + 1, field.getType());
+                    Class<?> type = field.getType();
+                    if (type != Short.class) {
+                        value = resultSet.getObject(index + 1, type);
+                    } else {
+                        value = (short) resultSet.getInt(index + 1);
+                    }
                 } else {
                     value = null;
                 }
