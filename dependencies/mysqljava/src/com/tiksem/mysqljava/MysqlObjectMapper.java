@@ -24,7 +24,7 @@ public class MysqlObjectMapper {
 
     public static final List<String> ALL_FOREIGN = new ArrayList<String>();
 
-    private final Connection connection;
+    private Connection connection;
 
     public MysqlObjectMapper() {
         try {
@@ -583,7 +583,19 @@ public class MysqlObjectMapper {
 
     @Override
     protected void finalize() throws Throwable {
+        destroy();
         super.finalize();
-        connection.close();
+    }
+
+    public void destroy() {
+        if(connection != null){
+            try {
+                connection.close();
+            } catch (SQLException e) {
+
+            }
+
+            connection = null;
+        }
     }
 }

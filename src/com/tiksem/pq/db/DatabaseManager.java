@@ -868,6 +868,10 @@ public class DatabaseManager {
         }
     }
 
+    public void destroy() {
+        mapper.destroy();
+    }
+
     private interface NextPhotoPatternProvider {
         Photo getPattern();
     }
@@ -2353,5 +2357,10 @@ public class DatabaseManager {
 
     public void dropTables() {
         new MysqlTablesCreator(mapper).dropTables();
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
     }
 }

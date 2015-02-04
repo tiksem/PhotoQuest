@@ -36,6 +36,10 @@ public class Settings {
     }
 
     public long getRequestDelay() {
-        return Long.parseLong(properties.getProperty("requestDelay"));
+        try {
+            return Long.parseLong(properties.getProperty("requestDelay"));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
