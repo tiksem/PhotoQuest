@@ -820,4 +820,10 @@ public class ApiHandler {
             }
         };
     }
+
+    @RequestMapping("/refreshSettings")
+    public @ResponseBody Object refreshSettings() {
+        Settings.getInstance().update();
+        return new Success();
+    }
 }
