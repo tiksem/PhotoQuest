@@ -2151,8 +2151,19 @@ public class DatabaseManager {
                                                           RatingOrder order) {
         Collection<Photoquest> result =
                 advancedRequestsManager.getFollowingPhotoquests(userId, order, offsetLimit);
+        User signedInUser = getSignedInUser(request);
         for(Photoquest photoquest : result){
-            photoquest.setIsFollowing(true);
+            if (signedInUser == null) {
+                photoquest.setIsFollowing(null);
+            } else {
+                Long signedInUserId = signedInUser.getId();
+                if(signedInUserId.equals(userId)){
+                    photoquest.setIsFollowing(true);
+                } else {
+                    Long photoquestId = photoquest.getId();
+                    photoquest.setIsFollowing(getFollowingPhotoquest(signedInUserId, photoquestId) != null);
+                }
+            }
             setAvatar(request, photoquest);
         }
 
