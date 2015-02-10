@@ -265,6 +265,12 @@ public class ApiHandler {
                 throw new IllegalArgumentException("Wrong tag, should match [A-Za-z]{3,20} pattern");
             }
         }
+
+        name = name.trim();
+        if(name.isEmpty()){
+            throw new IllegalArgumentException("Photoquest name is empty");
+        }
+
         return getDatabaseManager().createPhotoQuest(request, name, tags, follow);
     }
 
