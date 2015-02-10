@@ -12,6 +12,7 @@ import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
+import com.utils.framework.google.places.City;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.randomuser.Gender;
 import com.utils.framework.randomuser.RandomUserGenerator;
@@ -76,11 +77,7 @@ public class DatabaseManager {
     }
 
     private void insertAll(Object... objects) {
-        mapper.insertAll(objects);
-    }
-
-    private void insertAll(Iterator<Object> objects) {
-        mapper.insertAll(objects);
+        mapper.insertAll(Arrays.asList(objects));
     }
 
     private void delete(Object pattern) {
@@ -1830,7 +1827,8 @@ public class DatabaseManager {
         followUser(friendId, signedInUserId);
 
         friend.incrementUnreadRepliesCount();
-        replaceAll(request, friend, reply);
+        replace(friend);
+        mapper.delete(reply);
     }
 
     public Collection<Dialog> getDialogs(HttpServletRequest request, OffsetLimit offsetLimit) {
@@ -2346,7 +2344,10 @@ public class DatabaseManager {
                 RelationStatus.class,
                 Reply.class,
                 User.class,
-                CaptchaInfo.class
+                CaptchaInfo.class,
+                com.tiksem.pq.data.City.class,
+                com.tiksem.pq.data.Country.class,
+                ProgressOperation.class
         ), progressStream, "\n");
     }
 
@@ -2359,8 +2360,16 @@ public class DatabaseManager {
         new MysqlTablesCreator(mapper).dropTables();
     }
 
+    public List<ProgressOperation> getProgressOperations() {
+        return mapper.queryAllObjects(ProgressOperation.class, new OffsetLimit(0, 500), "id desc");
+    }
+
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
+    }
+
+    public MysqlObjectMapper getMapper() {
+        return mapper;
     }
 }

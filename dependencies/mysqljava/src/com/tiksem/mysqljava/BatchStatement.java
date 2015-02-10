@@ -17,13 +17,14 @@ public abstract class BatchStatement {
 
     public BatchStatement(List<Object> objects) {
         this.objects = objects;
+    }
+
+    public void execute(Connection connection) {
         for(Object object : objects){
             StatementInfo info = prepareStatementForObject(object);
             sqlArgsMap.put(info.sql, info.args);
         }
-    }
 
-    public void execute(Connection connection) {
         List<NamedParameterStatement> statements = new ArrayList<NamedParameterStatement>();
         int[] statementObjectsCount = new int[objects.size()];
         int statementIndex = 0;
@@ -89,7 +90,7 @@ public abstract class BatchStatement {
     }
 
     protected void onNotOneRowInserted(Object object) throws SQLException {
-        throw new RuntimeException("WTF?");
+
     }
     protected abstract StatementInfo prepareStatementForObject(final Object object);
     protected void onStatementExecutionFinished(List<Object> objects, NamedParameterStatement statement) {

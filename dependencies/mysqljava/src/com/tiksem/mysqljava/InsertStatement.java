@@ -23,17 +23,29 @@ public class InsertStatement extends BatchStatement {
         super(objects);
     }
 
+    private boolean ignore;
+
+    public boolean isIgnore() {
+        return ignore;
+    }
+
+    public void setIgnore(boolean ignore) {
+        this.ignore = ignore;
+    }
+
     @Override
     protected void onStatementExecutionFinished(List<Object> objects, NamedParameterStatement statement) {
         try {
-            if (objects.size() == 1) {
-                ResultSet generatedKeys = statement.getGeneratedKeys();
-                for(Object object : objects){
-                    Field field = Reflection.getFieldWithAnnotation(object.getClass(), PrimaryKey.class);
-                    if (field != null && SqlGenerationUtilities.isInt(field)) {
-                        generatedKeys.next();
-                        Object id = generatedKeys.getObject(1);
-                        SqlGenerationUtilities.setObjectId(object, id);
+            if (!ignore) {
+                if (objects.size() == 1) {
+                    ResultSet generatedKeys = statement.getGeneratedKeys();
+                    for(Object object : objects){
+                        Field field = Reflection.getFieldWithAnnotation(object.getClass(), PrimaryKey.class);
+                        if (field != null && SqlGenerationUtilities.isInt(field)) {
+                            generatedKeys.next();
+                            Object id = generatedKeys.getObject(1);
+                            SqlGenerationUtilities.setObjectId(object, id);
+                        }
                     }
                 }
             }
@@ -70,7 +82,7 @@ public class InsertStatement extends BatchStatement {
         }
 
         Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
-        String sql = SqlGenerationUtilities.insert(object, fields, false);
+        String sql = SqlGenerationUtilities.insert(object, fields, false, ignore);
 
         StatementInfo info = new StatementInfo();
         info.args = args;

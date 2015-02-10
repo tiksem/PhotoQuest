@@ -13,6 +13,7 @@ import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
 import org.apache.commons.io.IOUtils;
+import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -825,5 +826,20 @@ public class ApiHandler {
     public @ResponseBody Object refreshSettings() {
         Settings.getInstance().update();
         return new Success();
+    }
+
+    @RequestMapping("/initLocationsFromJSON")
+    public @ResponseBody Object initLocationsFromJSON() throws IOException, JSONException {
+        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        LocationsCreatorFromJSON creatorFromJSON = new LocationsCreatorFromJSON(mapper, "locations.txt");
+        creatorFromJSON.initLocations();
+        return new Success();
+    }
+
+    @RequestMapping("/progress")
+    public @ResponseBody Object progress() {
+        return new Object(){
+            public List<ProgressOperation> operations = getDatabaseManager().getProgressOperations();
+        };
     }
 }

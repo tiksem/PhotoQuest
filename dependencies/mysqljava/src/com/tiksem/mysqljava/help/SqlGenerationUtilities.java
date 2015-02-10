@@ -335,7 +335,7 @@ public class SqlGenerationUtilities {
         return generatePatternWhereClosure(pattern, fields);
     }
 
-    public static String insert(final Object object, List<Field> fields, boolean replace) {
+    public static String insert(final Object object, List<Field> fields, boolean replace, boolean ignore) {
         List<String> fieldNames = CollectionUtils.transform(fields,
                 new CollectionUtils.Transformer<Field, String>() {
             @Override
@@ -361,6 +361,10 @@ public class SqlGenerationUtilities {
         });
 
         String result = replace ? "REPLACE" : "INSERT";
+        if(ignore){
+            result += " IGNORE";
+        }
+
         result += " INTO `" + object.getClass().getSimpleName() +
                 "` (" + Strings.join(", ", fieldNames) + ")\nVALUES (" +
                 Strings.join(", ", values)
@@ -559,8 +563,22 @@ public class SqlGenerationUtilities {
         return Reflection.getFieldWithAnnotation(aClass, PrimaryKey.class);
     }
 
+    public static boolean instanceOf(Class<?> a, Class<?> b) {
+        return b.isAssignableFrom(a);
+    }
+
     public static void setObjectId(Object object, Object id) {
         Field field = getPrimaryKey(object);
+        Class<?> type = field.getType();
+        if(id instanceof Long && !instanceOf(type, Long.class) && instanceOf(type, Number.class)){
+            Long aLong = (Long)id;
+            if(instanceOf(type, Short.class)){
+                id = aLong.shortValue();
+            } else if(instanceOf(type, Integer.class)) {
+                id = aLong.intValue();
+            }
+        }
+
         Reflection.setFieldValueUsingSetter(object, field, id);
     }
 

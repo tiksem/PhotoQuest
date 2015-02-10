@@ -528,17 +528,22 @@ public class MysqlObjectMapper {
         }
     }
 
-    public void insertAll(List<Object> objects) {
-        InsertStatement insertStatement = new InsertStatement(objects);
+    public <T> void insertAll(List<T> objects, boolean ignore) {
+        InsertStatement insertStatement = new InsertStatement((List<Object>) objects);
+        insertStatement.setIgnore(ignore);
         insertStatement.execute(connection);
     }
 
-    public void insert(Object object) {
-        insertAll(Collections.singletonList(object));
+    public <T> void insertAll(List<T> objects) {
+        insertAll(objects, false);
     }
 
-    public void insertAll(Object... objects) {
-        insertAll(Arrays.asList(objects));
+    public void insert(Object object, boolean ignore) {
+        insertAll(Collections.singletonList(object), ignore);
+    }
+
+    public void insert(Object object) {
+        insert(object, false);
     }
 
     public void replace(Object object) {
