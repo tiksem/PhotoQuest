@@ -5,14 +5,17 @@ import com.tiksem.mysqljava.MysqlTablesCreator;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.pq.data.*;
+import com.tiksem.pq.data.City;
 import com.tiksem.pq.data.Likable;
+import com.tiksem.pq.data.response.CitySuggestion;
+import com.tiksem.pq.data.response.CountrySuggestion;
 import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
+import com.utils.framework.MathUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
-import com.utils.framework.google.places.City;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.randomuser.Gender;
 import com.utils.framework.randomuser.RandomUserGenerator;
@@ -383,40 +386,36 @@ public class DatabaseManager {
         return getPhotoquestsCreatedByUserCount(getSignedInUserOrThrow(request).getId());
     }
 
-    private Location getLocationById(String id) {
-        return mapper.getObjectById(Location.class, id);
+    public City getCityById(Integer id) {
+        return mapper.getObjectById(City.class, id);
     }
 
-    private Location getLocationByIdOrThrow(String id) {
-        Location location = getLocationById(id);
-        if(location == null){
-            throw new LocationNotFoundException(id);
+    public City getCityByIdOrThrow(Integer id) {
+        City city = getCityById(id);
+        if(city == null){
+            throw new CityNotFoundException(id);
         }
 
-        return location;
+        return city;
     }
 
-    private Location addLocation(String placeId, City city) {
-        Location location = new Location();
-        location.setId(placeId);
-        location.setCountryCode(city.countryCode);
-        LocationInfo locationInfo = new LocationInfo();
-        locationInfo.setCity(city.name);
-        locationInfo.setCountry(city.country);
-        location.setInfo(Language.en, locationInfo);
-        insert(location);
-        return location;
+    public Country getCountryById(Integer id) {
+        return mapper.getObjectById(Country.class, id);
     }
 
-    public void updateLocation(User user) throws IOException {
-        String locationId = user.getLocation();
-        Location location = getLocationById(locationId);
-        if(location == null){
-            City city = getCityOrThrow(locationId);
-            location = addLocation(locationId, city);
+    public Country getCountryByIdOrThrow(Integer id) {
+        Country country = getCountryById(id);
+        if(country == null){
+            throw new CountryNotFoundException(id);
         }
 
-        user.setCountryCode(location.getCountryCode());
+        return country;
+    }
+
+    public void checkLocation(User user) {
+        City city = getCityByIdOrThrow(user.getCityId());
+        Country country = getCountryByIdOrThrow(city.getCountryId());
+        user.setCountryId(country.getId());
     }
 
     private User registerUser(User user) throws IOException {
@@ -426,7 +425,7 @@ public class DatabaseManager {
             throw new UserExistsRegisterException(login);
         }
 
-        updateLocation(user);
+        checkLocation(user);
 
         insert(user);
         return user;
@@ -434,7 +433,7 @@ public class DatabaseManager {
 
     public User editProfile(HttpServletRequest request,
                             String name, String lastName,
-                            String location) throws IOException {
+                            Integer cityId) throws IOException {
         User user = getSignedInUserOrThrow(request);
 
         if (name != null) {
@@ -443,10 +442,10 @@ public class DatabaseManager {
         if (lastName != null) {
             user.setNameAndLastName(user.getName(), lastName);
         }
-        if (location != null) {
-            user.setLocation(location);
+        if (cityId != null) {
+            user.setCityId(cityId);
         }
-        updateLocation(user);
+        checkLocation(user);
         setUserInfo(request, user);
 
         return replace(user);
@@ -460,19 +459,6 @@ public class DatabaseManager {
         user.setPassword(newPassword);
 
         replace(user);
-    }
-
-    public City getCityOrThrow(String location) throws IOException {
-        try {
-            City city = googlePlacesSearcher.getCityByPlaceId(location);
-            if(city == null){
-                throw new InvalidLocationException();
-            }
-
-            return city;
-        } catch (PlaceIsNotCityException e) {
-            throw new InvalidLocationException(e);
-        }
     }
 
     public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
@@ -584,22 +570,18 @@ public class DatabaseManager {
         }
     }
 
-    public long getUsersByLocationCount(String location) {
-        User pattern = new User();
-        pattern.setLocation(location);
-        return mapper.getCountByPattern(pattern);
-    }
-
     public Collection<User> searchUsers(HttpServletRequest request,
                                         String queryString,
-                                        String location,
+                                        Integer cityId,
+                                        Integer countryId,
                                         Boolean gender,
                                         OffsetLimit offsetLimit,
                                         RatingOrder order) {
         AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
         args.gender = gender;
         args.query = queryString;
-        args.location = location;
+        args.cityId = cityId;
+        args.countryId = countryId;
         args.orderBy = getPeopleOrderBy(order);
         Collection<User> users = advancedRequestsManager.searchUsers(args, offsetLimit);
         setUsersInfoAndRelationStatus(request, users);
@@ -607,11 +589,11 @@ public class DatabaseManager {
         return users;
     }
 
-    public long getSearchUsersCount(String queryString, String location, Boolean gender) {
+    public long getSearchUsersCount(String queryString, Integer cityId, Boolean gender) {
         AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
         args.gender = gender;
         args.query = queryString;
-        args.location = location;
+        args.cityId = cityId;
         return advancedRequestsManager.getSearchUsersCount(args);
     }
 
@@ -1047,11 +1029,30 @@ public class DatabaseManager {
         }
     }
 
+    public static class Location {
+        public String cityName;
+        public String countryName;
+        public Integer countryId;
+        public Integer cityId;
+    }
+
+    public Location getLocation(Integer cityId) {
+        Location location = new Location();
+        location.cityId = cityId;
+        City city = getCityByIdOrThrow(cityId);
+        Integer countryId = city.getCountryId();
+        Country country = getCountryByIdOrThrow(countryId);
+        location.cityName = city.getEnName();
+        location.countryName = country.getEnName();
+        location.countryId = countryId;
+        return location;
+    }
+
     public void setUserInfo(HttpServletRequest request, User user) {
-        Location location = getLocationByIdOrThrow(user.getLocation());
-        LocationInfo locationInfo = location.getInfo(Language.en);
-        user.setCountry(locationInfo.getCountry());
-        user.setCity(locationInfo.getCity());
+        Location location = getLocation(user.getCityId());
+
+        user.setCountry(location.countryName);
+        user.setCity(location.cityName);
         setAvatar(request, user);
     }
 
@@ -1856,6 +1857,12 @@ public class DatabaseManager {
         return result;
     }
 
+    private Integer getRandomCityId() {
+        int max = mapper.executeOnValueSelectSql("select max(id) from city", Integer.class);
+        int min = mapper.executeOnValueSelectSql("select min(id) from city", Integer.class);
+        return MathUtils.randInt(min, max);
+    }
+
     public List<User> registerRandomUsers(HttpServletRequest request, int startId, int count, String password)
             throws IOException {
         List<Response> data = new ArrayList<Response>();
@@ -1872,10 +1879,7 @@ public class DatabaseManager {
             user.setPassword(password);
             user.setGender(userData.gender == Gender.male);
 
-            AutoCompleteResult location =
-                    googlePlacesSearcher.performAutoCompleteCitiesSearch(userData.city).get(0);
-            user.setLocation(location.placeId);
-
+            user.setCityId(getRandomCityId());
 
             InputStream avatar = IOUtilities.getBufferedInputStreamFromUrl(userData.largeAvatar);
             user = registerUser(request, user, avatar);
@@ -1975,8 +1979,16 @@ public class DatabaseManager {
         return photo;
     }
 
-    public List<AutoCompleteResult> getLocationSuggestions(String query) throws IOException {
+    public List<AutoCompleteResult> getGoogleLocationSuggestions(String query) throws IOException {
         return googlePlacesSearcher.performAutoCompleteCitiesSearch(query);
+    }
+
+    public List<CountrySuggestion> getCountrySuggestions(String query) {
+        return advancedRequestsManager.getCountrySuggestions(query, 10);
+    }
+
+    public List<CitySuggestion> getCitySuggestions(Integer countryId, String query) {
+        return advancedRequestsManager.getCitySuggestions(countryId, query, 10);
     }
 
     public UserStats getUserStats(HttpServletRequest request) {
@@ -2342,7 +2354,6 @@ public class DatabaseManager {
                 FollowingPhotoquest.class,
                 Likable.class,
                 Like.class,
-                Location.class,
                 Message.class,
                 PerformedPhotoquest.class,
                 Photo.class,
@@ -2363,7 +2374,7 @@ public class DatabaseManager {
     }
 
     public void clearDatabase() throws IOException {
-        new MysqlTablesCreator(mapper).clearDatabase();
+        new MysqlTablesCreator(mapper).clearDatabase("city", "country");
         FileUtils.deleteDirectory(new File("images"));
     }
 

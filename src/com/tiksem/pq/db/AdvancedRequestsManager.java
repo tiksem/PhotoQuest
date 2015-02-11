@@ -2,16 +2,14 @@ package com.tiksem.pq.db;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
-import com.tiksem.pq.data.Action;
-import com.tiksem.pq.data.Photo;
-import com.tiksem.pq.data.Photoquest;
-import com.tiksem.pq.data.User;
+import com.tiksem.pq.data.*;
+import com.tiksem.pq.data.response.CitySuggestion;
+import com.tiksem.pq.data.response.CountrySuggestion;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
-import com.utils.framework.collections.iterator.AbstractIterator;
 import com.utils.framework.strings.Strings;
+import org.springframework.web.servlet.support.RequestContextUtils;
 
-import javax.jdo.PersistenceManager;
 import java.util.*;
 
 /**
@@ -90,7 +88,8 @@ public class AdvancedRequestsManager {
     public static class SearchUsersParams {
         public String query;
         public Boolean gender;
-        public String location;
+        public Integer cityId;
+        public Integer countryId;
         public String orderBy;
     }
 
@@ -109,7 +108,8 @@ public class AdvancedRequestsManager {
         if(Strings.isEmpty(params.query)){
             User user = new User();
             user.setGender(params.gender);
-            user.setLocation(params.location);
+            user.setCityId(params.cityId);
+            user.setCountryId(params.countryId);
             if (!getCount) {
                 return mapper.queryByPattern(user, offsetLimit, params.orderBy);
             } else {
@@ -127,24 +127,30 @@ public class AdvancedRequestsManager {
 
         params.query = query + "%";
 
-        String sqlFile;
-        if(params.location != null){
-            if(params.gender != null){
-                sqlFile = "search_users_by_gender_location_and_query.sql";
-            } else {
-                sqlFile = "search_users_by_location_and_query.sql";
-            }
-        } else if(params.gender != null) {
-            sqlFile = "search_users_by_gender_and_query.sql";
-        } else {
-            sqlFile = "search_users_by_query.sql";
-        }
+        String sqlFile = "search_users_by_query.sql";
 
         sqlFile = getCount ? "user/search/count/" + sqlFile : "user/search/" + sqlFile;
 
-        Map<String, Object> args = Reflection.objectToPropertyMap(params);
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("query", query);
+
+        String where = "";
+        if(params.gender != null){
+            where += "AND gender = " + params.gender + " ";
+        }
+
+        if (params.cityId != null) {
+            where += "AND cityId = " + params.cityId + " ";
+        }
+
+        if (params.countryId != null) {
+            where += "AND countryId = " + params.countryId;
+        }
+        args.put("where", where);
+
         if (!getCount) {
             offsetLimit.addToMap(args);
+            args.put("orderBy", params.orderBy);
         }
         if (!getCount) {
             return sqlFileExecutor.executeSQLQuery(sqlFile, args, User.class);
@@ -209,5 +215,62 @@ public class AdvancedRequestsManager {
         args.put("photoquestId", action.getPhotoquestId());
         String sqlFile = "feed/commit_add_photo.sql";
         sqlFileExecutor.executeNonSelectQuery(sqlFile, args);
+    }
+
+    public List<CitySuggestion> getCitySuggestions(int countryId, String query, int limit) {
+        List<City> cities;
+
+        if(Strings.isEmpty(query)){
+            City pattern = new City();
+            pattern.setCountryId(countryId);
+            cities = mapper.queryByPattern(pattern, new OffsetLimit(0, limit), "id desc");
+        } else {
+            query += "%";
+
+            Map<String, Object> args = new HashMap<String, Object>();
+            args.put("countryId", countryId);
+            args.put("query", query);
+            args.put("limit", limit);
+
+            String sqlFile = "location/city_suggestions.sql";
+            cities = sqlFileExecutor.executeSQLQuery(sqlFile, args, City.class);
+        }
+
+        return CollectionUtils.transform(cities, new CollectionUtils.Transformer<City, CitySuggestion>() {
+            @Override
+            public CitySuggestion get(City city) {
+                CitySuggestion suggestion = new CitySuggestion();
+                suggestion.id = city.getId();
+                suggestion.value = city.getEnName();
+                return suggestion;
+            }
+        });
+    }
+
+    public List<CountrySuggestion> getCountrySuggestions(String query, int limit) {
+        List<Country> countries;
+
+        if(Strings.isEmpty(query)){
+            countries = mapper.queryAllObjects(Country.class, new OffsetLimit(0, limit), "id desc");
+        } else {
+            query = "%" + query + "%";
+
+            Map<String, Object> args = new HashMap<String, Object>();
+            args.put("query", query);
+            args.put("limit", limit);
+
+            String sqlFile = "location/country_suggestions.sql";
+            countries = sqlFileExecutor.executeSQLQuery(sqlFile, args, Country.class);
+        }
+
+        return CollectionUtils.transform(countries, new CollectionUtils.Transformer<Country, CountrySuggestion>() {
+            @Override
+            public CountrySuggestion get(Country country) {
+                CountrySuggestion suggestion = new CountrySuggestion();
+                suggestion.id = country.getId();
+                suggestion.value = country.getEnName();
+                return suggestion;
+            }
+        });
     }
 }

@@ -108,8 +108,11 @@ public class MysqlTablesCreator {
         mapper.executeNonSelectSQL("create database photoquest");
     }
 
-    public void clearDatabase() {
-        for(String tableName : getTableNames()){
+    public void clearDatabase(String... excludeTableNames) {
+        List<String> tableNames = getTableNames();
+        CollectionUtils.removeAllIgnoreCase(tableNames, excludeTableNames);
+
+        for(String tableName : tableNames){
             String sql = "DELETE FROM `" + tableName + "`";
             mapper.executeNonSelectSQL(sql);
         }

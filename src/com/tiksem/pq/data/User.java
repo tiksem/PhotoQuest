@@ -1,26 +1,30 @@
 package com.tiksem.pq.data;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.tiksem.mysqljava.FieldsCheckingUtilities;
 import com.tiksem.mysqljava.annotations.*;
 import com.tiksem.mysqljava.annotations.NotNull;
-import com.utils.framework.Reflection;
 
 /**
  * Created by CM on 10/30/2014.
  */
 
 @MultipleIndexes(indexes = {
-        @MultipleIndex(fields = {"location", "nameData"}),
-        @MultipleIndex(fields = {"location", "gender", "nameData"}),
+        @MultipleIndex(fields = {"cityId", "nameData"}),
+        @MultipleIndex(fields = {"cityId", "gender", "nameData"}),
         @MultipleIndex(fields = {"gender", "nameData"}),
-        @MultipleIndex(fields = {"location", "gender", "rating", "id"}),
+        @MultipleIndex(fields = {"cityId", "gender", "rating", "id"}),
         @MultipleIndex(fields = {"gender", "rating", "id"}),
-        @MultipleIndex(fields = {"location", "rating", "id"}),
-        @MultipleIndex(fields = {"location", "gender", "id"}),
+        @MultipleIndex(fields = {"cityId", "rating", "id"}),
+        @MultipleIndex(fields = {"cityId", "gender", "id"}),
         @MultipleIndex(fields = {"gender", "id"}),
-        @MultipleIndex(fields = {"location", "id"}),
-        @MultipleIndex(fields = {"rating", "id"})
+        @MultipleIndex(fields = {"cityId", "id"}),
+        @MultipleIndex(fields = {"rating", "id"}),
+        @MultipleIndex(fields = {"countryId", "nameData"}),
+        @MultipleIndex(fields = {"countryId", "gender", "nameData"}),
+        @MultipleIndex(fields = {"countryId", "gender", "rating", "id"}),
+        @MultipleIndex(fields = {"countryId", "rating", "id"}),
+        @MultipleIndex(fields = {"countryId", "gender", "id"}),
+        @MultipleIndex(fields = {"countryId", "id"})
 })
 @Table
 public class User implements WithAvatar {
@@ -68,11 +72,11 @@ public class User implements WithAvatar {
 
     @Stored
     @NotNull
-    private String location;
+    private Integer cityId;
 
-    @Stored(type = "CHAR(2)")
+    @Stored
     @NotNull
-    private String countryCode;
+    private Integer countryId;
 
     @Stored
     @NotNull
@@ -319,20 +323,12 @@ public class User implements WithAvatar {
         this.unreadRepliesCount = unreadRepliesCount;
     }
 
-    public String getLocation() {
-        return location;
+    public Integer getCityId() {
+        return cityId;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public String getCountryCode() {
-        return countryCode;
-    }
-
-    public void setCountryCode(String countryCode) {
-        this.countryCode = countryCode;
+    public void setCityId(Integer cityId) {
+        this.cityId = cityId;
     }
 
     public String getCity() {
@@ -386,5 +382,13 @@ public class User implements WithAvatar {
         }
 
         setNameAndLastName(parts[0], parts[1]);
+    }
+
+    public Integer getCountryId() {
+        return countryId;
+    }
+
+    public void setCountryId(Integer countryId) {
+        this.countryId = countryId;
     }
 }

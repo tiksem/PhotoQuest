@@ -86,6 +86,19 @@ public class MysqlObjectMapper {
         }
     }
 
+    public <T> T executeOnValueSelectSql(String sql, Class<T> resultClass) {
+        ResultSet resultSet = executeSelectSqlGetResultSet(sql);
+        try {
+            if (resultSet.next()) {
+                return (T) resultSet.getObject(1);
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public List<Map<String, Map<String, Object>>> executeSelectSql(String sql) {
         try {
             Statement statement = connection.createStatement();

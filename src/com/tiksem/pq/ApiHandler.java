@@ -17,10 +17,7 @@ import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.AbstractRequestAttributes;
-import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.Cookie;
@@ -134,7 +131,7 @@ public class ApiHandler {
                                       @RequestParam(value="password", required=true) String password,
                                       @RequestParam(value="name", required=true) String name,
                                       @RequestParam(value="lastName", required=true) String lastName,
-                                      @RequestParam(value="location", required=true) String location,
+                                      @RequestParam(value="cityId", required=true) Integer cityId,
                                       @RequestParam(value="gender", required=true) boolean gender,
                                       @RequestParam(value="captcha", required=true) long captcha,
                                       @RequestParam(value="answer", required=true) String answer)
@@ -146,7 +143,7 @@ public class ApiHandler {
         user.setLogin(login);
         user.setPassword(password);
         user.setNameAndLastName(name, lastName);
-        user.setLocation(location);
+        user.setCityId(cityId);
         user.setGender(gender);
 
         return databaseManager.registerUser(request, user, (InputStream) null);
@@ -156,10 +153,10 @@ public class ApiHandler {
     public @ResponseBody Object editProfile(
                                          @RequestParam(value="name", required=false) String name,
                                          @RequestParam(value="lastName", required=false) String lastName,
-                                         @RequestParam(value="location", required=false) String location)
+                                         @RequestParam(value="cityId", required=false) Integer cityId)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.editProfile(request, name, lastName, location);
+        return databaseManager.editProfile(request, name, lastName, cityId);
     }
 
     @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
@@ -185,22 +182,36 @@ public class ApiHandler {
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers(
             @RequestParam(value = "filter", required = false) String filter,
-            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "cityId", required = false) Integer cityId,
+            @RequestParam(value = "countryId", required = false) Integer countryId,
             @RequestParam(value = "gender", required = false) Boolean gender,
             OffsetLimit offsetLimit,
             @RequestParam(value = "order", required = false, defaultValue = "newest")
             RatingOrder order) {
+        DatabaseManager databaseManager = getDatabaseManager();
         Collection<User> users
-                = getDatabaseManager().searchUsers(request, filter, location, gender, offsetLimit, order);
+                = databaseManager.searchUsers(request, filter, cityId, countryId, gender, offsetLimit, order);
 
-        return getUsersResponse(users);
+        Object usersResponse = getUsersResponse(users);
+        if(usersResponse instanceof UsersList){
+            UsersList usersList = (UsersList)usersResponse;
+            if (cityId != null) {
+                usersList.location = databaseManager.getLocation(cityId);
+            } else if(countryId != null) {
+                usersList.location = new DatabaseManager.Location();
+                usersList.location.countryId = countryId;
+                usersList.location.countryName = databaseManager.getCountryByIdOrThrow(countryId).getEnName();
+            }
+        }
+
+        return usersResponse;
     }
 
     @RequestMapping("/getUsersCount")
     public @ResponseBody Object getAllUsersCount(@RequestParam(value = "filter", required = false) String filter,
-                                                 @RequestParam(value = "location", required = false) String location,
+                                                 @RequestParam(value = "cityId", required = false) Integer cityId,
                                                  @RequestParam(value = "gender", required = false) Boolean gender) {
-        long count = getDatabaseManager().getSearchUsersCount(filter, location, gender);
+        long count = getDatabaseManager().getSearchUsersCount(filter, cityId, gender);
 
         return new CountResponse(count);
     }
@@ -660,7 +671,21 @@ public class ApiHandler {
     @RequestMapping("/getLocationSuggestions")
     public @ResponseBody Object getLocationSuggestions(@RequestParam(
             value = "query", required = true) String query) throws IOException {
-        return new LocationSuggestions(getDatabaseManager().getLocationSuggestions(query));
+        return new LocationSuggestions(getDatabaseManager().getGoogleLocationSuggestions(query));
+    }
+
+    @RequestMapping("/getCountrySuggestions")
+    public @ResponseBody Object getCountrySuggestions(@RequestParam(
+            value = "query", required = true) String query) throws IOException {
+        return new Suggestions(getDatabaseManager().getCountrySuggestions(query));
+    }
+
+    @RequestMapping("/getCitySuggestions")
+    public @ResponseBody Object getCitySuggestions(
+            @RequestParam(value = "query", required = false, defaultValue = "") String query,
+            @RequestParam(value = "countryId", required = true) Integer countryId)
+            throws IOException {
+        return new Suggestions(getDatabaseManager().getCitySuggestions(countryId, query));
     }
 
     @RequestMapping("/messages")
