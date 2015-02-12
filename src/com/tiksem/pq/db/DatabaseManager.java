@@ -1205,6 +1205,10 @@ public class DatabaseManager {
     }
 
     public void addFriend(HttpServletRequest request, long userId) {
+        if(userId == getSignedInUserOrThrow(request).getId()){
+            throw new IllegalArgumentException("Unable to add yourself as friend");
+        }
+
         try {
             acceptFriendRequest(request, userId);
         } catch (RelationNotFoundException e) {
@@ -1680,6 +1684,10 @@ public class DatabaseManager {
 
     public Message addMessage(HttpServletRequest request, long toUserId, String messageText) {
         User signedInUser = getSignedInUserOrThrow(request);
+        if(toUserId == signedInUser.getId()){
+            throw new IllegalArgumentException("Unable to send message to yourself");
+        }
+
         User toUser = getUserByIdOrThrow(toUserId);
         return addMessage(signedInUser, toUser, messageText);
     }
