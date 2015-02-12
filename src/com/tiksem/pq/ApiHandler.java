@@ -8,6 +8,7 @@ import com.tiksem.pq.data.response.android.MobileFeedList;
 import com.tiksem.pq.data.response.android.MobilePhotoquestList;
 import com.tiksem.pq.data.response.android.MobileUserList;
 import com.tiksem.pq.db.*;
+import com.tiksem.pq.db.advanced.SearchUsersParams;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
@@ -67,10 +68,24 @@ public class ApiHandler {
     }
 
     private Object getUsersResponse(Collection<User> users) {
+        return getUsersResponse(users, null, null, null);
+    }
+
+    private Object getUsersResponse(Collection<User> users, DatabaseManager databaseManager,
+                                    Integer countryId, Integer cityId) {
         if(isMobileClient()){
             return new MobileUserList(users);
         } else {
-            return new UsersList(users);
+            UsersList usersList = new UsersList(users);
+            if (cityId != null) {
+                usersList.location = databaseManager.getLocation(cityId);
+            } else if(countryId != null) {
+                usersList.location = new DatabaseManager.Location();
+                usersList.location.countryId = countryId;
+                usersList.location.countryName = databaseManager.getCountryByIdOrThrow(countryId).getEnName();
+            }
+
+            return usersList;
         }
     }
 
@@ -175,50 +190,34 @@ public class ApiHandler {
                                          @RequestParam(value="password", required=false, defaultValue = "password")
                                          String password) throws IOException {
 
-        List<User> users = getDatabaseManager().registerRandomUsers(request, startId, count, password);
+        DatabaseManager databaseManager = getDatabaseManager();
+        List<User> users = databaseManager.registerRandomUsers(request, startId, count, password);
         return getUsersResponse(users);
     }
 
     @RequestMapping("/users")
     public @ResponseBody Object getAllUsers(
-            @RequestParam(value = "filter", required = false) String filter,
-            @RequestParam(value = "cityId", required = false) Integer cityId,
-            @RequestParam(value = "countryId", required = false) Integer countryId,
-            @RequestParam(value = "gender", required = false) Boolean gender,
+            SearchUsersParams searchParams,
             OffsetLimit offsetLimit,
             @RequestParam(value = "order", required = false, defaultValue = "newest")
             RatingOrder order) {
         DatabaseManager databaseManager = getDatabaseManager();
         Collection<User> users
-                = databaseManager.searchUsers(request, filter, cityId, countryId, gender, offsetLimit, order);
+                = databaseManager.searchUsers(request, searchParams, offsetLimit, order);
 
-        Object usersResponse = getUsersResponse(users);
-        if(usersResponse instanceof UsersList){
-            UsersList usersList = (UsersList)usersResponse;
-            if (cityId != null) {
-                usersList.location = databaseManager.getLocation(cityId);
-            } else if(countryId != null) {
-                usersList.location = new DatabaseManager.Location();
-                usersList.location.countryId = countryId;
-                usersList.location.countryName = databaseManager.getCountryByIdOrThrow(countryId).getEnName();
-            }
-        }
-
-        return usersResponse;
+        return getUsersResponse(users, databaseManager, searchParams.countryId, searchParams.cityId);
     }
 
     @RequestMapping("/getUsersCount")
-    public @ResponseBody Object getAllUsersCount(@RequestParam(value = "filter", required = false) String filter,
-                                                 @RequestParam(value = "cityId", required = false) Integer cityId,
-                                                 @RequestParam(value = "gender", required = false) Boolean gender) {
-        long count = getDatabaseManager().getSearchUsersCount(filter, cityId, gender);
+    public @ResponseBody Object getAllUsersCount(SearchUsersParams searchParams) {
+        long count = getDatabaseManager().getSearchUsersCount(searchParams);
 
         return new CountResponse(count);
     }
 
     @RequestMapping("/getFriendsCount")
-    public @ResponseBody Object getFriendsCount() {
-        return new CountResponse(getDatabaseManager().getFriendsCount(request));
+    public @ResponseBody Object getFriendsCount(SearchUsersParams searchParams) {
+        return new CountResponse(getDatabaseManager().getFriendsCount(request, searchParams));
     }
 
     @RequestMapping("/getFriendRequestsCount")
@@ -227,10 +226,15 @@ public class ApiHandler {
     }
 
     @RequestMapping("/friends")
-    public @ResponseBody Object getFriends(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getFriends(request, offsetLimit,
-                RatingOrder.newest, true);
-        return getUsersResponse(users);
+    public @ResponseBody Object getFriends(SearchUsersParams searchParams,
+                                           OffsetLimit offsetLimit,
+                                           @RequestParam(value = "order", required = false, defaultValue = "newest")
+                                           RatingOrder order) {
+        DatabaseManager databaseManager = getDatabaseManager();
+        Collection<User> users
+                = databaseManager.getFriends(request, searchParams, offsetLimit, order);
+
+        return getUsersResponse(users, databaseManager, searchParams.countryId, searchParams.cityId);
     }
 
     @RequestMapping("/followers")
@@ -248,14 +252,24 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getReceivedFriendRequests")
-    public @ResponseBody Object getReceivedFriendRequests(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getReceivedFriendRequests(request, offsetLimit);
+    public @ResponseBody Object getReceivedFriendRequests(SearchUsersParams searchParams,
+                                                          OffsetLimit offsetLimit,
+                                                          @RequestParam(value = "order", required = false,
+                                                                  defaultValue = "newest")
+                                                          RatingOrder order) {
+        Collection<User> users = getDatabaseManager().getReceivedFriendRequests(
+                request, searchParams, offsetLimit, order);
         return getUsersResponse(users);
     }
 
     @RequestMapping("/getSentFriendRequests")
-    public @ResponseBody Object getSentFriendRequests(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getSentFriendRequests(request, offsetLimit);
+    public @ResponseBody Object getSentFriendRequests(SearchUsersParams searchParams,
+                                                      OffsetLimit offsetLimit,
+                                                      @RequestParam(value = "order", required = false,
+                                                              defaultValue = "newest")
+                                                      RatingOrder order) {
+        Collection<User> users = getDatabaseManager().getSentFriendRequests(
+                request, searchParams, offsetLimit, order);
         return getUsersResponse(users);
     }
 
@@ -678,6 +692,12 @@ public class ApiHandler {
     public @ResponseBody Object getCountrySuggestions(@RequestParam(
             value = "query", required = true) String query) throws IOException {
         return new Suggestions(getDatabaseManager().getCountrySuggestions(query));
+    }
+
+    @RequestMapping("/getCountryByName")
+    public @ResponseBody Object getCountryByName(@RequestParam(
+            value = "name", required = true) String name) {
+        return getDatabaseManager().getCountryByNameOrThrow(name);
     }
 
     @RequestMapping("/getCitySuggestions")

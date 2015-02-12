@@ -11,6 +11,8 @@ import com.tiksem.pq.data.response.CitySuggestion;
 import com.tiksem.pq.data.response.CountrySuggestion;
 import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
+import com.tiksem.pq.db.advanced.AdvancedRequestsManager;
+import com.tiksem.pq.db.advanced.SearchUsersParams;
 import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.MathUtils;
@@ -412,6 +414,28 @@ public class DatabaseManager {
         return country;
     }
 
+    public Country getCountryByName(String name) {
+        Country pattern = new Country();
+        pattern.setEnName(name);
+        Country country = mapper.getObjectByPattern(pattern);
+        if(country != null){
+            return country;
+        }
+
+        pattern = new Country();
+        pattern.setRuName(name);
+        return mapper.getObjectByPattern(pattern);
+    }
+
+    public Country getCountryByNameOrThrow(String name) {
+        Country country = getCountryByName(name);
+        if(country == null){
+            throw new CountryNotFoundException(name);
+        }
+
+        return country;
+    }
+
     public void checkLocation(User user) {
         City city = getCityByIdOrThrow(user.getCityId());
         Country country = getCountryByIdOrThrow(city.getCountryId());
@@ -570,31 +594,34 @@ public class DatabaseManager {
         }
     }
 
+    private interface UsersSearcher {
+        public Collection<User> search(String orderBy);
+    }
+
     public Collection<User> searchUsers(HttpServletRequest request,
-                                        String queryString,
-                                        Integer cityId,
-                                        Integer countryId,
-                                        Boolean gender,
-                                        OffsetLimit offsetLimit,
-                                        RatingOrder order) {
-        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
-        args.gender = gender;
-        args.query = queryString;
-        args.cityId = cityId;
-        args.countryId = countryId;
-        args.orderBy = getPeopleOrderBy(order);
-        Collection<User> users = advancedRequestsManager.searchUsers(args, offsetLimit);
+                                        RatingOrder order,
+                                        UsersSearcher usersSearcher) {
+        String orderBy = getPeopleOrderBy(order);
+        Collection<User> users = usersSearcher.search(orderBy);
         setUsersInfoAndRelationStatus(request, users);
 
         return users;
     }
 
-    public long getSearchUsersCount(String queryString, Integer cityId, Boolean gender) {
-        AdvancedRequestsManager.SearchUsersParams args = new AdvancedRequestsManager.SearchUsersParams();
-        args.gender = gender;
-        args.query = queryString;
-        args.cityId = cityId;
-        return advancedRequestsManager.getSearchUsersCount(args);
+    public Collection<User> searchUsers(HttpServletRequest request,
+                                        final SearchUsersParams searchParams,
+                                        final OffsetLimit offsetLimit,
+                                        RatingOrder order) {
+        return searchUsers(request, order, new UsersSearcher() {
+            @Override
+            public Collection<User> search(String orderBy) {
+                return advancedRequestsManager.searchUsers(searchParams, orderBy, offsetLimit);
+            }
+        });
+    }
+
+    public long getSearchUsersCount(SearchUsersParams searchParams) {
+        return advancedRequestsManager.getSearchUsersCount(searchParams);
     }
 
     public PerformedPhotoquest getOrCreatePerformedPhotoquest(long userId, long photoquestId) {
@@ -1237,25 +1264,43 @@ public class DatabaseManager {
         return getUsersByFromUserIdInRelation(userId, Relationship.FRIENDSHIP, offsetLimit, order);
     }
 
-    public long getFriendsCount(HttpServletRequest request) {
-        Relationship friendshipPattern = new Relationship();
-        friendshipPattern.setType(Relationship.FRIENDSHIP);
-        friendshipPattern.setFromUserId(getSignedInUserOrThrow(request).getId());
-        return mapper.getCountByPattern(friendshipPattern);
+    public long getFriendsCount(HttpServletRequest request, SearchUsersParams searchParams) {
+        long signedInUserId = getSignedInUserOrThrow(request).getId();
+        return advancedRequestsManager.getSearchFriendsCount(searchParams, signedInUserId);
     }
 
-    public List<User> getFriends(HttpServletRequest request, OffsetLimit offsetLimit, RatingOrder order,
-                                 boolean fillFriendShipData) {
-        List<User> friends = getFriendsOf(getSignedInUserOrThrow(request).getId(), offsetLimit, order);
-        setUsersInfo(request, friends);
-        if (fillFriendShipData) {
-            for(User friend : friends){
-                friend.setRelation(RelationStatus.friend);
-                setUserInfo(request, friend);
-            }
+    private interface RelationsSearcher {
+        List<User> search(String orderBy, long userId);
+        RelationStatus getStatus();
+    }
+
+    private List<User> searchRelations(HttpServletRequest request, RatingOrder order,
+                                       RelationsSearcher searcher) {
+        String orderBy = getPeopleOrderBy(order);
+        User signedInUser = getSignedInUserOrThrow(request);
+        List<User> friends = searcher.search(orderBy, signedInUser.getId());
+
+        for(User friend : friends){
+            friend.setRelation(searcher.getStatus());
+            setUserInfo(request, friend);
         }
 
         return friends;
+    }
+
+    public List<User> getFriends(HttpServletRequest request, final SearchUsersParams params,
+                                 final OffsetLimit offsetLimit, RatingOrder order) {
+        return searchRelations(request, order, new RelationsSearcher() {
+            @Override
+            public List<User> search(String orderBy, long userId) {
+                return advancedRequestsManager.searchFriends(params, offsetLimit, orderBy, userId);
+            }
+
+            @Override
+            public RelationStatus getStatus() {
+                return RelationStatus.friend;
+            }
+        });
     }
 
     public Photoquest getOrCreateSystemPhotoQuest(String photoquestName) {
@@ -2103,12 +2148,34 @@ public class DatabaseManager {
         return result;
     }
 
-    public List<User> getReceivedFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return getFriendRequests(request, offsetLimit, true);
+    public List<User> getReceivedFriendRequests(HttpServletRequest request, final SearchUsersParams searchParams,
+                                                final OffsetLimit offsetLimit, RatingOrder order) {
+        return searchRelations(request, order, new RelationsSearcher() {
+            @Override
+            public List<User> search(String orderBy, long userId) {
+                return advancedRequestsManager.searchReceivedRequests(searchParams, offsetLimit, orderBy, userId);
+            }
+
+            @Override
+            public RelationStatus getStatus() {
+                return RelationStatus.request_received;
+            }
+        });
     }
 
-    public List<User> getSentFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit) {
-        return getFriendRequests(request, offsetLimit, false);
+    public List<User> getSentFriendRequests(HttpServletRequest request, final SearchUsersParams searchParams,
+                                            final OffsetLimit offsetLimit, RatingOrder order) {
+        return searchRelations(request, order, new RelationsSearcher() {
+            @Override
+            public List<User> search(String orderBy, long userId) {
+                return advancedRequestsManager.searchSentRequests(searchParams, offsetLimit, orderBy, userId);
+            }
+
+            @Override
+            public RelationStatus getStatus() {
+                return RelationStatus.request_sent;
+            }
+        });
     }
 
     private FollowingPhotoquest getFollowingPhotoquest(long userId, long photoquestId) {

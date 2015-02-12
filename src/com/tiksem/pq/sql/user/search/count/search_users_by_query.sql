@@ -3,4 +3,4 @@ FROM user
 WHERE
   nameData LIKE :query
   :where
-LIMIT 0, 200
+LIMIT 0, :innerLimit

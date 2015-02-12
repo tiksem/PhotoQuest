@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +26,7 @@ public class SqlFileExecutor {
     private static Pattern PRE_ARG_PATTERN = Pattern.compile("::[^\\s]+");
 
     private MysqlObjectMapper mapper;
-    private Map<String, String[]> queries = new HashMap<String, String[]>();
+    private static Map<String, String[]> queries = new ConcurrentHashMap<String, String[]>();
 
     public SqlFileExecutor(MysqlObjectMapper mapper) {
         this.mapper = mapper;
@@ -48,16 +49,22 @@ public class SqlFileExecutor {
             sqls = sqls.clone();
             int i = 0;
             for(String sql : sqls){
-                List<String> argPlaceholders = Strings.findAll(sql, PRE_ARG_PATTERN);
-                for(String placeholder : argPlaceholders){
-                    Object value = args.get(placeholder.substring(2));
-                    if(value == null){
-                        throw new IllegalArgumentException("Error while executing sql file " + fileName + ". " +
-                                "The value of " + placeholder + " was not provided");
-                    }
+                while (true) {
+                    Matcher matcher = PRE_ARG_PATTERN.matcher(sql);
+                    if(matcher.find()){
+                        String placeholder = matcher.group();
+                        Object value = args.get(placeholder.substring(2));
+                        if(value == null){
+                            throw new IllegalArgumentException("Error while executing sql file " + fileName + ". " +
+                                    "The value of " + placeholder + " was not provided");
+                        }
 
-                    sql = sql.replace(placeholder, value.toString());
+                        sql = Strings.replace(sql, matcher, value.toString());
+                    } else {
+                        break;
+                    }
                 }
+
                 sqls[i++] = sql;
             }
         }

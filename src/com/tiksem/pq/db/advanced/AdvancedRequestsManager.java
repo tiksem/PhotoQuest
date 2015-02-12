@@ -1,14 +1,14 @@
-package com.tiksem.pq.db;
+package com.tiksem.pq.db.advanced;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.CitySuggestion;
 import com.tiksem.pq.data.response.CountrySuggestion;
+import com.tiksem.pq.db.RatingOrder;
+import com.tiksem.pq.db.SqlFileExecutor;
 import com.utils.framework.CollectionUtils;
-import com.utils.framework.Reflection;
 import com.utils.framework.strings.Strings;
-import org.springframework.web.servlet.support.RequestContextUtils;
 
 import java.util.*;
 
@@ -85,78 +85,45 @@ public class AdvancedRequestsManager {
         return sqlFileExecutor.executeSQLQuery(sqlFile, args, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
     }
 
-    public static class SearchUsersParams {
-        public String query;
-        public Boolean gender;
-        public Integer cityId;
-        public Integer countryId;
-        public String orderBy;
-    }
-
     public <T> List<T> searchUsers(SearchUsersParams params,
+                                   String orderBy,
                                    OffsetLimit offsetLimit) {
-        return (List<T>) searchUsersOrGetCount(params, offsetLimit, false);
+        UsersSearcher searcher = new UsersSearcher(sqlFileExecutor, params);
+        return searcher.search(offsetLimit, orderBy);
     }
 
     public long getSearchUsersCount(SearchUsersParams params) {
-        return (Long)searchUsersOrGetCount(params, null, true);
+        UsersSearcher searcher = new UsersSearcher(sqlFileExecutor, params);
+        return searcher.getCount();
     }
 
-    private Object searchUsersOrGetCount(SearchUsersParams params,
-                                             OffsetLimit offsetLimit,
-                                             boolean getCount) {
-        if(Strings.isEmpty(params.query)){
-            User user = new User();
-            user.setGender(params.gender);
-            user.setCityId(params.cityId);
-            user.setCountryId(params.countryId);
-            if (!getCount) {
-                return mapper.queryByPattern(user, offsetLimit, params.orderBy);
-            } else {
-                return mapper.getCountByPattern(user);
-            }
-        }
+    public <T> List<T> searchFriends(SearchUsersParams params,
+                                   OffsetLimit offsetLimit,
+                                   String orderBy,
+                                   long userId) {
+        FriendsSearcher searcher = new FriendsSearcher(sqlFileExecutor, params, userId);
+        return searcher.search(offsetLimit, orderBy);
+    }
 
-        String[] queryParts = params.query.split(" +");
-        String query;
-        if(queryParts.length > 1){
-            query = queryParts[0] + " " + queryParts[1];
-        } else {
-            query = params.query;
-        }
+    public long getSearchFriendsCount(SearchUsersParams params, long userId) {
+        FriendsSearcher searcher = new FriendsSearcher(sqlFileExecutor, params, userId);
+        return searcher.getCount();
+    }
 
-        query += "%";
+    public <T> List<T> searchSentRequests(SearchUsersParams params,
+                                     OffsetLimit offsetLimit,
+                                     String orderBy,
+                                     long userId) {
+        SentRequestsSearcher searcher = new SentRequestsSearcher(sqlFileExecutor, params, userId);
+        return searcher.search(offsetLimit, orderBy);
+    }
 
-        String sqlFile = "search_users_by_query.sql";
-
-        sqlFile = getCount ? "user/search/count/" + sqlFile : "user/search/" + sqlFile;
-
-        Map<String, Object> args = new HashMap<String, Object>();
-        args.put("query", query);
-
-        String where = "";
-        if(params.gender != null){
-            where += "AND gender = " + params.gender + " ";
-        }
-
-        if (params.cityId != null) {
-            where += "AND cityId = " + params.cityId + " ";
-        }
-
-        if (params.countryId != null) {
-            where += "AND countryId = " + params.countryId;
-        }
-        args.put("where", where);
-
-        if (!getCount) {
-            offsetLimit.addToMap(args);
-            args.put("orderBy", params.orderBy);
-        }
-        if (!getCount) {
-            return sqlFileExecutor.executeSQLQuery(sqlFile, args, User.class);
-        } else {
-            return sqlFileExecutor.executeCountQuery(sqlFile, args);
-        }
+    public <T> List<T> searchReceivedRequests(SearchUsersParams params,
+                                          OffsetLimit offsetLimit,
+                                          String orderBy,
+                                          long userId) {
+        ReceivedRequestsSearcher searcher = new ReceivedRequestsSearcher(sqlFileExecutor, params, userId);
+        return searcher.search(offsetLimit, orderBy);
     }
 
     public void deleteComment(long commentId) {
