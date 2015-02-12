@@ -1221,9 +1221,13 @@ public class DatabaseManager {
             declineFriendRequest(request, userId);
         } catch (RelationNotFoundException e) {
             try {
-                cancelFriendRequest(request, userId);
-            } catch (RelationNotFoundException e1) {
-                removeFriendShip(request, userId);
+                unfollowUser(request, userId);
+            } catch (UserIsNotFollowingException e2) {
+                try {
+                    cancelFriendRequest(request, userId);
+                } catch (RelationNotFoundException e3) {
+                    removeFriendShip(request, userId);
+                }
             }
         }
     }
@@ -1890,7 +1894,7 @@ public class DatabaseManager {
 
         friend.incrementUnreadRepliesCount();
         replace(friend);
-        mapper.delete(reply);
+        insert(reply);
     }
 
     public Collection<Dialog> getDialogs(HttpServletRequest request, OffsetLimit offsetLimit) {
