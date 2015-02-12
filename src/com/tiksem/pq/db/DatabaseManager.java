@@ -1503,7 +1503,7 @@ public class DatabaseManager {
         asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
-                Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
+                Photoquest photoquest = databaseManager.getPhotoQuestByIdOrThrow(photoquestId);
                 databaseManager.incrementLikesCount(photo, photoquest);
                 databaseManager.updatePhotoquestAvatar(photoquest);
             }
