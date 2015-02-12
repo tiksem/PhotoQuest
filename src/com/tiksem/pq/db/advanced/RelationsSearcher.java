@@ -44,7 +44,7 @@ public abstract class RelationsSearcher extends UsersSearcher {
             args.put("orderByLimitExpression", "");
         } else {
             args.put("select", "user.*");
-            args.put("orderByLimitExpression", "ORDER BY :orderBy LIMIT :offset, :limit");
+            args.put("orderByLimitExpression", "ORDER BY ::orderBy LIMIT :offset, :limit");
         }
 
         args.put("selectUserIdColumn", getSelectUserIdColumn());

@@ -8,4 +8,4 @@ SELECT user.* FROM user
       ::where
     LIMIT 0, :innerLimit
   ) as sel ON sel.userId = user.ID
-ORDER BY :orderBy LIMIT :offset, :limit
+ORDER BY ::orderBy LIMIT :offset, :limit

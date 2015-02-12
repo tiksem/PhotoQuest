@@ -32,6 +32,27 @@ public class SqlFileExecutor {
         this.mapper = mapper;
     }
 
+    private String applyPreArgsReplacement(String string, String fileName, Map<String, Object> args) {
+        while (true) {
+            Matcher matcher = PRE_ARG_PATTERN.matcher(string);
+            if(matcher.find()){
+                String placeholder = matcher.group();
+                Object value = args.get(placeholder.substring(2));
+                if(value == null){
+                    throw new IllegalArgumentException("Error while executing sql file " + fileName + ". " +
+                            "The value of " + placeholder + " was not provided");
+                }
+
+                String valueAsString = value.toString();
+                valueAsString = applyPreArgsReplacement(valueAsString, fileName, args);
+
+                string = Strings.replace(string, matcher, valueAsString);
+            } else {
+                return string;
+            }
+        }
+    }
+
     private String[] getSqls(String fileName, Map<String, Object> args) {
         String[] sqls = queries.get(fileName);
         if(sqls == null){
@@ -49,23 +70,7 @@ public class SqlFileExecutor {
             sqls = sqls.clone();
             int i = 0;
             for(String sql : sqls){
-                while (true) {
-                    Matcher matcher = PRE_ARG_PATTERN.matcher(sql);
-                    if(matcher.find()){
-                        String placeholder = matcher.group();
-                        Object value = args.get(placeholder.substring(2));
-                        if(value == null){
-                            throw new IllegalArgumentException("Error while executing sql file " + fileName + ". " +
-                                    "The value of " + placeholder + " was not provided");
-                        }
-
-                        sql = Strings.replace(sql, matcher, value.toString());
-                    } else {
-                        break;
-                    }
-                }
-
-                sqls[i++] = sql;
+                sqls[i++] = applyPreArgsReplacement(sql, fileName, args);
             }
         }
 

@@ -12,4 +12,4 @@ SELECT Photoquest.*, User_userId.* FROM photoquest
   (
   SELECT * FROM `user`
   ) as User_userId ON User_userId.id = photoquest.userId
-ORDER BY :orderBy LIMIT :offset, :limit
+ORDER BY ::orderBy LIMIT :offset, :limit
