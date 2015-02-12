@@ -58,6 +58,18 @@ public class MysqlObjectMapper {
         }
     }
 
+    public int executeModifySQL(String sql, Map<String, Object> args) {
+        try {
+            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            if (args != null) {
+                statement.setObjects(args);
+            }
+            return statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private Object executeInsertSQL(String sql, Map<String, Object> args) {
         try {
             NamedParameterStatement statement = new NamedParameterStatement(connection, sql,
@@ -541,22 +553,22 @@ public class MysqlObjectMapper {
         }
     }
 
-    public <T> void insertAll(List<T> objects, boolean ignore) {
+    public <T> int insertAll(List<T> objects, boolean ignore) {
         InsertStatement insertStatement = new InsertStatement((List<Object>) objects);
         insertStatement.setIgnore(ignore);
-        insertStatement.execute(connection);
+        return insertStatement.execute(connection);
     }
 
-    public <T> void insertAll(List<T> objects) {
-        insertAll(objects, false);
+    public <T> int insertAll(List<T> objects) {
+        return insertAll(objects, false);
     }
 
-    public void insert(Object object, boolean ignore) {
-        insertAll(Collections.singletonList(object), ignore);
+    public int insert(Object object, boolean ignore) {
+        return insertAll(Collections.singletonList(object), ignore);
     }
 
-    public void insert(Object object) {
-        insert(object, false);
+    public int insert(Object object) {
+        return insert(object, false);
     }
 
     public void replace(Object object) {
@@ -582,21 +594,25 @@ public class MysqlObjectMapper {
         executeNonSelectSQL(sql, args);
     }
 
-    public void deleteAll(Iterable<Object> objects) {
+    public int deleteAll(Iterable<Object> objects) {
+        int sum = 0;
+
         for(Object object : objects){
             List<Field> fields = SqlGenerationUtilities.getFields(object);
             Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
             String sql = SqlGenerationUtilities.delete(object, fields);
-            executeNonSelectSQL(sql, args);
+            sum += executeModifySQL(sql, args);
         }
+
+        return sum;
     }
 
-    public void deleteAll(Object... objects) {
-        deleteAll(Arrays.asList(objects));
+    public int deleteAll(Object... objects) {
+        return deleteAll(Arrays.asList(objects));
     }
 
-    public void delete(Object object) {
-        deleteAll(Arrays.asList(object));
+    public int delete(Object object) {
+        return deleteAll(Arrays.asList(object));
     }
 
     @Override

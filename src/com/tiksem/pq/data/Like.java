@@ -7,14 +7,19 @@ import com.tiksem.mysqljava.annotations.*;
  */
 
 @Table
+@MultipleIndexes(indexes = {
+        @MultipleIndex(fields = {"userId", "photoId"}, isUnique = true),
+        @MultipleIndex(fields = {"userId", "commentId"}, isUnique = true)
+})
 public class Like implements WithPhoto {
     @PrimaryKey
     private Long id;
 
-    @Index(indexType = IndexType.HASH)
+    @Index
     private Long photoId;
-    @Index(indexType = IndexType.HASH)
+    @Index
     private Long commentId;
+
     @ForeignKey(parent = User.class, field = "id")
     @NotNull
     private Long userId;

@@ -19,7 +19,9 @@ public abstract class BatchStatement {
         this.objects = objects;
     }
 
-    public void execute(Connection connection) {
+    public int execute(Connection connection) {
+        int sum = 0;
+
         for(Object object : objects){
             StatementInfo info = prepareStatementForObject(object);
             sqlArgsMap.put(info.sql, info.args);
@@ -63,12 +65,15 @@ public abstract class BatchStatement {
                             onNotOneRowInserted(objects.get(index));
                         }
                         index++;
+                        sum += i;
                     }
                 } else {
-                    if (statement.executeUpdate() != 1) {
+                    int count = statement.executeUpdate();
+                    if (count != 1) {
                         onNotOneRowInserted(objects.get(index));
                     }
                     index++;
+                    sum += count;
                 }
 
                 List<Object> objects = this.objects.subList(start, index);
@@ -78,6 +83,8 @@ public abstract class BatchStatement {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
+        return sum;
     }
 
     protected static class StatementInfo {

@@ -77,16 +77,16 @@ public class DatabaseManager {
         mapper.replaceAll(objects);
     }
 
-    private void insert(Object object) {
-        mapper.insert(object);
+    private int insert(Object object) {
+        return mapper.insert(object);
     }
 
     private void insertAll(Object... objects) {
         mapper.insertAll(Arrays.asList(objects));
     }
 
-    private void delete(Object pattern) {
-        mapper.delete(pattern);
+    private int delete(Object pattern) {
+        return mapper.delete(pattern);
     }
 
     private void deleteAll(Object... objects) {
@@ -1499,10 +1499,11 @@ public class DatabaseManager {
 
         like = like(request, like, photo.getUserId());
 
-        final Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+        final Long photoquestId = photo.getPhotoquestId();
         asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
+                Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
                 databaseManager.incrementLikesCount(photo, photoquest);
                 databaseManager.updatePhotoquestAvatar(photoquest);
             }
@@ -1570,14 +1571,18 @@ public class DatabaseManager {
         return like;
     }
 
-    public void unlike(HttpServletRequest request, long likeId) {
-        Like like = getLikeByIdOrThrow(likeId);
+    public void unlike(HttpServletRequest request, final long likeId) {
+        final Like like = getLikeByIdOrThrow(likeId);
         if(!like.getUserId().equals(getSignedInUserOrThrow(request).getId())){
             throw new PermissionDeniedException("Unable to unlike like owned by another user");
         }
 
         final Long photoId = like.getPhotoId();
         final Long commentId = like.getCommentId();
+
+        if (delete(like) == 0) {
+            throw new LikeNotFoundException(likeId);
+        }
 
         asyncTaskHandler.execute(new Task() {
             @Override
@@ -1598,17 +1603,17 @@ public class DatabaseManager {
             }
         });
 
-        final Reply reply = getReplyByLikeId(likeId);
-        if(reply != null){
-            asyncTaskHandler.execute(new Task() {
-                @Override
-                public void run(DatabaseManager databaseManager) {
-                    databaseManager.delete(reply);
-                }
-            });
-        }
-
-        delete(like);
+        final long userId = like.getUserId();
+        asyncTaskHandler.execute(new Task() {
+            @Override
+            public void run(DatabaseManager databaseManager) {
+                Reply reply = new Reply();
+                reply.setType(Reply.LIKE);
+                reply.setUserId(userId);
+                reply.setId(likeId);
+                databaseManager.delete(reply);
+            }
+        });
     }
 
     private Dialog updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
@@ -1908,7 +1913,14 @@ public class DatabaseManager {
     private Integer getRandomCityId() {
         int max = mapper.executeOnValueSelectSql("select max(id) from city", Integer.class);
         int min = mapper.executeOnValueSelectSql("select min(id) from city", Integer.class);
-        return MathUtils.randInt(min, max);
+        for (int i = 0; i < 100; i++) {
+            int randomCityId = MathUtils.randInt(min, max);
+            if (mapper.getObjectById(City.class, randomCityId) != null) {
+                return randomCityId;
+            }
+        }
+
+        throw new RuntimeException("Unexpected WTF, try again");
     }
 
     public List<User> registerRandomUsers(HttpServletRequest request, int startId, int count, String password)
