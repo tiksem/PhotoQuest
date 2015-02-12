@@ -323,7 +323,7 @@ public class ApiHandler {
         return databaseManager.changeAvatar(request, file);
     }
 
-    @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}", method = RequestMethod.GET,
+    @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}.jpg", method = RequestMethod.GET,
             headers = "Accept=image/jpeg, image/jpg, image/png, image/gif")
     public void
     getImageById(@PathVariable Long id,

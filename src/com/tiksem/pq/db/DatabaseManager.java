@@ -822,7 +822,7 @@ public class DatabaseManager {
             return;
         }
 
-        photo.setUrl(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + photoId);
+        photo.setUrl(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + photoId + ".jpg");
     }
 
     private void initPhotosUrl(Iterable<Photo> photos, HttpServletRequest request) {
@@ -1052,7 +1052,7 @@ public class DatabaseManager {
         if(avatarId == null){
             withAvatar.setAvatar(getDefaultAvatar(request));
         } else {
-            withAvatar.setAvatar(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + avatarId);
+            withAvatar.setAvatar(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + avatarId + ".jpg");
         }
     }
 
