@@ -125,7 +125,7 @@ public class AdvancedRequestsManager {
             query = params.query;
         }
 
-        params.query = query + "%";
+        query += "%";
 
         String sqlFile = "search_users_by_query.sql";
 
