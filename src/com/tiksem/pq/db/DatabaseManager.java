@@ -1274,11 +1274,14 @@ public class DatabaseManager {
         RelationStatus getStatus();
     }
 
-    private List<User> searchRelations(HttpServletRequest request, RatingOrder order,
+    private List<User> searchRelations(HttpServletRequest request, Long userId, RatingOrder order,
                                        RelationsSearcher searcher) {
         String orderBy = getPeopleOrderBy(order);
-        User signedInUser = getSignedInUserOrThrow(request);
-        List<User> friends = searcher.search(orderBy, signedInUser.getId());
+        if (userId == null) {
+            User signedInUser = getSignedInUserOrThrow(request);
+            userId = signedInUser.getId();
+        }
+        List<User> friends = searcher.search(orderBy, userId);
 
         for(User friend : friends){
             friend.setRelation(searcher.getStatus());
@@ -1289,8 +1292,8 @@ public class DatabaseManager {
     }
 
     public List<User> getFriends(HttpServletRequest request, final SearchUsersParams params,
-                                 final OffsetLimit offsetLimit, RatingOrder order) {
-        return searchRelations(request, order, new RelationsSearcher() {
+                                 final OffsetLimit offsetLimit, RatingOrder order, Long userId) {
+        return searchRelations(request, userId, order, new RelationsSearcher() {
             @Override
             public List<User> search(String orderBy, long userId) {
                 return advancedRequestsManager.searchFriends(params, offsetLimit, orderBy, userId);
@@ -2150,7 +2153,7 @@ public class DatabaseManager {
 
     public List<User> getReceivedFriendRequests(HttpServletRequest request, final SearchUsersParams searchParams,
                                                 final OffsetLimit offsetLimit, RatingOrder order) {
-        return searchRelations(request, order, new RelationsSearcher() {
+        return searchRelations(request, null, order, new RelationsSearcher() {
             @Override
             public List<User> search(String orderBy, long userId) {
                 return advancedRequestsManager.searchReceivedRequests(searchParams, offsetLimit, orderBy, userId);
@@ -2165,7 +2168,7 @@ public class DatabaseManager {
 
     public List<User> getSentFriendRequests(HttpServletRequest request, final SearchUsersParams searchParams,
                                             final OffsetLimit offsetLimit, RatingOrder order) {
-        return searchRelations(request, order, new RelationsSearcher() {
+        return searchRelations(request, null, order, new RelationsSearcher() {
             @Override
             public List<User> search(String orderBy, long userId) {
                 return advancedRequestsManager.searchSentRequests(searchParams, offsetLimit, orderBy, userId);

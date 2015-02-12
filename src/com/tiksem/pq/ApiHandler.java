@@ -229,10 +229,12 @@ public class ApiHandler {
     public @ResponseBody Object getFriends(SearchUsersParams searchParams,
                                            OffsetLimit offsetLimit,
                                            @RequestParam(value = "order", required = false, defaultValue = "newest")
-                                           RatingOrder order) {
+                                           RatingOrder order,
+                                           @RequestParam(value = "id", required = false)
+                                           Long id) {
         DatabaseManager databaseManager = getDatabaseManager();
         Collection<User> users
-                = databaseManager.getFriends(request, searchParams, offsetLimit, order);
+                = databaseManager.getFriends(request, searchParams, offsetLimit, order, id);
 
         return getUsersResponse(users, databaseManager, searchParams.countryId, searchParams.cityId);
     }
