@@ -476,7 +476,7 @@ public class DatabaseManager {
         return replace(user);
     }
 
-    public void changePassword(HttpServletRequest request, String newPassword, String oldPassword) {
+    public User changePassword(HttpServletRequest request, String newPassword, String oldPassword) {
         User user = getSignedInUserOrThrow(request);
         if(!user.getPassword().equals(oldPassword)){
             throw new PermissionDeniedException("Invalid password!");
@@ -484,6 +484,7 @@ public class DatabaseManager {
         user.setPassword(newPassword);
 
         replace(user);
+        return loginOrThrow(request, user.getLogin(), user.getPassword());
     }
 
     public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {

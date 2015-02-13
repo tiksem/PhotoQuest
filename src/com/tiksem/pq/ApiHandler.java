@@ -135,8 +135,7 @@ public class ApiHandler {
                                       HttpServletResponse response){
         User user = getDatabaseManager().loginOrThrow(request, login, password);
 
-        response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("login", login));
-        response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("password", password));
+        setLoginCookies(response, user);
 
         if(mobile){
             response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("mobile", "true"));
@@ -194,11 +193,20 @@ public class ApiHandler {
     @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
     public @ResponseBody Object changePassword(
             @RequestParam(value="old", required=true) String oldPassword,
-            @RequestParam(value="new", required=true) String newPassword)
+            @RequestParam(value="new", required=true) String newPassword,
+            HttpServletResponse response)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        databaseManager.changePassword(request, newPassword, oldPassword);
-        return new Success();
+        User user = databaseManager.changePassword(request, newPassword, oldPassword);
+
+        setLoginCookies(response, user);
+
+        return user;
+    }
+
+    private void setLoginCookies(HttpServletResponse response, User user) {
+        response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("login", user.getLogin()));
+        response.addCookie(HttpUtilities.createLocalhostUnexpiredCookie("password", user.getPassword()));
     }
 
     @RequestMapping(value = "/registerRandom", method = RequestMethod.GET)
