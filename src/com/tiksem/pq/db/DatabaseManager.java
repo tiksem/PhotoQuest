@@ -4,6 +4,7 @@ import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.MysqlTablesCreator;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.mysqljava.SelectParams;
+import com.tiksem.mysqljava.security.ApiRequest;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.City;
 import com.tiksem.pq.data.Likable;
@@ -57,8 +58,8 @@ public class DatabaseManager {
     // do not use directly
     private User _signedInUser;
 
-    public DatabaseManager() {
-        mapper = new MysqlObjectMapper();
+    public DatabaseManager(MysqlObjectMapper mapper) {
+        this.mapper = mapper;
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
         asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
         captchaManager = new DatabaseCaptchaManager(mapper);
@@ -2475,7 +2476,8 @@ public class DatabaseManager {
                 CaptchaInfo.class,
                 com.tiksem.pq.data.City.class,
                 com.tiksem.pq.data.Country.class,
-                ProgressOperation.class
+                ProgressOperation.class,
+                ApiRequest.class
         ), progressStream, "\n");
     }
 

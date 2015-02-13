@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.mysqljava.annotations.AddingDate;
 import com.tiksem.mysqljava.annotations.PrimaryKey;
 import com.tiksem.mysqljava.annotations.Stored;
 import com.tiksem.mysqljava.annotations.Table;
@@ -13,6 +14,17 @@ public class CaptchaInfo {
     private Long id;
     @Stored
     private String answer;
+
+    @AddingDate
+    private Long addingDate;
+
+    public Long getAddingDate() {
+        return addingDate;
+    }
+
+    public void setAddingDate(Long addingDate) {
+        this.addingDate = addingDate;
+    }
 
     public String getAnswer() {
         return answer;

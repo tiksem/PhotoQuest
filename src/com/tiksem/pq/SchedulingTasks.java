@@ -1,5 +1,6 @@
 package com.tiksem.pq;
 
+import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.pq.db.DatabaseManager;
 import org.apache.commons.io.IOUtils;
 import org.springframework.context.annotation.Scope;
@@ -18,7 +19,7 @@ import java.io.IOException;
 @Component
 @Scope("singleton")
 public class SchedulingTasks {
-    private DatabaseManager databaseManager = new DatabaseManager();
+    private DatabaseManager databaseManager = new DatabaseManager(new MysqlObjectMapper());
 
     @Scheduled(cron = "0 * * * * *")
     public void clearRatingAndViews() {

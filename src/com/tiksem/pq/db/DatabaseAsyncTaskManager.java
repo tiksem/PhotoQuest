@@ -1,5 +1,7 @@
 package com.tiksem.pq.db;
 
+import com.tiksem.mysqljava.MysqlObjectMapper;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Queue;
@@ -22,7 +24,7 @@ public class DatabaseAsyncTaskManager {
         @Override
         public Thread newThread(Runnable r) {
             Thread thread = new Thread(r);
-            databaseManagers.put(thread, new DatabaseManager());
+            databaseManagers.put(thread, new DatabaseManager(new MysqlObjectMapper()));
             return thread;
         }
     }

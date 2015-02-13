@@ -36,6 +36,15 @@ import java.util.regex.Pattern;
 @RequestMapping("/")
 public class ApiHandler {
     private static final Pattern TAG_PATTERN = Pattern.compile("[\\d\\w]{3,20}", Pattern.UNICODE_CHARACTER_CLASS);
+    private static final Set<String> uncheckedRequests = new HashSet<String>();
+
+    static {
+        List<String> list = Arrays.asList("initDatabase", "clearDatabase");
+        for(String request : list){
+            uncheckedRequests.add("//" + request);
+            uncheckedRequests.add("/" + request);
+        }
+    }
 
     @Autowired
     private HttpServletRequest request;
@@ -44,14 +53,22 @@ public class ApiHandler {
     private HttpSession httpSession;
 
     private DatabaseManager getDatabaseManager() {
-        long delay = Settings.getInstance().getRequestDelay();
+        Settings settings = Settings.getInstance();
+        long delay = settings.getRequestDelay();
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        final DatabaseManager databaseManager = new DatabaseManager();
+        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        String requestURI = request.getRequestURI();
+        if(settings.isEnableRPS() && !uncheckedRequests.contains(requestURI)){
+            settings.getRpsGuard().commitUserRequest(mapper, request.getRemoteAddr(),
+                    requestURI);
+        }
+
+        final DatabaseManager databaseManager = new DatabaseManager(mapper);
         RequestContextHolder.currentRequestAttributes().
                 registerDestructionCallback("DatabaseManager", new Runnable() {
                     @Override
@@ -877,7 +894,9 @@ public class ApiHandler {
 
     @RequestMapping("/refreshSettings")
     public @ResponseBody Object refreshSettings() {
-        Settings.getInstance().update();
+        Settings instance = Settings.getInstance();
+        instance.update();
+        instance.updateRps();
         return new Success();
     }
 

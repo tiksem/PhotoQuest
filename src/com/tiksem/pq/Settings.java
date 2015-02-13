@@ -1,10 +1,14 @@
 package com.tiksem.pq;
 
+import com.tiksem.mysqljava.security.RpsGuard;
+import com.utils.framework.strings.Strings;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -13,6 +17,7 @@ import java.util.Properties;
 public class Settings {
     private static Settings settings = null;
     private Properties properties;
+    private RpsGuard rpsGuard;
 
     public synchronized static Settings getInstance() {
         if(settings == null){
@@ -31,8 +36,23 @@ public class Settings {
         }
     }
 
+    public void updateRps() {
+        Properties rpsSettings = new Properties();
+        try {
+            rpsSettings.load(new FileInputStream("rps.txt"));
+        } catch (IOException e) {
+
+        }
+        rpsGuard = new RpsGuard((Map)rpsSettings);
+    }
+
     public Settings() {
         update();
+        updateRps();
+    }
+
+    public RpsGuard getRpsGuard() {
+        return rpsGuard;
     }
 
     public long getRequestDelay() {
@@ -41,5 +61,9 @@ public class Settings {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    public boolean isEnableRPS() {
+        return Strings.equalsIgnoreCase(properties.getProperty("enableRPS"), "true");
     }
 }
