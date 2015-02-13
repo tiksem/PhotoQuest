@@ -577,7 +577,7 @@ public class ApiHandler {
 
 
     @RequestMapping("/getNextPrevPhotoOfPhotoquest")
-    public @ResponseBody Object getNextPrevPhotoOfPhotoquest(@RequestParam("photoquestId") Long photoquestId,
+    public @ResponseBody Object getNextPrevPhotoOfPhoteoquest(@RequestParam("photoquestId") Long photoquestId,
                                                          @RequestParam("photoId") Long photoId,
                                                          @RequestParam("next") boolean next,
                                                       @RequestParam(value = "order", required = false,

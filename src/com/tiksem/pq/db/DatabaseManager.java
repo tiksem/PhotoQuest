@@ -1996,6 +1996,14 @@ public class DatabaseManager {
         public PhotoCategory category;
     }
 
+    private long getUserAvatarsCount(long userId) {
+        Photoquest avatar = getOrCreateSystemPhotoQuest(AVATAR_QUEST_NAME);
+        Photo photo = new Photo();
+        photo.setUserId(userId);
+        photo.setPhotoquestId(avatar.getId());
+        return mapper.getCountByPattern(photo);
+    }
+
     public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId, PhotoFillParams params) {
         Photo photo = mapper.getObjectById(Photo.class, photoId, MysqlObjectMapper.ALL_FOREIGN);
         if(photo == null){
@@ -2030,7 +2038,11 @@ public class DatabaseManager {
         setPhotoInfo(request, photo);
 
         if(params.userId != null){
-            photo.setShowNextPrevButtons(getPhotosOfUserCount(params.userId) > 1);
+            if (params.category != PhotoCategory.avatar) {
+                photo.setShowNextPrevButtons(getPhotosOfUserCount(params.userId) > 1);
+            } else {
+                photo.setShowNextPrevButtons(getUserAvatarsCount(params.userId) > 1);
+            }
         } else {
             Long photoquestId = params.photoquestId;
             if(photoquestId != null) {
