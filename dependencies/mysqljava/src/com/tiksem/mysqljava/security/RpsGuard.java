@@ -68,6 +68,9 @@ public class RpsGuard {
                         request.setBannedUntilTime(currentTime + banTime);
                         shouldThrowIpBanned = true;
                     }
+                } else {
+                    request.setBannedUntilTime(null);
+                    request.setAttemptsCountBeforeBan(null);
                 }
             } else {
                 if (bannedUntilTime > currentTime) {
