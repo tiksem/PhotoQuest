@@ -12,13 +12,15 @@ public class MobilePhotoquest {
     public String name;
     public Long avatarId;
     public String createdBy;
-    public Long viewsCount;
+    public long viewsCount;
 
     public MobilePhotoquest(Photoquest photoquest) {
         name = photoquest.getName();
         avatarId = photoquest.getAvatarId();
         User user = photoquest.getUser();
-        createdBy = user.getName() + " " + user.getLastName();
+        if (user != null) {
+            createdBy = user.getName() + " " + user.getLastName();
+        }
         viewsCount = photoquest.getViewsCount();
     }
 }
