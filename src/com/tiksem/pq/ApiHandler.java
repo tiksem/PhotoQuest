@@ -4,10 +4,7 @@ import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
-import com.tiksem.pq.data.response.android.MobileFeedList;
-import com.tiksem.pq.data.response.android.MobilePhotoquestList;
-import com.tiksem.pq.data.response.android.MobileUser;
-import com.tiksem.pq.data.response.android.MobileUserList;
+import com.tiksem.pq.data.response.android.*;
 import com.tiksem.pq.db.*;
 import com.tiksem.pq.db.advanced.SearchUsersParams;
 import com.tiksem.pq.http.HttpUtilities;
@@ -87,6 +84,14 @@ public class ApiHandler {
 
     private Object getUsersResponse(Collection<User> users) {
         return getUsersResponse(users, null, null, null);
+    }
+
+    private Object getPhotosResponse(Collection<Photo> photos) {
+        if(isMobileClient()){
+            return new MobilePhotoList(photos);
+        } else {
+            return new PhotosList(photos);
+        }
     }
 
     private Object getUserResponse(User user) {
@@ -570,7 +575,7 @@ public class ApiHandler {
                                                       OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
                 getPhotosOfPhotoquest(request, photoquestId, offsetLimit, order);
-        return new PhotosList(photos);
+        return getPhotosResponse(photos);
     }
 
     @RequestMapping("/getFiendsPhotosOfPhotoquest")

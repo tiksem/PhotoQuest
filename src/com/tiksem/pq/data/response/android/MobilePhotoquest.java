@@ -9,12 +9,14 @@ import com.tiksem.pq.data.User;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class MobilePhotoquest {
+    public long id;
     public String name;
     public Long avatarId;
     public String createdBy;
     public long viewsCount;
 
     public MobilePhotoquest(Photoquest photoquest) {
+        id = photoquest.getId();
         name = photoquest.getName();
         avatarId = photoquest.getAvatarId();
         User user = photoquest.getUser();
