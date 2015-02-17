@@ -6,6 +6,7 @@ import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.data.response.android.MobileFeedList;
 import com.tiksem.pq.data.response.android.MobilePhotoquestList;
+import com.tiksem.pq.data.response.android.MobileUser;
 import com.tiksem.pq.data.response.android.MobileUserList;
 import com.tiksem.pq.db.*;
 import com.tiksem.pq.db.advanced.SearchUsersParams;
@@ -86,6 +87,14 @@ public class ApiHandler {
 
     private Object getUsersResponse(Collection<User> users) {
         return getUsersResponse(users, null, null, null);
+    }
+
+    private Object getUserResponse(User user) {
+        if(isMobileClient()){
+            return new MobileUser(user);
+        }
+
+        return user;
     }
 
     private Object getUsersResponse(Collection<User> users, DatabaseManager databaseManager,
@@ -538,7 +547,7 @@ public class ApiHandler {
     @RequestMapping("/getUserById")
     public @ResponseBody Object getUserById(@RequestParam("id") long id){
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.requestUserProfileData(request, id);
+        return getUserResponse(databaseManager.requestUserProfileData(request, id));
     }
 
     @RequestMapping("/getUnreadMessagesCount")
