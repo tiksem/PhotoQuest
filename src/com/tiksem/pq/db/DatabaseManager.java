@@ -596,6 +596,22 @@ public class DatabaseManager {
         }
     }
 
+    public long getReceivedRequestsCount(HttpServletRequest request, SearchUsersParams params, Long userId) {
+        if(userId == null){
+            userId = getSignedInUserOrThrow(request).getId();
+        }
+
+        return advancedRequestsManager.getSearchReceivedRequestsCount(params, userId);
+    }
+
+    public long getSentRequestsCount(HttpServletRequest request, SearchUsersParams params, Long userId) {
+        if(userId == null){
+            userId = getSignedInUserOrThrow(request).getId();
+        }
+
+        return advancedRequestsManager.getSearchSentRequestsCount(params, userId);
+    }
+
     private interface UsersSearcher {
         public Collection<User> search(String orderBy);
     }
@@ -1274,9 +1290,12 @@ public class DatabaseManager {
         return getUsersByFromUserIdInRelation(userId, Relationship.FRIENDSHIP, offsetLimit, order);
     }
 
-    public long getFriendsCount(HttpServletRequest request, SearchUsersParams searchParams) {
-        long signedInUserId = getSignedInUserOrThrow(request).getId();
-        return advancedRequestsManager.getSearchFriendsCount(searchParams, signedInUserId);
+    public long getFriendsCount(HttpServletRequest request, SearchUsersParams searchParams, Long userId) {
+        if(userId == null){
+            userId = getSignedInUserOrThrow(request).getId();
+        }
+
+        return advancedRequestsManager.getSearchFriendsCount(searchParams, userId);
     }
 
     private interface RelationsSearcher {

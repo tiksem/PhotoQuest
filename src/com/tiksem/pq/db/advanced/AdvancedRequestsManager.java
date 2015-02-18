@@ -118,6 +118,16 @@ public class AdvancedRequestsManager {
         return searcher.search(offsetLimit, orderBy);
     }
 
+    public long getSearchReceivedRequestsCount(SearchUsersParams params, long userId) {
+        ReceivedRequestsSearcher searcher = new ReceivedRequestsSearcher(sqlFileExecutor, params, userId);
+        return searcher.getCount();
+    }
+
+    public long getSearchSentRequestsCount(SearchUsersParams params, long userId) {
+        SentRequestsSearcher searcher = new SentRequestsSearcher(sqlFileExecutor, params, userId);
+        return searcher.getCount();
+    }
+
     public <T> List<T> searchReceivedRequests(SearchUsersParams params,
                                           OffsetLimit offsetLimit,
                                           String orderBy,

@@ -255,13 +255,22 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getFriendsCount")
-    public @ResponseBody Object getFriendsCount(SearchUsersParams searchParams) {
-        return new CountResponse(getDatabaseManager().getFriendsCount(request, searchParams));
+    public @ResponseBody Object getFriendsCount(SearchUsersParams searchParams,
+                                                @RequestParam(value = "id", required = false)
+                                                Long id) {
+        return new CountResponse(getDatabaseManager().getFriendsCount(request, searchParams, id));
     }
 
-    @RequestMapping("/getFriendRequestsCount")
-    public @ResponseBody Object getFriendRequestsCount() {
-        return new CountResponse(getDatabaseManager().getSignedInUserOrThrow(request).getReceivedRequestsCount());
+    @RequestMapping("/getReceivedRequestsCount")
+    public @ResponseBody Object getReceivedRequestsCount(SearchUsersParams searchParams) {
+        return new CountResponse(getDatabaseManager().
+                getReceivedRequestsCount(request, searchParams, null));
+    }
+
+    @RequestMapping("/getSentRequestsCount")
+    public @ResponseBody Object getSentRequestsCount(SearchUsersParams searchParams) {
+        return new CountResponse(getDatabaseManager().
+                getSentRequestsCount(request, searchParams, null));
     }
 
     @RequestMapping("/friends")
