@@ -1575,7 +1575,9 @@ public class DatabaseManager {
         User signedInUser = getSignedInUserOrThrow(request);
         like.setUserId(signedInUser.getId());
 
-        if(mapper.getObjectByPattern(like) != null){
+        String additionalWhere = like.getCommentId() == null ? "commentId is NULL" : null;
+
+        if(mapper.getObjectByPattern(like, additionalWhere) != null){
             throw new LikeExistsException(like);
         }
 

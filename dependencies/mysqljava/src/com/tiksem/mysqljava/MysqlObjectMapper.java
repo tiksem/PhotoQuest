@@ -357,7 +357,14 @@ public class MysqlObjectMapper {
     }
 
     public <T> T getObjectByPattern(final T pattern) {
-        List<T> list = queryByPattern(pattern, new OffsetLimit(0, 1));
+        return getObjectByPattern(pattern, null);
+    }
+
+    public <T> T getObjectByPattern(final T pattern, String additionalWhere) {
+        SelectParams params = new SelectParams();
+        params.offsetLimit = new OffsetLimit(0, 1);
+        params.additionalWhereClosure = additionalWhere;
+        List<T> list = queryByPattern(pattern, params);
         if(list.isEmpty()){
             return null;
         }

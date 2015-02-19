@@ -8,8 +8,7 @@ import com.tiksem.mysqljava.annotations.*;
 
 @Table
 @MultipleIndexes(indexes = {
-        @MultipleIndex(fields = {"userId", "photoId"}, isUnique = true),
-        @MultipleIndex(fields = {"userId", "commentId"}, isUnique = true)
+        @MultipleIndex(fields = {"userId", "photoId", "commentId"}, isUnique = true)
 })
 public class Like implements WithPhoto {
     @PrimaryKey
