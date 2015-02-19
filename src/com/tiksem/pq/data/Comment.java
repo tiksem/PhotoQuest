@@ -30,7 +30,7 @@ public class Comment implements Likable, WithPhoto {
     @NotNull
     private Long likesCount;
 
-    @ForeignKey(parent = Comment.class, field = "id")
+    @ForeignKey(parent = Comment.class, field = "id", onDelete = OnDelete.SET_NULL)
     private Long toCommentId;
 
     @ForeignValue(idField = "userId")

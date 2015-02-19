@@ -7,7 +7,8 @@ import com.tiksem.mysqljava.annotations.*;
  */
 @Table
 @MultipleIndexes(indexes = {
-        @MultipleIndex(fields = {"userId", "addingDate"})
+        @MultipleIndex(fields = {"userId", "addingDate"}),
+        @MultipleIndex(fields = {"id", "type"})
 })
 public class Reply {
     public static final int FRIEND_REQUEST_ACCEPTED = 0;
