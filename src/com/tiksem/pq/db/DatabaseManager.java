@@ -2132,7 +2132,7 @@ public class DatabaseManager {
         Long photoId = withPhoto.getPhotoId();
         if (photoId != null) {
             withPhoto.setPhoto(HttpUtilities.getBaseUrl(request) +
-                    Photo.IMAGE_URL_PATH + photoId);
+                    Photo.IMAGE_URL_PATH + photoId + ".jpg");
         }
     }
 
@@ -2152,8 +2152,7 @@ public class DatabaseManager {
             Long id = reply.getId();
             if(type == Reply.COMMENT){
                 Comment comment = getCommentByIdOrThrow(id);
-                comment.setPhoto(HttpUtilities.getBaseUrl(request) +
-                        Photo.IMAGE_URL_PATH + comment.getPhotoId());
+                setPhoto(request, comment);
                 replyResponse.setComment(comment);
                 user = getUserByIdOrThrow(comment.getUserId());
                 setPhoto(request, comment);
