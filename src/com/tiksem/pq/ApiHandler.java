@@ -779,6 +779,12 @@ public class ApiHandler {
         return new DialogsList(dialogs);
     }
 
+    @RequestMapping("/getDialogsCount")
+    public @ResponseBody Object getDialogsCount() {
+        long count = getDatabaseManager().getDialogsCount(request);
+        return new CountResponse(count);
+    }
+
     @RequestMapping("/deleteComment")
     public @ResponseBody Object deleteComment(
             @RequestParam(value = "id", required = true) Long commentId) {

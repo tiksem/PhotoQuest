@@ -1943,6 +1943,15 @@ public class DatabaseManager {
         return result;
     }
 
+    public long getDialogsCount(HttpServletRequest request) {
+        User signedInUser = getSignedInUserOrThrow(request);
+        Dialog dialogPattern = new Dialog();
+        long signedInUserId = signedInUser.getId();
+        dialogPattern.setUser1Id(signedInUserId);
+
+        return mapper.getCountByPattern(dialogPattern);
+    }
+
     private Integer getRandomCityId() {
         int max = mapper.executeOnValueSelectSql("select max(id) from city", Integer.class);
         int min = mapper.executeOnValueSelectSql("select min(id) from city", Integer.class);
