@@ -8,6 +8,8 @@ import com.tiksem.mysqljava.annotations.*;
 @Table
 @MultipleIndex(fields = {"userId", "actionId"}, isUnique = true)
 public class Feed {
+    @PrimaryKey
+    private Long id;
     @Stored
     @NotNull
     private Long userId;
@@ -40,5 +42,13 @@ public class Feed {
 
     public void setAction(Action action) {
         this.action = action;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 }
