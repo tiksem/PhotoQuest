@@ -71,25 +71,20 @@ public class ResultSetUtilities {
             throw new RuntimeException();
         }
 
-        return new AbstractList<String>(){
-            @Override
-            public String get(int index) {
-                try {
-                    return metaData.getColumnLabel(index + 1).toLowerCase();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+        try {
+            int columnCount = metaData.getColumnCount();
+            for (int i = 0; i < columnCount; i++) {
+                if(metaData.getColumnName(i + 1).equalsIgnoreCase(column)) {
+                    return i;
+                } else if(metaData.getColumnLabel(i + 1).equalsIgnoreCase(column)) {
+                    return i;
                 }
             }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
-            @Override
-            public int size() {
-                try {
-                    return metaData.getColumnCount();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }.indexOf(column.toLowerCase());
+        return -1;
     }
 
     private static Object getColumnValue(Field field, ResultSet resultSet, int index) {

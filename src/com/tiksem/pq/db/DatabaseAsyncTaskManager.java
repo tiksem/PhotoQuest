@@ -25,8 +25,7 @@ public class DatabaseAsyncTaskManager {
         @Override
         public Thread newThread(Runnable r) {
             Thread thread = new Thread(r);
-            String lang = ((InnerRunnable)r).lang;
-            databaseManagers.put(thread, new DatabaseManager(new MysqlObjectMapper(), lang));
+            databaseManagers.put(thread, new DatabaseManager(new MysqlObjectMapper(), null));
             return thread;
         }
     }
@@ -75,16 +74,8 @@ public class DatabaseAsyncTaskManager {
         threadPoolExecutor.setThreadFactory(threadFactory);
     }
 
-    private static abstract class InnerRunnable implements Runnable {
-        private String lang;
-
-        public InnerRunnable(String lang) {
-            this.lang = lang;
-        }
-    }
-
     private void executeOnExecutor(Executor executor, final Task task, String lang) {
-        executor.execute(new InnerRunnable(lang) {
+        executor.execute(new Runnable() {
             @Override
             public void run() {
                 Thread thread = Thread.currentThread();
