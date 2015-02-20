@@ -19,7 +19,7 @@ import java.io.IOException;
 @Component
 @Scope("singleton")
 public class SchedulingTasks {
-    private DatabaseManager databaseManager = new DatabaseManager(new MysqlObjectMapper());
+    private DatabaseManager databaseManager = new DatabaseManager(new MysqlObjectMapper(), "en");
 
     @Scheduled(cron = "0 * * * * *")
     public void clearRatingAndViews() {

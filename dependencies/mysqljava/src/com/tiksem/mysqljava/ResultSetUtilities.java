@@ -75,7 +75,7 @@ public class ResultSetUtilities {
             @Override
             public String get(int index) {
                 try {
-                    return metaData.getColumnName(index + 1).toLowerCase();
+                    return metaData.getColumnLabel(index + 1).toLowerCase();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }

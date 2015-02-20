@@ -3,11 +3,9 @@ package com.tiksem.pq.db.advanced;
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.pq.data.*;
-import com.tiksem.pq.data.response.CitySuggestion;
-import com.tiksem.pq.data.response.CountrySuggestion;
+import com.tiksem.pq.data.response.LocationSuggestion;
 import com.tiksem.pq.db.RatingOrder;
 import com.tiksem.pq.db.SqlFileExecutor;
-import com.utils.framework.CollectionUtils;
 import com.utils.framework.strings.Strings;
 
 import java.util.*;
@@ -47,7 +45,8 @@ public class AdvancedRequestsManager {
             case rated:
                 orderBy = "likesCount";
                 break;
-        };
+        }
+        ;
         params.put("orderBy", orderBy);
 
         return sqlFileExecutor.executeSQLQuery(sqlFile, params, Photoquest.class);
@@ -98,9 +97,9 @@ public class AdvancedRequestsManager {
     }
 
     public <T> List<T> searchFriends(SearchUsersParams params,
-                                   OffsetLimit offsetLimit,
-                                   String orderBy,
-                                   long userId) {
+                                     OffsetLimit offsetLimit,
+                                     String orderBy,
+                                     long userId) {
         FriendsSearcher searcher = new FriendsSearcher(sqlFileExecutor, params, userId);
         return searcher.search(offsetLimit, orderBy);
     }
@@ -111,9 +110,9 @@ public class AdvancedRequestsManager {
     }
 
     public <T> List<T> searchSentRequests(SearchUsersParams params,
-                                     OffsetLimit offsetLimit,
-                                     String orderBy,
-                                     long userId) {
+                                          OffsetLimit offsetLimit,
+                                          String orderBy,
+                                          long userId) {
         SentRequestsSearcher searcher = new SentRequestsSearcher(sqlFileExecutor, params, userId);
         return searcher.search(offsetLimit, orderBy);
     }
@@ -129,9 +128,9 @@ public class AdvancedRequestsManager {
     }
 
     public <T> List<T> searchReceivedRequests(SearchUsersParams params,
-                                          OffsetLimit offsetLimit,
-                                          String orderBy,
-                                          long userId) {
+                                              OffsetLimit offsetLimit,
+                                              String orderBy,
+                                              long userId) {
         ReceivedRequestsSearcher searcher = new ReceivedRequestsSearcher(sqlFileExecutor, params, userId);
         return searcher.search(offsetLimit, orderBy);
     }
@@ -161,7 +160,7 @@ public class AdvancedRequestsManager {
         args.put("photoquestId", photoquestId);
         args.put("userId", userId);
         List<Photo> photos = sqlFileExecutor.executeSQLQuery("photo/next_prev_photo_of_friends.sql", args, Photo.class);
-        if(photos.isEmpty()){
+        if (photos.isEmpty()) {
             return null;
         }
 
@@ -194,60 +193,40 @@ public class AdvancedRequestsManager {
         sqlFileExecutor.executeNonSelectQuery(sqlFile, args);
     }
 
-    public List<CitySuggestion> getCitySuggestions(int countryId, String query, int limit) {
+    public List<LocationSuggestion> getCitySuggestions(int countryId, String query, int limit, String lang) {
         List<City> cities;
+        String sqlFile;
+        Map<String, Object> args = new HashMap<String, Object>();
 
-        if(Strings.isEmpty(query)){
-            City pattern = new City();
-            pattern.setCountryId(countryId);
-            cities = mapper.queryByPattern(pattern, new OffsetLimit(0, limit), "id desc");
+        if (Strings.isEmpty(query)) {
+            sqlFile = "location/city_suggestions_without_query.sql";
+            args.put("nameField", lang.equals("ru") ? "ruName" : "enName");
         } else {
             query += "%";
-
-            Map<String, Object> args = new HashMap<String, Object>();
-            args.put("countryId", countryId);
             args.put("query", query);
-            args.put("limit", limit);
-
-            String sqlFile = "location/city_suggestions.sql";
-            cities = sqlFileExecutor.executeSQLQuery(sqlFile, args, City.class);
+            sqlFile = "location/city_suggestions.sql";
         }
 
-        return CollectionUtils.transform(cities, new CollectionUtils.Transformer<City, CitySuggestion>() {
-            @Override
-            public CitySuggestion get(City city) {
-                CitySuggestion suggestion = new CitySuggestion();
-                suggestion.id = city.getId();
-                suggestion.value = city.getEnName();
-                return suggestion;
-            }
-        });
+        args.put("limit", limit);
+        args.put("countryId", countryId);
+
+        return sqlFileExecutor.executeSQLQuery(sqlFile, args, LocationSuggestion.class);
     }
 
-    public List<CountrySuggestion> getCountrySuggestions(String query, int limit) {
-        List<Country> countries;
-
-        if(Strings.isEmpty(query)){
-            countries = mapper.queryAllObjects(Country.class, new OffsetLimit(0, limit), "id desc");
+    public List<LocationSuggestion> getCountrySuggestions(String query, int limit, String lang) {
+        String sqlFile;
+        Map<String, Object> args = new HashMap<String, Object>();
+        if (Strings.isEmpty(query)) {
+            sqlFile = "location/country_suggestions_without_query.sql";
+            args.put("nameField", lang.equals("ru") ? "ruName" : "enName");
         } else {
-            query = "%" + query + "%";
-
-            Map<String, Object> args = new HashMap<String, Object>();
+            query += "%";
             args.put("query", query);
-            args.put("limit", limit);
-
-            String sqlFile = "location/country_suggestions.sql";
-            countries = sqlFileExecutor.executeSQLQuery(sqlFile, args, Country.class);
+            sqlFile = "location/country_suggestions.sql";
         }
 
-        return CollectionUtils.transform(countries, new CollectionUtils.Transformer<Country, CountrySuggestion>() {
-            @Override
-            public CountrySuggestion get(Country country) {
-                CountrySuggestion suggestion = new CountrySuggestion();
-                suggestion.id = country.getId();
-                suggestion.value = country.getEnName();
-                return suggestion;
-            }
-        });
+        args.put("limit", limit);
+
+        return sqlFileExecutor.executeSQLQuery(sqlFile, args, LocationSuggestion.class);
     }
 }

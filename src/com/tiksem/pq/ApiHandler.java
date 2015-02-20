@@ -66,7 +66,10 @@ public class ApiHandler {
                     requestURI);
         }
 
-        final DatabaseManager databaseManager = new DatabaseManager(mapper);
+        Cookie langCookie = HttpUtilities.getCookie("lang", request.getCookies());
+        String lang = langCookie == null ? "en" : langCookie.getValue();
+
+        final DatabaseManager databaseManager = new DatabaseManager(mapper, lang);
         RequestContextHolder.currentRequestAttributes().
                 registerDestructionCallback("DatabaseManager", new Runnable() {
                     @Override

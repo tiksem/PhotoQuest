@@ -8,8 +8,7 @@ import com.tiksem.mysqljava.security.ApiRequest;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.City;
 import com.tiksem.pq.data.Likable;
-import com.tiksem.pq.data.response.CitySuggestion;
-import com.tiksem.pq.data.response.CountrySuggestion;
+import com.tiksem.pq.data.response.LocationSuggestion;
 import com.tiksem.pq.data.response.ReplyResponse;
 import com.tiksem.pq.data.response.UserStats;
 import com.tiksem.pq.db.advanced.AdvancedRequestsManager;
@@ -54,15 +53,17 @@ public class DatabaseManager {
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
+    private String lang;
 
     // do not use directly
     private User _signedInUser;
 
-    public DatabaseManager(MysqlObjectMapper mapper) {
+    public DatabaseManager(MysqlObjectMapper mapper, String lang) {
         this.mapper = mapper;
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
-        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
+        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler(lang);
         captchaManager = new DatabaseCaptchaManager(mapper);
+        this.lang = lang;
     }
 
     private <T> T replace(T object) {
@@ -2099,12 +2100,12 @@ public class DatabaseManager {
         return googlePlacesSearcher.performAutoCompleteCitiesSearch(query);
     }
 
-    public List<CountrySuggestion> getCountrySuggestions(String query) {
-        return advancedRequestsManager.getCountrySuggestions(query, 10);
+    public List<LocationSuggestion> getCountrySuggestions(String query) {
+        return advancedRequestsManager.getCountrySuggestions(query, 10, lang);
     }
 
-    public List<CitySuggestion> getCitySuggestions(Integer countryId, String query) {
-        return advancedRequestsManager.getCitySuggestions(countryId, query, 10);
+    public List<LocationSuggestion> getCitySuggestions(Integer countryId, String query) {
+        return advancedRequestsManager.getCitySuggestions(countryId, query, 10, lang);
     }
 
     public UserStats getUserStats(HttpServletRequest request) {

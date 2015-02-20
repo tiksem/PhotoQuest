@@ -1,4 +1,4 @@
-(SELECT * FROM Country WHERE enName like :query)
+(SELECT enName as value, id FROM Country WHERE enName like :query ORDER BY enName)
 UNION
-(SELECT * FROM Country WHERE ruName like :query)
-ORDER BY id desc LIMIT :limit
+(SELECT ruName as value, id FROM Country WHERE ruName like :query ORDER BY ruName)
+LIMIT :limit

@@ -1,6 +1,7 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
+import com.utils.framework.strings.Strings;
 
 import java.util.Collections;
 import java.util.Map;
@@ -24,7 +25,8 @@ public class DatabaseAsyncTaskManager {
         @Override
         public Thread newThread(Runnable r) {
             Thread thread = new Thread(r);
-            databaseManagers.put(thread, new DatabaseManager(new MysqlObjectMapper()));
+            String lang = ((InnerRunnable)r).lang;
+            databaseManagers.put(thread, new DatabaseManager(new MysqlObjectMapper(), lang));
             return thread;
         }
     }
@@ -38,8 +40,13 @@ public class DatabaseAsyncTaskManager {
     }
 
     public class Handler {
+        private String lang;
         private Queue<Task> queue = new ConcurrentLinkedQueue<Task>();
         private int threadHashCode = System.identityHashCode(Thread.currentThread());
+
+        public Handler(String lang) {
+            this.lang = lang;
+        }
 
         public void execute(final Task task) {
             if(System.identityHashCode(Thread.currentThread()) != threadHashCode){
@@ -56,7 +63,7 @@ public class DatabaseAsyncTaskManager {
                             task.run(databaseManager);
                         }
                     }
-                });
+                }, lang);
             } else {
                 queue.add(task);
             }
@@ -68,8 +75,16 @@ public class DatabaseAsyncTaskManager {
         threadPoolExecutor.setThreadFactory(threadFactory);
     }
 
-    private void executeOnExecutor(Executor executor, final Task task) {
-        executor.execute(new Runnable() {
+    private static abstract class InnerRunnable implements Runnable {
+        private String lang;
+
+        public InnerRunnable(String lang) {
+            this.lang = lang;
+        }
+    }
+
+    private void executeOnExecutor(Executor executor, final Task task, String lang) {
+        executor.execute(new InnerRunnable(lang) {
             @Override
             public void run() {
                 Thread thread = Thread.currentThread();
@@ -79,7 +94,7 @@ public class DatabaseAsyncTaskManager {
         });
     }
 
-    public Handler createHandler() {
-        return new Handler();
+    public Handler createHandler(String lang) {
+        return new Handler(lang);
     }
 }

@@ -1,4 +1,4 @@
-(SELECT * FROM City WHERE countryId = :countryId AND enName like :query)
+(SELECT enName as value, id FROM City WHERE countryId = :countryId AND enName like :query)
 UNION
-(SELECT * FROM City WHERE countryId = :countryId AND ruName like :query)
-ORDER BY id asc LIMIT :limit
+(SELECT ruName as value, id FROM City WHERE countryId = :countryId AND ruName like :query)
+ORDER BY id ASC LIMIT :limit

@@ -37,7 +37,7 @@ public class LocationsCreatorFromJSON {
     public LocationsCreatorFromJSON(MysqlObjectMapper mapper, String fileName) {
         this.mapper = mapper;
         this.fileName = fileName;
-        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler();
+        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler("en");
     }
 
     private void insertCountries() {
