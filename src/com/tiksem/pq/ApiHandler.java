@@ -105,6 +105,19 @@ public class ApiHandler {
         }
     }
 
+    private Object getMessagesResponse(DatabaseManager databaseManager, Collection<Message> messages) {
+        User user = databaseManager.getSignedInUserOrThrow(request);
+        if(isMobileClient()){
+            return new MobileMessagesList(messages, user);
+        } else {
+            databaseManager.setAvatar(request, user);
+            DialogMessages dialogMessages = new DialogMessages();
+            dialogMessages.messages = messages;
+            dialogMessages.user = user;
+            return dialogMessages;
+        }
+    }
+
     private Object getUserResponse(User user) {
         if(isMobileClient()){
             return new MobileUser(user);
@@ -774,14 +787,9 @@ public class ApiHandler {
                                                     @RequestParam(value = "afterId", required = false) Long afterId,
                                                OffsetLimit offsetLimit) {
         DatabaseManager databaseManager = getDatabaseManager();
-        User user = databaseManager.getUserByIdOrThrow(userId);
         Collection<Message> result =
                 databaseManager.getMessagesWithUser(request, userId, offsetLimit, afterId);
-        databaseManager.setAvatar(request, user);
-        DialogMessages dialogMessages = new DialogMessages();
-        dialogMessages.messages = result;
-        dialogMessages.user = user;
-        return dialogMessages;
+        return getMessagesResponse(databaseManager, result);
     }
 
     @RequestMapping("/getDialogs")
