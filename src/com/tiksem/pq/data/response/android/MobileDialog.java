@@ -1,6 +1,7 @@
 package com.tiksem.pq.data.response.android;
 
 import com.tiksem.pq.data.Dialog;
+import com.tiksem.pq.data.Message;
 import com.tiksem.pq.data.User;
 
 /**
@@ -14,6 +15,7 @@ public class MobileDialog {
     public String lastMessage;
     public Long avatarId;
     public boolean sent;
+    public boolean read;
 
     public MobileDialog(Dialog dialog) {
         User user = dialog.getUser();
@@ -21,8 +23,10 @@ public class MobileDialog {
         name = user.getName();
         lastName = user.getLastName();
         lastMessageTime = dialog.getLastMessageTime();
-        lastMessage = dialog.getLastMessage().getMessage();
+        Message last = dialog.getLastMessage();
+        lastMessage = last.getMessage();
         avatarId = user.getAvatarId();
         sent = dialog.getUser2Id().equals(userId);
+        read = last.getRead();
     }
 }
