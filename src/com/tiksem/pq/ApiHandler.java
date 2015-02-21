@@ -118,6 +118,14 @@ public class ApiHandler {
         }
     }
 
+    private Object getRepliesResponse(Collection<ReplyResponse> replies) {
+        if(isMobileClient()){
+            return new MobileReplyList(replies);
+        } else {
+            return new RepliesList(replies);
+        }
+    }
+
     private Object getUserResponse(User user) {
         if(isMobileClient()){
             return new MobileUser(user);
@@ -891,7 +899,7 @@ public class ApiHandler {
 
     @RequestMapping("/getReplies")
     public @ResponseBody Object getReplies(OffsetLimit offsetLimit) {
-        return new RepliesList(getDatabaseManager().getRepliesWithFullInfo(request, offsetLimit));
+        return getRepliesResponse(getDatabaseManager().getRepliesWithFullInfo(request, offsetLimit));
     }
 
     @RequestMapping("/getRepliesCount")
