@@ -97,6 +97,14 @@ public class ApiHandler {
         }
     }
 
+    private Object getDialogsResponse(Collection<Dialog> dialogs) {
+        if(isMobileClient()){
+            return new MobileDialogList(dialogs);
+        } else {
+            return new DialogsList(dialogs);
+        }
+    }
+
     private Object getUserResponse(User user) {
         if(isMobileClient()){
             return new MobileUser(user);
@@ -779,7 +787,7 @@ public class ApiHandler {
     @RequestMapping("/getDialogs")
     public @ResponseBody Object getDialogs(OffsetLimit offsetLimit) {
         Collection<Dialog> dialogs = getDatabaseManager().getDialogs(request, offsetLimit);
-        return new DialogsList(dialogs);
+        return getDialogsResponse(dialogs);
     }
 
     @RequestMapping("/getDialogsCount")
