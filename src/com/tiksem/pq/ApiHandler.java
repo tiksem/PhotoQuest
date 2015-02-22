@@ -657,13 +657,26 @@ public class ApiHandler {
 
 
     @RequestMapping("/getNextPrevPhotoOfPhotoquest")
-    public @ResponseBody Object getNextPrevPhotoOfPhoteoquest(@RequestParam("photoquestId") Long photoquestId,
-                                                         @RequestParam("photoId") Long photoId,
-                                                         @RequestParam("next") boolean next,
-                                                      @RequestParam(value = "order", required = false,
-                                                              defaultValue = "newest")
-                                                      RatingOrder order){
-        return getDatabaseManager().getNextPrevPhotoOfPhotoquest(request, photoquestId, photoId, order, next);
+    public @ResponseBody Object getNextPrevPhotoOfPhotoquest(@RequestParam("photoquestId") Long photoquestId,
+                                                             @RequestParam("photoId") Long photoId,
+                                                             @RequestParam("next") boolean next,
+                                                             @RequestParam(value = "category", defaultValue = "all")
+                                                             PhotoCategory category,
+                                                             @RequestParam(value = "order", required = false,
+                                                                     defaultValue = "newest")
+                                                             RatingOrder order){
+        if (category == PhotoCategory.all) {
+            return getDatabaseManager().getNextPrevPhotoOfPhotoquest(request,
+                    photoquestId, photoId, order, next);
+        } else if(category == PhotoCategory.mine) {
+            return getDatabaseManager().getNextPrevPhotoOfSignedInUserInPhotoquest
+                    (request, photoquestId, photoId, order, next);
+        } else if (category == PhotoCategory.friends) {
+            return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(request,
+                    photoquestId, photoId, order, next);
+        }
+
+        throw new UnsupportedOperationException("Unsupported category");
     }
 
     @RequestMapping("/getNextPrevPhotoOfFriendsInPhotoquest")
@@ -673,7 +686,8 @@ public class ApiHandler {
                                                              @RequestParam(value = "order", required = false,
                                                                      defaultValue = "newest")
                                                              RatingOrder order){
-        return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(request, photoquestId, photoId, order, next);
+        return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(request,
+                photoquestId, photoId, order, next);
     }
 
     @RequestMapping("/getNextPrevPhotoOfUserInPhotoquest")
