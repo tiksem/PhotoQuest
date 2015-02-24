@@ -11,9 +11,13 @@ public class MobileMessage {
     public long addingDate;
     public boolean sent;
 
-    public MobileMessage(Message m, User signedInUser) {
+    public MobileMessage(Message m, boolean sent) {
         message = m.getMessage();
         addingDate = m.getAddingDate();
-        sent = m.getFromUserId().equals(signedInUser.getId());
+        this.sent = sent;
+    }
+
+    public MobileMessage(Message m, User signedInUser) {
+        this(m, m.getFromUserId().equals(signedInUser.getId()));
     }
 }

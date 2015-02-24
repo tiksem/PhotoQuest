@@ -118,6 +118,14 @@ public class ApiHandler {
         }
     }
 
+    private Object getSendMessageResponse(Message message) {
+        if(isMobileClient()){
+            return new MobileMessage(message, true);
+        } else {
+            return message;
+        }
+    }
+
     private Object getRepliesResponse(Collection<ReplyResponse> replies) {
         if(isMobileClient()){
             return new MobileReplyList(replies);
@@ -775,7 +783,7 @@ public class ApiHandler {
             throw new IllegalArgumentException("message.length > 255");
         }
 
-        return getDatabaseManager().addMessage(request, toUserId, message);
+        return getSendMessageResponse(getDatabaseManager().addMessage(request, toUserId, message));
     }
 
     @RequestMapping("/getLocationSuggestions")
