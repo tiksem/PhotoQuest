@@ -18,6 +18,11 @@ public class AdvancedRequestsManager {
     public static final String CLEAR_USERS_RATING = "update user set rating = 0";
     public static final String CLEAR_PHOTOQUESTS_VIEWS = "update photoquest set viewsCount = 0";
     public static final String CLEAR_PHOTOS_VIEWS = "update photo set viewsCount = 0";
+    public static final String PERFORMED_PHOTOQUESTS_WHERE = "AND photoquest.ID IN \n" +
+            "      (SELECT photoquestId FROM performedphotoquest WHERE userId = :userId)";
+    public static final String FOLLOWING_PHOTOQUESTS_WHERE = "AND photoquest.ID IN \n" +
+            "      (SELECT photoquestId FROM followingphotoquest WHERE userId = :userId)";
+    public static final String CREATED_PHOTOQUESTS_WHERE = "AND photoquest.userId = :userId";
 
     private MysqlObjectMapper mapper;
     private SqlFileExecutor sqlFileExecutor;
@@ -28,41 +33,43 @@ public class AdvancedRequestsManager {
     }
 
     private Collection<Photoquest> getPhotoquestsByUserId(long userId,
-                                                          RatingOrder order,
+                                                          String orderBy,
                                                           OffsetLimit offsetLimit,
                                                           String sqlFile) {
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("userId", userId);
         offsetLimit.addToMap(params);
-
-        String orderBy = null;
-        switch (order) {
-            case newest:
-                orderBy = "id";
-                break;
-            case hottest:
-                orderBy = "viewsCount";
-                break;
-            case rated:
-                orderBy = "likesCount";
-                break;
-        }
-        ;
         params.put("orderBy", orderBy);
 
         return sqlFileExecutor.executeSQLQuery(sqlFile, params, Photoquest.class);
     }
 
-    public Collection<Photoquest> getFollowingPhotoquests(long userId, RatingOrder order,
+    public Collection<Photoquest> getFollowingPhotoquests(long userId, String orderBy,
+                                                          String filter,
                                                           OffsetLimit offsetLimit) {
-        String sqlFile = "photoquest/following_photoquests.sql";
-        return getPhotoquestsByUserId(userId, order, offsetLimit, sqlFile);
+        if (!Strings.isEmpty(filter)) {
+            String where = FOLLOWING_PHOTOQUESTS_WHERE;
+            Map<String, Object> args = new HashMap<String, Object>();
+            args.put("userId", userId);
+            return getPhotoquestsByQuery(filter, offsetLimit, where, orderBy, args);
+        } else {
+            String sqlFile = "photoquest/following_photoquests.sql";
+            return getPhotoquestsByUserId(userId, orderBy, offsetLimit, sqlFile);
+        }
     }
 
-    public Collection<Photoquest> getPerformedPhotoquests(long userId, RatingOrder order,
+    public Collection<Photoquest> getPerformedPhotoquests(long userId, String orderBy,
+                                                          String filter,
                                                           OffsetLimit offsetLimit) {
-        String sqlFile = "photoquest/performed_photoquests.sql";
-        return getPhotoquestsByUserId(userId, order, offsetLimit, sqlFile);
+        if (!Strings.isEmpty(filter)) {
+            String where = PERFORMED_PHOTOQUESTS_WHERE;
+            Map<String, Object> args = new HashMap<String, Object>();
+            args.put("userId", userId);
+            return getPhotoquestsByQuery(filter, offsetLimit, where, orderBy, args);
+        } else {
+            String sqlFile = "photoquest/performed_photoquests.sql";
+            return getPhotoquestsByUserId(userId, orderBy, offsetLimit, sqlFile);
+        }
     }
 
     public Collection<Action> getNews(long userId, OffsetLimit offsetLimit) {
@@ -98,12 +105,28 @@ public class AdvancedRequestsManager {
         return sqlFileExecutor.executeCountQuery(sqlFile, args);
     }
 
-    public long getCreatedPhotoquestsByQueryCount(String query, long userId) {
+    private long getUserPhotoquestsByQueryCount(String query, long userId, String where) {
         Map<String, Object> args = new HashMap<String, Object>();
         args.put("query", query);
         args.put("userId", userId);
-        String sqlFile = "photoquest/created_photoquests_search_count.sql";
+        args.put("where", where);
+        String sqlFile = "photoquest/user_photoquests_search_count.sql";
         return sqlFileExecutor.executeCountQuery(sqlFile, args);
+    }
+
+    public long getCreatedPhotoquestsByQueryCount(String query, long userId) {
+        String where = CREATED_PHOTOQUESTS_WHERE;
+        return getUserPhotoquestsByQueryCount(query, userId, where);
+    }
+
+    public long getPerformedPhotoquestsByQueryCount(String query, long userId) {
+        String where = PERFORMED_PHOTOQUESTS_WHERE;
+        return getUserPhotoquestsByQueryCount(query, userId, where);
+    }
+
+    public long getFollowingPhotoquestsByQueryCount(String query, long userId) {
+        String where = FOLLOWING_PHOTOQUESTS_WHERE;
+        return getUserPhotoquestsByQueryCount(query, userId, where);
     }
 
     public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit,
@@ -113,7 +136,7 @@ public class AdvancedRequestsManager {
 
     public List<Photoquest> getCreatedPhotoquestsByQuery(String query, OffsetLimit offsetLimit,
                                                          String orderBy, long userId) {
-        String where = "AND photoquest.userId = :userId";
+        String where = CREATED_PHOTOQUESTS_WHERE;
         return getPhotoquestsByQuery(query, offsetLimit, where, orderBy, Maps.hashMap("userId", (Object)userId));
     }
 

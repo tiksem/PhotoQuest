@@ -522,35 +522,39 @@ public class ApiHandler {
     @RequestMapping("/getPerformedPhotoquests")
     public @ResponseBody Object getPerformedPhotoquests(
             @RequestParam(value = "userId", required = true) Long userId,
+            @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests =
-                getDatabaseManager().getPerformedPhotoquests(request, userId, offsetLimit, order);
+                getDatabaseManager().getPerformedPhotoquests(request, userId, offsetLimit, filter, order);
 
         return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getPerformedPhotoquestsCount")
     public @ResponseBody Object getPerformedPhotoquestsCount(
+            @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "userId", required = true) Long userId){
-        long count = getDatabaseManager().getPerformedPhotoquestsCount(userId);
+        long count = getDatabaseManager().getPerformedPhotoquestsCount(filter, userId);
         return new CountResponse(count);
     }
 
     @RequestMapping("/getFollowingPhotoquests")
     public @ResponseBody Object getFollowingPhotoquests(
+            @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "userId", required = true) Long userId,
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests =
-                getDatabaseManager().getFollowingPhotoquests(request, userId, offsetLimit, order);
+                getDatabaseManager().getFollowingPhotoquests(request, userId, filter, offsetLimit, order);
         return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getFollowingPhotoquestsCount")
     public @ResponseBody Object getFollowingPhotoquestsCount(
+            @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "userId", required = true) Long userId){
-        long count = getDatabaseManager().getFollowingPhotoquestsCount(userId);
+        long count = getDatabaseManager().getFollowingPhotoquestsCount(filter, userId);
         return new CountResponse(count);
     }
 

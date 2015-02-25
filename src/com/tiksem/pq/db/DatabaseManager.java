@@ -330,16 +330,18 @@ public class DatabaseManager {
         }
     }
 
-    public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
-        setAvatar(request, photoquests);
-
+    private void initUserAvatars(HttpServletRequest request, Collection<Photoquest> photoquests) {
         for (Photoquest photoquest : photoquests) {
             User user = photoquest.getUser();
             if(user != null){
                 setAvatar(request, user);
             }
         }
+    }
 
+    public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
+        setAvatar(request, photoquests);
+        initUserAvatars(request, photoquests);
         setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
     }
 
@@ -2307,10 +2309,12 @@ public class DatabaseManager {
     }
 
     public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, long userId,
+                                                          String filter,
                                                           OffsetLimit offsetLimit,
                                                           RatingOrder order) {
+        String orderBy = getPhotoOrderBy(order);
         Collection<Photoquest> result =
-                advancedRequestsManager.getFollowingPhotoquests(userId, order, offsetLimit);
+                advancedRequestsManager.getFollowingPhotoquests(userId, orderBy, filter, offsetLimit);
         User signedInUser = getSignedInUser(request);
         for(Photoquest photoquest : result){
             if (signedInUser == null) {
@@ -2327,35 +2331,44 @@ public class DatabaseManager {
             setAvatar(request, photoquest);
         }
 
+        initUserAvatars(request, result);
+
         return result;
     }
 
-    public long getPerformedPhotoquestsCount(long userId) {
-        PerformedPhotoquest pattern = new PerformedPhotoquest();
-        pattern.setUserId(userId);
+    public long getPerformedPhotoquestsCount(String filter, long userId) {
+        if (Strings.isEmpty(filter)) {
+            PerformedPhotoquest pattern = new PerformedPhotoquest();
+            pattern.setUserId(userId);
 
-        return mapper.getCountByPattern(pattern);
+            return mapper.getCountByPattern(pattern);
+        } else {
+            return advancedRequestsManager.getPerformedPhotoquestsByQueryCount(filter, userId);
+        }
     }
 
     public Collection<Photoquest> getPerformedPhotoquests(HttpServletRequest request, long userId,
                                                           OffsetLimit offsetLimit,
+                                                          String filter,
                                                           RatingOrder order) {
+        String orderBy = getPhotoOrderBy(order);
         Collection<Photoquest> result =
-                advancedRequestsManager.getPerformedPhotoquests(userId, order, offsetLimit);
-        for(Photoquest photoquest : result){
-            setAvatar(request, photoquest);
-        }
+                advancedRequestsManager.getPerformedPhotoquests(userId, orderBy, filter, offsetLimit);
 
-        setPhotoquestsFollowingParamIfSignedIn(request, result);
+        initPhotoquestsInfo(request, result);
 
         return result;
     }
 
-    public long getFollowingPhotoquestsCount(long userId) {
-        FollowingPhotoquest pattern = new FollowingPhotoquest();
-        pattern.setUserId(userId);
+    public long getFollowingPhotoquestsCount(String filter, long userId) {
+        if (Strings.isEmpty(filter)) {
+            FollowingPhotoquest pattern = new FollowingPhotoquest();
+            pattern.setUserId(userId);
 
-        return mapper.getCountByPattern(pattern);
+            return mapper.getCountByPattern(pattern);
+        } else {
+            return advancedRequestsManager.getFollowingPhotoquestsByQueryCount(filter, userId);
+        }
     }
 
     private Relationship followUser(long fromUserId, long toUserId) {
