@@ -77,6 +77,11 @@ public class AdvancedRequestsManager {
 
     public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit, String orderBy) {
         Map<String, Object> args = new HashMap<String, Object>();
+
+        orderBy = orderBy.replace("likesCount", "Photoquest.likesCount");
+        orderBy = orderBy.replace("viewsCount", "Photoquest.viewsCount");
+        orderBy = orderBy.replace("id", "Photoquest.id");
+
         offsetLimit.addToMap(args);
         args.put("query", query);
         args.put("orderBy", orderBy);
