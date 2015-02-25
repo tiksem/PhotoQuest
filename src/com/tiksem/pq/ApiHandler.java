@@ -621,9 +621,19 @@ public class ApiHandler {
                                                       @RequestParam(value = "order", required = false,
                                                               defaultValue = "newest")
                                                       RatingOrder order,
+                                                      @RequestParam(value = "category", defaultValue = "all")
+                                                      PhotoCategory category,
                                                       OffsetLimit offsetLimit){
-        Collection<Photo> photos = getDatabaseManager().
-                getPhotosOfPhotoquest(request, photoquestId, offsetLimit, order);
+        Collection<Photo> photos = null;
+        if (category == PhotoCategory.all) {
+            photos = getDatabaseManager().
+                    getPhotosOfPhotoquest(request, photoquestId, offsetLimit, order);
+        } else if(category == PhotoCategory.friends) {
+            photos = getDatabaseManager().getPhotosOfFriendsByPhotoquest(request, photoquestId, order, offsetLimit);
+        } else if(category == PhotoCategory.mine) {
+            photos = getDatabaseManager().getPhotosOfSignedInUserByPhotoquest(request, photoquestId, order, offsetLimit);
+        }
+
         return getPhotosResponse(photos);
     }
 
