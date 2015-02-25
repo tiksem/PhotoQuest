@@ -6,6 +6,7 @@ import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.response.LocationSuggestion;
 import com.tiksem.pq.db.RatingOrder;
 import com.tiksem.pq.db.SqlFileExecutor;
+import com.utils.framework.Maps;
 import com.utils.framework.strings.Strings;
 
 import java.util.*;
@@ -75,9 +76,10 @@ public class AdvancedRequestsManager {
                 MysqlObjectMapper.ALL_FOREIGN);
     }
 
-    public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit, String orderBy) {
-        Map<String, Object> args = new HashMap<String, Object>();
-
+    public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit,
+                                                  String where,
+                                                  String orderBy,
+                                                  Map<String, Object> args) {
         orderBy = orderBy.replace("likesCount", "Photoquest.likesCount");
         orderBy = orderBy.replace("viewsCount", "Photoquest.viewsCount");
         orderBy = orderBy.replace("id", "Photoquest.id");
@@ -85,8 +87,34 @@ public class AdvancedRequestsManager {
         offsetLimit.addToMap(args);
         args.put("query", query);
         args.put("orderBy", orderBy);
+        args.put("where", where);
         String sqlFile = "photoquest/search_photoquests_order_by.sql";
         return sqlFileExecutor.executeSQLQuery(sqlFile, args, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
+    }
+
+    public long getPhotoquestsByQueryCount(String query) {
+        Map<String, Object> args = Collections.singletonMap("query", (Object)query);
+        String sqlFile = "photoquest/search_photoquests_count.sql";
+        return sqlFileExecutor.executeCountQuery(sqlFile, args);
+    }
+
+    public long getCreatedPhotoquestsByQueryCount(String query, long userId) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("query", query);
+        args.put("userId", userId);
+        String sqlFile = "photoquest/created_photoquests_search_count.sql";
+        return sqlFileExecutor.executeCountQuery(sqlFile, args);
+    }
+
+    public List<Photoquest> getPhotoquestsByQuery(String query, OffsetLimit offsetLimit,
+                                                  String orderBy) {
+        return getPhotoquestsByQuery(query, offsetLimit, "", orderBy, new HashMap<String, Object>());
+    }
+
+    public List<Photoquest> getCreatedPhotoquestsByQuery(String query, OffsetLimit offsetLimit,
+                                                         String orderBy, long userId) {
+        String where = "AND photoquest.userId = :userId";
+        return getPhotoquestsByQuery(query, offsetLimit, where, orderBy, Maps.hashMap("userId", (Object)userId));
     }
 
     public <T> List<T> searchUsers(SearchUsersParams params,

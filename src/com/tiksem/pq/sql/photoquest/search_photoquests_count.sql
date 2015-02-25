@@ -1,5 +1,5 @@
-SELECT count(*)
+SELECT
+COUNT(IF(MATCH (keywords) AGAINST (:query IN NATURAL LANGUAGE MODE), 1, NULL))
+AS count
 FROM photoquestsearch
-WHERE
-  MATCH (keywords) AGAINST (:query IN NATURAL LANGUAGE MODE) 
 LIMIT 0, 100

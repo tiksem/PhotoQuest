@@ -6,6 +6,7 @@ SELECT Photoquest.*, User_userId.* FROM photoquest
         WHERE
           MATCH (keywords) AGAINST (:query IN NATURAL LANGUAGE MODE)
           AND photoquest.ID = photoquestsearch.photoquestId
+          ::where
         ORDER BY relevance desc LIMIT 0, 100
   ) as sel ON sel.photoquestId = photoquest.ID
   LEFT JOIN

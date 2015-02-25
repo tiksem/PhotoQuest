@@ -502,18 +502,20 @@ public class ApiHandler {
     @RequestMapping("/getCreatedPhotoquests")
     public @ResponseBody Object getCreatedPhotoquests(
             @RequestParam(value = "userId", required = true) Long userId,
+            @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests =
-                getDatabaseManager().getPhotoquestsCreatedByUser(request, userId, offsetLimit, order);
+                getDatabaseManager().getPhotoquestsCreatedByUser(request, filter, userId, offsetLimit, order);
 
         return getPhotoquestsResponse(photoquests);
     }
 
     @RequestMapping("/getCreatedPhotoquestsCount")
     public @ResponseBody Object getCreatedPhotoquestsCount(
-            @RequestParam(value = "userId", required = true) Long userId){
-        long count = getDatabaseManager().getPhotoquestsCreatedByUserCount(userId);
+            @RequestParam(value = "userId", required = true) Long userId,
+            @RequestParam(value = "filter", required = false) String filter){
+        long count = getDatabaseManager().getPhotoquestsCreatedByUserCount(filter, userId);
         return new CountResponse(count);
     }
 
@@ -565,8 +567,8 @@ public class ApiHandler {
     }
 
     @RequestMapping("/getPhotoquestsCount")
-    public @ResponseBody Object getPhotoquestsCount(){
-        long count = getDatabaseManager().getPhotoQuestsCount();
+    public @ResponseBody Object getPhotoquestsCount(@RequestParam(value = "filter", required = false) String filter){
+        long count = getDatabaseManager().getPhotoQuestsCount(filter);
         return new CountResponse(count);
     }
 

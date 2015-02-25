@@ -298,20 +298,36 @@ public class DatabaseManager {
 
     public Collection<Photoquest> getPhotoquestsCreatedByUser(
             HttpServletRequest request,
+            String filter,
             long userId, OffsetLimit offsetLimit, RatingOrder order) {
-        Photoquest pattern = new Photoquest();
-        pattern.setUserId(userId);
-        Collection<Photoquest> photoquests =
-                mapper.queryByPattern(pattern, offsetLimit, getPhotoOrderBy(order));
-        setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
-        setAvatar(request, photoquests);
-        return photoquests;
+        String orderBy = getPhotoOrderBy(order);
+        List<Photoquest> result;
+        if (Strings.isEmpty(filter)) {
+            SelectParams params = new SelectParams();
+            params.offsetLimit = offsetLimit;
+            params.ordering = orderBy;
+            params.foreignFieldsToFill = MysqlObjectMapper.ALL_FOREIGN;
+            Photoquest pattern = new Photoquest();
+            pattern.setUserId(userId);
+            result = mapper.queryByPattern(pattern, params);
+        } else {
+            result = advancedRequestsManager.getCreatedPhotoquestsByQuery(filter, offsetLimit, orderBy, userId);
+        }
+
+        initPhotoquestsInfo(request, result);
+        return result;
     }
 
-    public long getPhotoquestsCreatedByUserCount(long userId) {
-        Photoquest photoquest = new Photoquest();
-        photoquest.setUserId(userId);
-        return mapper.getCountByPattern(photoquest);
+
+
+    public long getPhotoquestsCreatedByUserCount(String filter, long userId) {
+        if (Strings.isEmpty(filter)) {
+            Photoquest photoquest = new Photoquest();
+            photoquest.setUserId(userId);
+            return mapper.getCountByPattern(photoquest);
+        } else {
+            return advancedRequestsManager.getCreatedPhotoquestsByQueryCount(filter, userId);
+        }
     }
 
     public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
@@ -378,16 +394,6 @@ public class DatabaseManager {
                 ordering);
         initPhotoquestsInfo(request, photoquests);
         return photoquests;
-    }
-
-    public Collection<Photoquest> getPhotoquestsCreatedBySignedInUser(HttpServletRequest request,
-                                                                      OffsetLimit offsetLimit,
-                                                                      RatingOrder order) {
-        return getPhotoquestsCreatedByUser(request, getSignedInUserOrThrow(request).getId(), offsetLimit, order);
-    }
-
-    public long getPhotoquestsCreatedBySignedInUserCount(HttpServletRequest request) {
-        return getPhotoquestsCreatedByUserCount(getSignedInUserOrThrow(request).getId());
     }
 
     public City getCityById(Integer id) {
@@ -1184,8 +1190,12 @@ public class DatabaseManager {
         return result;
     }
 
-    public long getPhotoQuestsCount() {
-        return mapper.getAllObjectsCount(Photoquest.class);
+    public long getPhotoQuestsCount(String filter) {
+        if (Strings.isEmpty(filter)) {
+            return mapper.getAllObjectsCount(Photoquest.class);
+        } else {
+            return advancedRequestsManager.getPhotoquestsByQueryCount(filter);
+        }
     }
 
     public boolean hasFriendship(long user1Id, long user2Id) {
