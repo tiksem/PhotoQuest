@@ -16,12 +16,14 @@ public class MobileReply {
     public Long photoId;
     public long avatarId;
     public long addingDate;
+    public long userId;
 
     public MobileReply(ReplyResponse reply) {
         type = reply.getType();
 
         User user = reply.getUser();
         name = user.getName() + " " + user.getLastName();
+        userId = user.getId();
         avatarId = user.getAvatarId();
 
         Comment replyComment = reply.getComment();
