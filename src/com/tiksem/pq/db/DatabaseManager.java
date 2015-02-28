@@ -710,6 +710,10 @@ public class DatabaseManager {
             throw new IllegalArgumentException("The photo is not in avatar photoquest");
         }
 
+        if(!photo.getUserId().equals(signedInUser.getId())){
+            throw new PermissionDeniedException("Unable to set as avatar photo, which is not owned by current user");
+        }
+
         signedInUser.setAvatarId(photo.getId());
         replace(signedInUser);
         initPhotoUrl(photo, request);
