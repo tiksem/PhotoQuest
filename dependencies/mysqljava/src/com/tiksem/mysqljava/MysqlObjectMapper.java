@@ -415,7 +415,12 @@ public class MysqlObjectMapper {
         List<Field> fields = SqlGenerationUtilities.getFields(object);
         Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
         String sql = SqlGenerationUtilities.changeValue(object, fields, fieldName, diff);
-        executeNonSelectSQL(sql, args);
+        int modifiedCount = executeModifySQL(sql, args);
+        if (modifiedCount == 1) {
+            Reflection.changeNumberUsingGetterAndSetter(object, fieldName, diff);
+        } else if(modifiedCount != 0) {
+            throw new IllegalStateException("More than one object have been modified");
+        }
     }
 
     public void increment(Object object, String fieldName) {
