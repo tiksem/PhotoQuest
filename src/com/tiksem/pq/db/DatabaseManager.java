@@ -45,6 +45,7 @@ public class DatabaseManager {
     private static final long PHOTOQUEST_VIEW_PERIOD = 30 * 1000;
     private static final long PROFILE_VIEW_PERIOD = 30 * 1000;
     private static final long PHOTO_VIEW_PERIOD = 30 * 1000;
+    public static final String PHOTOQUEST_SET_NULL_AVATAR = "UPDATE Photoquest SET avatarId = NULL WHERE id = :id";
 
     private MysqlObjectMapper mapper;
 
@@ -772,8 +773,18 @@ public class DatabaseManager {
         return photo;
     }
 
-    public void deletePhoto(long id) {
+    public void deletePhoto(HttpServletRequest request, long id) {
         Photo photo = getPhotoByIdOrThrow(id);
+
+        User signedInUser = getSignedInUserOrThrow(request);
+        if(!photo.getUserId().equals(signedInUser.getId())){
+            throw new PermissionDeniedException("Unable to delete photo, which is not owned by current user");
+        }
+
+        if(photo.getId().equals(signedInUser.getAvatarId())){
+            throw new AvatarDeletionException();
+        }
+
         Long photoquestId = photo.getPhotoquestId();
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
 
@@ -2025,6 +2036,10 @@ public class DatabaseManager {
                 photoquest.setAvatarId(photoId);
                 replace(photoquest);
             }
+        } else if(avatarId != null) {
+            photoquest.setAvatarId(null);
+            mapper.executeModifySQL(PHOTOQUEST_SET_NULL_AVATAR,
+                    Collections.singletonMap("id", (Object)photoquest.getId()));
         }
     }
 

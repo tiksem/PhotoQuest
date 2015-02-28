@@ -469,7 +469,7 @@ public class ApiHandler {
 
     @RequestMapping("/deletePhoto")
     public @ResponseBody Object deletePhoto(@RequestParam(value = "id") Long id) {
-        getDatabaseManager().deletePhoto(id);
+        getDatabaseManager().deletePhoto(request, id);
         return new Success();
     }
 

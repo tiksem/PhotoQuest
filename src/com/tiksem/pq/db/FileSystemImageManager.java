@@ -80,11 +80,11 @@ public class FileSystemImageManager implements ImageManager {
 
     @Override
     public void deleteImage(final long id) {
-        String path = generateImagePath(id);
+        final String path = generateImagePath(id);
         Iterator<File> iterator = FileUtils.iterateFiles(new File(path).getParentFile(), new AbstractFileFilter() {
             @Override
             public boolean accept(File file) {
-                return file.getName().startsWith(String.valueOf(id));
+                return file.getPath().replace('\\', '/').startsWith(path);
             }
         }, new AbstractFileFilter() {
             @Override
