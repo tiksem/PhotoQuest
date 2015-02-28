@@ -1,6 +1,7 @@
 package com.tiksem.pq.data;
 
 import com.tiksem.pq.exceptions.ExceptionWithData;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 /**
  * Created by CM on 11/7/2014.
@@ -26,6 +27,9 @@ public class ExceptionResponse {
 
         if(throwable instanceof ExceptionWithData){
             data = ((ExceptionWithData) throwable).getData();
+        } else if(throwable instanceof MissingServletRequestParameterException) {
+            MissingServletRequestParameterException exception = (MissingServletRequestParameterException)throwable;
+            data = exception.getParameterName();
         }
     }
 
