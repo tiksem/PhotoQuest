@@ -1,13 +1,12 @@
 package com.tiksem.pq;
 
+import com.tiksem.mysqljava.security.DatabaseRpsGuard;
+import com.tiksem.mysqljava.security.MemoryRpsGuard;
 import com.tiksem.mysqljava.security.RpsGuard;
 import com.utils.framework.strings.Strings;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -43,7 +42,7 @@ public class Settings {
         } catch (IOException e) {
 
         }
-        rpsGuard = new RpsGuard((Map)rpsSettings);
+        rpsGuard = new MemoryRpsGuard((Map)rpsSettings);
     }
 
     public Settings() {

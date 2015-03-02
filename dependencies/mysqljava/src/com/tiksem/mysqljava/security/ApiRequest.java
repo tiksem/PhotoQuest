@@ -65,4 +65,24 @@ public class ApiRequest {
     public void setRequestMethodId(Integer requestMethodId) {
         this.requestMethodId = requestMethodId;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ApiRequest that = (ApiRequest) o;
+
+        if (!ip.equals(that.ip)) return false;
+        if (!requestMethodId.equals(that.requestMethodId)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = ip.hashCode();
+        result = 31 * result + requestMethodId.hashCode();
+        return result;
+    }
 }
