@@ -20,16 +20,16 @@ import java.util.regex.Pattern;
  * Time: 18:31
  */
 public class FieldsCheckingUtilities {
-    public static final String CHECK_NAME_FIELD_PATTERN_STRING = "\\w+";
+    public static final String CHECK_NAME_FIELD_PATTERN_STRING = "\\p{L}+";
     public static final String CHECK_SENTENCE_FIELD_PATTERN_STRING = "([a-zA-Z] )*[a-zA-Z]";
     private static final Pattern CHECK_NAME_FIELD_PATTERN = Pattern.compile(CHECK_NAME_FIELD_PATTERN_STRING,
             Pattern.UNICODE_CHARACTER_CLASS);
 
-    public static final String CHECK_LOGIN_FIELD_PATTERN_STRING = "[a-zA-Z_][a-zA-Z_0-9]+";
+    public static final String CHECK_LOGIN_FIELD_PATTERN_STRING = "[a-zA-Z0-9]{3,20}";
     private static final Pattern CHECK_LOGIN_FIELD_PATTERN = Pattern.compile(CHECK_LOGIN_FIELD_PATTERN_STRING);
 
     public static final String CHECK_PASSWORD_FIELD_PATTERN_STRING =
-            ".+";
+            ".{6,20}";
     private static final Pattern CHECK_PASSWORD_FIELD_PATTERN = Pattern.compile(CHECK_PASSWORD_FIELD_PATTERN_STRING);
 
     public static boolean checkNameField(String name){

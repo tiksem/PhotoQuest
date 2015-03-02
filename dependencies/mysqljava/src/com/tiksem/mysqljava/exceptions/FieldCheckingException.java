@@ -6,22 +6,18 @@ package com.tiksem.mysqljava.exceptions;
  * Time: 18:49
  */
 public class FieldCheckingException extends RuntimeException{
-    public FieldCheckingException() {
+    private String fieldName;
+
+    public FieldCheckingException(String fieldName) {
+        this.fieldName = fieldName;
     }
 
-    public FieldCheckingException(String message) {
+    public FieldCheckingException(String message, String fieldName) {
         super(message);
+        this.fieldName = fieldName;
     }
 
-    public FieldCheckingException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public FieldCheckingException(Throwable cause) {
-        super(cause);
-    }
-
-    public FieldCheckingException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
+    public String getFieldName() {
+        return fieldName;
     }
 }

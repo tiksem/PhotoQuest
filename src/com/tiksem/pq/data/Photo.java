@@ -10,12 +10,12 @@ import com.tiksem.mysqljava.annotations.*;
 @MultipleIndexes(indexes = {
         @MultipleIndex(fields = {"photoquestId", "id"}),
         @MultipleIndex(fields = {"photoquestId", "userId", "likesCount", "id"}),
-        @MultipleIndex(fields = {"photoquestId", "userId", "viewsCount", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "userId", "isNew", "viewsCount", "id"}),
         @MultipleIndex(fields = {"photoquestId", "userId", "id"}),
         @MultipleIndex(fields = {"photoquestId", "likesCount", "id"}),
-        @MultipleIndex(fields = {"photoquestId", "viewsCount", "id"}),
+        @MultipleIndex(fields = {"photoquestId", "isNew", "viewsCount", "id"}),
         @MultipleIndex(fields = {"userId", "likesCount", "id"}),
-        @MultipleIndex(fields = {"userId", "viewsCount", "id"})
+        @MultipleIndex(fields = {"userId", "isNew", "viewsCount", "id"})
 })
 public class Photo implements Likable {
     public static final String IMAGE_URL_PATH = "/image/";
@@ -58,6 +58,9 @@ public class Photo implements Likable {
 
     @Stored
     private String message;
+
+    @Stored
+    private Boolean isNew;
 
     public Long getLikesCount() {
         return likesCount;
@@ -187,5 +190,13 @@ public class Photo implements Likable {
 
     public void setPhotoquest(Photoquest photoquest) {
         this.photoquest = photoquest;
+    }
+
+    public Boolean getIsNew() {
+        return isNew;
+    }
+
+    public void setIsNew(Boolean isNew) {
+        this.isNew = isNew;
     }
 }

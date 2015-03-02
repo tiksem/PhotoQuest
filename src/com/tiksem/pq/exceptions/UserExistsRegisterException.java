@@ -8,7 +8,14 @@ import com.tiksem.mysqljava.exceptions.RegisterFailedException;
  * Time: 16:40
  */
 public class UserExistsRegisterException extends RegisterFailedException {
+    private String userName;
+
     public UserExistsRegisterException(String userName) {
         super("Username '" + userName + "' is taken");
+        this.userName = userName;
+    }
+
+    public String getUserName() {
+        return userName;
     }
 }

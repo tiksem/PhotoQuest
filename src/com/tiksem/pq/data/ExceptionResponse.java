@@ -1,6 +1,8 @@
 package com.tiksem.pq.data;
 
+import com.tiksem.mysqljava.exceptions.FieldCheckingException;
 import com.tiksem.pq.exceptions.ExceptionWithData;
+import com.tiksem.pq.exceptions.UserExistsRegisterException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 
 /**
@@ -30,6 +32,12 @@ public class ExceptionResponse {
         } else if(throwable instanceof MissingServletRequestParameterException) {
             MissingServletRequestParameterException exception = (MissingServletRequestParameterException)throwable;
             data = exception.getParameterName();
+        } else if(throwable instanceof FieldCheckingException) {
+            FieldCheckingException exception = (FieldCheckingException) throwable;
+            data = exception.getFieldName();
+        } else if(throwable instanceof UserExistsRegisterException) {
+            UserExistsRegisterException exception = (UserExistsRegisterException) throwable;
+            data = exception.getUserName();
         }
     }
 

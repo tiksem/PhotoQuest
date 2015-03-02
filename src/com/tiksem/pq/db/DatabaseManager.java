@@ -674,6 +674,7 @@ public class DatabaseManager {
 
         photo.setLikesCount(0l);
         photo.setUserId(userId);
+        photo.setIsNew(true);
 
         insert(photo);
         try {
@@ -1141,7 +1142,7 @@ public class DatabaseManager {
         String orderString;
         switch (order) {
             case hottest:
-                orderString = "viewsCount desc, id desc";
+                orderString = "isNew desc, viewsCount desc, id desc";
                 break;
             case rated:
                 orderString = "likesCount desc, id desc";

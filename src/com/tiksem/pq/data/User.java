@@ -3,6 +3,7 @@ package com.tiksem.pq.data;
 import com.tiksem.mysqljava.FieldsCheckingUtilities;
 import com.tiksem.mysqljava.annotations.*;
 import com.tiksem.mysqljava.annotations.NotNull;
+import com.tiksem.mysqljava.exceptions.FieldCheckingException;
 
 /**
  * Created by CM on 10/30/2014.
@@ -28,6 +29,9 @@ import com.tiksem.mysqljava.annotations.NotNull;
 })
 @Table
 public class User implements WithAvatar {
+    public static final int MAX_NAME_LENGTH = 20;
+    public static final int MAX_LAST_NAME_LENGTH = 40;
+
     @PrimaryKey
     private Long id;
 
@@ -371,7 +375,15 @@ public class User implements WithAvatar {
         this.name = FieldsCheckingUtilities.getFixedNameField(name, getClass(), "name");
         this.lastName = FieldsCheckingUtilities.getFixedNameField(lastName, getClass(), "lastName");;
 
-        this.nameData = name + " " + lastName;
+        if(this.name.length() > MAX_NAME_LENGTH){
+            throw new FieldCheckingException("name", "name is too big");
+        }
+
+        if (this.lastName.length() > MAX_LAST_NAME_LENGTH) {
+            throw new FieldCheckingException("lastName", "lastName is too big");
+        }
+
+        this.nameData = this.name + " " + this.lastName;
     }
 
     public void setNameData(String nameData) {
