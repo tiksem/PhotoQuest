@@ -281,6 +281,7 @@ public class DatabaseManager {
         photoquest = Photoquest.withZeroViewsAndLikes(photoquestName);
         Long userId = user.getId();
         photoquest.setUserId(userId);
+        photoquest.setIsNew(true);
 
         insert(photoquest);
         Action action = new Action();
@@ -2566,6 +2567,10 @@ public class DatabaseManager {
 
     public List<ProgressOperation> getProgressOperations() {
         return mapper.queryAllObjects(ProgressOperation.class, new OffsetLimit(0, 500), "id desc");
+    }
+
+    public void updateNewFlag() {
+        advancedRequestsManager.updateNewFlag();
     }
 
     @Override

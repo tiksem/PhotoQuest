@@ -15,7 +15,8 @@ import com.tiksem.mysqljava.annotations.*;
         @MultipleIndex(fields = {"photoquestId", "likesCount", "id"}),
         @MultipleIndex(fields = {"photoquestId", "isNew", "viewsCount", "id"}),
         @MultipleIndex(fields = {"userId", "likesCount", "id"}),
-        @MultipleIndex(fields = {"userId", "isNew", "viewsCount", "id"})
+        @MultipleIndex(fields = {"userId", "isNew", "viewsCount", "id"}),
+        @MultipleIndex(fields = {"isNew", "addingDate"})
 })
 public class Photo implements Likable {
     public static final String IMAGE_URL_PATH = "/image/";
@@ -60,6 +61,7 @@ public class Photo implements Likable {
     private String message;
 
     @Stored
+    @NotNull
     private Boolean isNew;
 
     public Long getLikesCount() {

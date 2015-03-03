@@ -22,9 +22,9 @@ import java.io.IOException;
 public class SchedulingTasks {
     private DatabaseManager databaseManager = new DatabaseManager(new MysqlObjectMapper(), "en");
 
-    @Scheduled(cron = "0 * * * * *")
-    public void clearRatingAndViews() {
-        //databaseManager.clearRatingAndViews();
+    @Scheduled(cron = "0 0/30 * * * ?")
+    public void updateNewFlag() {
+        databaseManager.updateNewFlag();
     }
 
     @Scheduled(cron = "0 0/15 * * * *")

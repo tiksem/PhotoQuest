@@ -285,4 +285,12 @@ public class AdvancedRequestsManager {
 
         return sqlFileExecutor.executeSQLQuery(sqlFile, args, LocationSuggestion.class);
     }
+
+    public void updateNewFlag() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, -7);
+        Object startTime = calendar.getTimeInMillis();
+        String sqlFile = "update_new_flag.sql";
+        sqlFileExecutor.executeNonSelectQuery(sqlFile, Collections.singletonMap("startTime", startTime));
+    }
 }

@@ -12,7 +12,8 @@ import com.tiksem.mysqljava.annotations.*;
         @MultipleIndex(fields = {"userId", "viewsCount", "id"}),
         @MultipleIndex(fields = {"userId", "id"}),
         @MultipleIndex(fields = {"likesCount", "id"}),
-        @MultipleIndex(fields = {"viewsCount", "id"})
+        @MultipleIndex(fields = {"viewsCount", "id"}),
+        @MultipleIndex(fields = {"isNew", "addingDate"})
 })
 public class Photoquest implements WithAvatar, Likable {
     @PrimaryKey
@@ -41,6 +42,10 @@ public class Photoquest implements WithAvatar, Likable {
     @Stored
     @AddingDate
     private Long addingDate;
+
+    @Stored
+    @NotNull
+    private Boolean isNew;
 
     private String avatar;
 
@@ -162,5 +167,20 @@ public class Photoquest implements WithAvatar, Likable {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Boolean getIsNew() {
+        return isNew;
+    }
+
+    public void setIsNew(Boolean isNew) {
+        this.isNew = isNew;
+    }
+
+    @OnPrepareForStorage
+    void onPrepareForStorage() {
+        if (isNew == null) {
+            isNew = false;
+        }
     }
 }
