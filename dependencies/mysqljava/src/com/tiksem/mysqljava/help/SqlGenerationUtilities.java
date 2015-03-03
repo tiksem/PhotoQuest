@@ -702,7 +702,7 @@ public class SqlGenerationUtilities {
         NotNull notNull = field.getAnnotation(NotNull.class);
 
         String fieldType = SqlGenerationUtilities.getSqlType(field);
-        String sql = alter + " " + action + " " + field.getName() + " " + fieldType;
+        String sql = alter + " " + action + " `" + field.getName() + "` " + fieldType;
 
         if(notNull != null){
             sql += " not null";

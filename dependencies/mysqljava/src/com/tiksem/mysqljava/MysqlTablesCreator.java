@@ -269,12 +269,22 @@ public class MysqlTablesCreator {
         }
 
         sql += getIndexName(fieldNames) + " ON " + quotedTableName +
-                "(" + Strings.join(", ", fieldNames) + ")";
+                "(" + Strings.join(", ", quoteFieldNames(fieldNames)) + ")";
         if(indexType != IndexType.FULLTEXT){
             sql += " USING " + indexType;
         }
 
         mapper.executeNonSelectSQL(sql);
+    }
+
+    private List<String> quoteFieldNames(List<String> fieldNames) {
+        fieldNames = CollectionUtils.transform(fieldNames, new CollectionUtils.Transformer<String, String>() {
+            @Override
+            public String get(String s) {
+                return "`" + s + "`";
+            }
+        });
+        return fieldNames;
     }
 
     private void addIndex(IndexType indexType, String tableName, String fieldName, boolean unique) {

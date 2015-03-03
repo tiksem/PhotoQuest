@@ -1672,9 +1672,16 @@ public class DatabaseManager {
                 reply.setType(Reply.LIKE);
                 reply.setUserId(userId);
                 reply.setId(likeId);
-                databaseManager.delete(reply);
+                databaseManager.deleteReply(reply);
             }
         });
+    }
+
+    private void deleteReply(Reply reply) {
+        delete(reply);
+        User user = new User();
+        user.setId(reply.getUserId());
+        mapper.changeValue(user, "unreadRepliesCount", -1);
     }
 
     private Dialog updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
@@ -2151,7 +2158,22 @@ public class DatabaseManager {
         return stats;
     }
 
+    private void readAllReplies(User user) {
+        Reply pattern = new Reply();
+        pattern.setRead(false);
+        pattern.setUserId(user.getId());
+
+        Reply values = new Reply();
+        values.setRead(true);
+
+        mapper.updateUsingPattern(pattern, values);
+        user.setUnreadRepliesCount(0l);
+        replace(user);
+    }
+
     private Collection<Reply> getReplies(User user, OffsetLimit offsetLimit) {
+        readAllReplies(user);
+
         Reply pattern = new Reply();
         pattern.setUserId(user.getId());
 

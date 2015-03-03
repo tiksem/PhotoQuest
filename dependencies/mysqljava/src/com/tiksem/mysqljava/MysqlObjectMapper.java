@@ -592,7 +592,7 @@ public class MysqlObjectMapper {
         replaceStatement.execute(connection);
     }
 
-    public <T> void updateUsingPattern(T pattern, T values) {
+    public <T> int updateUsingPattern(T pattern, T values) {
         String sql = SqlGenerationUtilities.update(pattern, values);
         List<Field> patternFields = SqlGenerationUtilities.getFields(pattern);
         List<Field> valuesFields = SqlGenerationUtilities.getFields(values);
@@ -603,7 +603,7 @@ public class MysqlObjectMapper {
             args.put(key + "_update", valuesArgs.get(key));
         }
 
-        executeNonSelectSQL(sql, args);
+        return executeModifySQL(sql, args);
     }
 
     public int deleteAll(Iterable<Object> objects) {

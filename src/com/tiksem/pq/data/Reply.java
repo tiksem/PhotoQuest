@@ -8,7 +8,8 @@ import com.tiksem.mysqljava.annotations.*;
 @Table
 @MultipleIndexes(indexes = {
         @MultipleIndex(fields = {"userId", "addingDate"}),
-        @MultipleIndex(fields = {"id", "type"})
+        @MultipleIndex(fields = {"id", "type"}),
+        @MultipleIndex(fields = {"userId", "read"})
 })
 public class Reply {
     public static final int FRIEND_REQUEST_ACCEPTED = 0;
@@ -31,6 +32,10 @@ public class Reply {
     @AddingDate
     @Stored
     private Long addingDate;
+
+    @Stored
+    @NotNull
+    private Boolean read;
 
     public Integer getType() {
         return type;
@@ -62,5 +67,20 @@ public class Reply {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
+    }
+
+    public Boolean getRead() {
+        return read;
+    }
+
+    public void setRead(Boolean read) {
+        this.read = read;
+    }
+
+    @OnPrepareForStorage
+    void onPrepareForStorage() {
+        if (read == null) {
+            read = false;
+        }
     }
 }
