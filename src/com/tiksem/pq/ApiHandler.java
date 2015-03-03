@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 @Controller
 @RequestMapping("/")
 public class ApiHandler {
-    private static final Pattern TAG_PATTERN = Pattern.compile("[\\d\\w]{3,20}", Pattern.UNICODE_CHARACTER_CLASS);
+    private static final Pattern TAG_PATTERN = Pattern.compile("[\\w]{3,20}", Pattern.UNICODE_CHARACTER_CLASS);
     private static final Set<String> uncheckedRequests = new HashSet<String>();
 
     static {
