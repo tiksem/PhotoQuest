@@ -197,6 +197,12 @@ public class AdvancedRequestsManager {
         sqlFileExecutor.executeNonSelectQuery("comment/delete_comment.sql", args);
     }
 
+    public void updateUnreadRepliesCount(long userId) {
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put("userId", userId);
+        sqlFileExecutor.executeNonSelectQuery("reply/update_unread_replies_count.sql", args);
+    }
+
     public void clearRatingAndViews() {
         mapper.executeNonSelectSQL(CLEAR_PHOTOQUESTS_VIEWS);
         mapper.executeNonSelectSQL(CLEAR_PHOTOS_VIEWS);

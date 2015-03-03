@@ -84,6 +84,10 @@ public class DatabaseManager {
         return mapper.insert(object);
     }
 
+    private int insertIgnore(Object object) {
+        return mapper.insert(object, true);
+    }
+
     private void insertAll(Object... objects) {
         mapper.insertAll(Arrays.asList(objects));
     }
@@ -1466,8 +1470,9 @@ public class DatabaseManager {
     }
 
     public void deleteComment(long commentId) {
-        getCommentByIdOrThrow(commentId);
+        Comment comment = getCommentByIdOrThrow(commentId);
         advancedRequestsManager.deleteComment(commentId);
+        advancedRequestsManager.updateUnreadRepliesCount(comment.getUserId());
     }
 
     public Comment addComment(HttpServletRequest request,
@@ -1648,9 +1653,11 @@ public class DatabaseManager {
         asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
+                long replyUserId;
                 if (commentId != null) {
                     Comment comment = databaseManager.getCommentByIdOrThrow(commentId);
                     databaseManager.decrementLikesCount(comment);
+                    replyUserId = comment.getUserId();
                 } else {
                     if (photoId == null) {
                         throw new RuntimeException("WTF?");
@@ -1660,17 +1667,12 @@ public class DatabaseManager {
                     Photoquest photoquest = databaseManager.getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
                     databaseManager.decrementLikesCount(photo, photoquest);
                     databaseManager.updatePhotoquestAvatar(photoquest);
+                    replyUserId = photo.getUserId();
                 }
-            }
-        });
 
-        final long userId = like.getUserId();
-        asyncTaskHandler.execute(new Task() {
-            @Override
-            public void run(DatabaseManager databaseManager) {
                 Reply reply = new Reply();
                 reply.setType(Reply.LIKE);
-                reply.setUserId(userId);
+                reply.setUserId(replyUserId);
                 reply.setId(likeId);
                 databaseManager.deleteReply(reply);
             }
@@ -1679,9 +1681,7 @@ public class DatabaseManager {
 
     private void deleteReply(Reply reply) {
         delete(reply);
-        User user = new User();
-        user.setId(reply.getUserId());
-        mapper.changeValue(user, "unreadRepliesCount", -1);
+        advancedRequestsManager.updateUnreadRepliesCount(reply.getUserId());
     }
 
     private Dialog updateDialog(long user1Id, long user2Id, long lastMessageTime, long lastMessageId) {
