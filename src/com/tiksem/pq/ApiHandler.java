@@ -377,7 +377,7 @@ public class ApiHandler {
         }
         for(String tag : tags){
             if(!TAG_PATTERN.matcher(tag).matches()){
-                throw new IllegalArgumentException("Wrong tag, should match [A-Za-z]{3,20} pattern");
+                throw new IllegalArgumentException("Wrong tag, should match " + TAG_PATTERN.toString() + " pattern");
             }
         }
 

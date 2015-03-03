@@ -21,8 +21,8 @@ public class FileSystemImageManager implements ImageManager {
             String.valueOf(Long.MAX_VALUE).length();
     private static final int DIRECTORY_NAME_LENGTH = 3;
     private static final double MAX_ASPECT_RATIO_K = 5.0;
-    private static final int MAX_WIDTH = 900;
-    private static final int MAX_HEIGHT = 900;
+    private static final int MAX_WIDTH = 1200;
+    private static final int MAX_HEIGHT = 1200;
     private static final int MIN_WIDTH = 300;
     private static final int MIN_HEIGHT = 300;
 
