@@ -20,18 +20,33 @@ public class FileSystemImageManager implements ImageManager {
     private static final int MAX_IMAGE_PATH_LENGTH =
             String.valueOf(Long.MAX_VALUE).length();
     private static final int DIRECTORY_NAME_LENGTH = 3;
-    private static final double MAX_ASPECT_RATIO_K = 5.0;
-    private static final int MAX_WIDTH = 1200;
-    private static final int MAX_HEIGHT = 1200;
-    private static final int MIN_WIDTH = 300;
-    private static final int MIN_HEIGHT = 300;
 
     private String imageDirectory;
     private ImageMagickExecutor imageMagickExecutor;
 
-    public FileSystemImageManager(String imageDirectory, String imageMagickPath) {
-        this.imageDirectory = imageDirectory;
-        imageMagickExecutor = new ImageMagickExecutor(imageMagickPath);
+    private double maxAspectRatioK;
+    private int maxWidth;
+    private int maxHeight;
+    private int minWidth;
+    private int minHeight;
+
+    public FileSystemImageManager(ImageManagerSettings settings) {
+        if(settings.imageDirectory == null){
+            throw new NullPointerException("settings.imageDirectory == null");
+        }
+
+        if(settings.imageMagickPath == null){
+            throw new NullPointerException("settings.imageMagickPath == null");
+        }
+
+        this.imageDirectory = settings.imageDirectory;
+        imageMagickExecutor = new ImageMagickExecutor(settings.imageMagickPath);
+
+        maxAspectRatioK = settings.maxAspectRatioK;
+        maxWidth = settings.maxWidth;
+        maxHeight = settings.maxHeight;
+        minWidth = settings.minWidth;
+        minHeight = settings.minHeight;
     }
 
     private String generateImagePath(long id) {
@@ -106,28 +121,39 @@ public class FileSystemImageManager implements ImageManager {
         ImageMagickExecutor.Image image = imageMagickExecutor.getImage(path);
         Size size = image.getSize();
 
-        if (size.width < MIN_WIDTH || size.height < MIN_HEIGHT) {
+        if ((size.width < minWidth && minWidth > 0) || (size.height < minHeight && minHeight > 0)) {
             File file = new File(path);
             FileUtils.forceDelete(file);
-            throw new SmallImageException(MIN_WIDTH, MIN_HEIGHT);
+            throw new SmallImageException(minWidth, minHeight);
         }
 
-        double aspectRatioK;
-        if(size.width > size.height){
-            aspectRatioK = (double)size.width / size.height;
-        } else {
-            aspectRatioK = (double)size.height / size.width;
-        }
+        if (maxAspectRatioK > 0.0) {
+            double aspectRatioK;
+            if(size.width > size.height){
+                aspectRatioK = (double)size.width / size.height;
+            } else {
+                aspectRatioK = (double)size.height / size.width;
+            }
 
-        if(aspectRatioK > MAX_ASPECT_RATIO_K){
-            File file = new File(path);
-            FileUtils.forceDelete(file);
-            throw new AspectMaxFactorRatioException(
-                    new AspectRatioData(size.width, size.height, MAX_ASPECT_RATIO_K));
+            if(aspectRatioK > maxAspectRatioK){
+                File file = new File(path);
+                FileUtils.forceDelete(file);
+                throw new AspectMaxFactorRatioException(
+                        new AspectRatioData(size.width, size.height, maxAspectRatioK));
+            }
         }
 
         String destination = path + "_temp";
-        String result = image.resizeProportionallyFitMax(new Size(MAX_WIDTH, MAX_HEIGHT), destination);
+
+        Size newSize = new Size(size.width, size.height);
+        if(maxWidth > 0){
+            size.width = maxWidth;
+        }
+        if(maxHeight > 0){
+            size.height = maxHeight;
+        }
+
+        String result = image.resizeProportionallyFitMax(newSize, destination);
         if (!result.equals(path)) {
             File file = new File(path);
             FileUtils.forceDelete(file);

@@ -5,6 +5,7 @@ import com.tiksem.mysqljava.MysqlTablesCreator;
 import com.tiksem.mysqljava.OffsetLimit;
 import com.tiksem.mysqljava.SelectParams;
 import com.tiksem.mysqljava.security.ApiRequest;
+import com.tiksem.pq.Settings;
 import com.tiksem.pq.data.*;
 import com.tiksem.pq.data.City;
 import com.tiksem.pq.data.Likable;
@@ -49,7 +50,7 @@ public class DatabaseManager {
 
     private MysqlObjectMapper mapper;
 
-    private ImageManager imageManager = new FileSystemImageManager("images", "magic");
+    private ImageManager imageManager;
     private CaptchaManager captchaManager;
     private GooglePlacesSearcher googlePlacesSearcher = new GooglePlacesSearcher(GOOGLE_API_KEY);
     private AdvancedRequestsManager advancedRequestsManager;
@@ -64,6 +65,7 @@ public class DatabaseManager {
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
         asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler(lang);
         captchaManager = new DatabaseCaptchaManager(mapper);
+        imageManager = new FileSystemImageManager(Settings.getInstance().getImageManagerSettings());
         this.lang = lang;
     }
 

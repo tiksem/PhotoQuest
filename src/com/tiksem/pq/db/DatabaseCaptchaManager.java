@@ -1,6 +1,7 @@
 package com.tiksem.pq.db;
 
 import com.tiksem.mysqljava.MysqlObjectMapper;
+import com.tiksem.pq.Settings;
 import com.tiksem.pq.data.CaptchaInfo;
 import nl.captcha.Captcha;
 import nl.captcha.backgrounds.FlatColorBackgroundProducer;
@@ -22,7 +23,7 @@ public class DatabaseCaptchaManager implements CaptchaManager {
 
     public DatabaseCaptchaManager(MysqlObjectMapper mapper) {
         this.mapper = mapper;
-        imageManager = new FileSystemImageManager("captcha", "magic") {
+        imageManager = new FileSystemImageManager(Settings.getInstance().getCaptchaSettings()) {
             @Override
             protected void fixDimensions(String path) throws IOException {
 

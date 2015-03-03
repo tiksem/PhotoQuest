@@ -3,10 +3,13 @@ package com.tiksem.pq;
 import com.tiksem.mysqljava.security.DatabaseRpsGuard;
 import com.tiksem.mysqljava.security.MemoryRpsGuard;
 import com.tiksem.mysqljava.security.RpsGuard;
+import com.tiksem.pq.db.ImageManagerSettings;
+import com.utils.framework.Maps;
 import com.utils.framework.strings.Strings;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -15,8 +18,10 @@ import java.util.Properties;
  */
 public class Settings {
     private static Settings settings = null;
-    private Properties properties;
+    private Map<String, String> properties;
     private RpsGuard rpsGuard;
+    private ImageManagerSettings imageManagerSettings;
+    private ImageManagerSettings captchaSettings;
 
     public synchronized static Settings getInstance() {
         if(settings == null){
@@ -27,9 +32,24 @@ public class Settings {
     }
 
     public void update() {
-        properties = new Properties();
+        properties = new LinkedHashMap<String, String>();
         try {
-            properties.load(new FileInputStream("settings.txt"));
+            Properties loaded = new Properties();
+            loaded.load(new FileInputStream("settings.txt"));
+            properties = new LinkedHashMap<String, String>((Map)loaded);
+
+            imageManagerSettings = new ImageManagerSettings();
+            imageManagerSettings.imageMagickPath = Maps.get(properties, "imageMagickPath", "magic");
+            imageManagerSettings.imageDirectory = Maps.get(properties, "imageDirectory", "images");
+            imageManagerSettings.maxAspectRatioK = Maps.getDouble(properties, "imageMaxAspectRatioK", -1.0);
+            imageManagerSettings.maxHeight = Maps.getInt(properties, "maxImageHeight", 0);
+            imageManagerSettings.minHeight = Maps.getInt(properties, "minImageHeight", 0);
+            imageManagerSettings.maxWidth = Maps.getInt(properties, "maxImageWidth", 0);
+            imageManagerSettings.minWidth = Maps.getInt(properties, "minImageWidth", 0);
+
+            captchaSettings = new ImageManagerSettings();
+            captchaSettings.imageMagickPath = imageManagerSettings.imageMagickPath;
+            captchaSettings.imageDirectory = Maps.get(properties, "captchaDirectory", "captcha");
         } catch (IOException e) {
 
         }
@@ -55,14 +75,18 @@ public class Settings {
     }
 
     public long getRequestDelay() {
-        try {
-            return Long.parseLong(properties.getProperty("requestDelay"));
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        return Maps.getLong(properties, "requestDelay", 0);
+    }
+
+    public ImageManagerSettings getImageManagerSettings() {
+        return imageManagerSettings;
+    }
+
+    public ImageManagerSettings getCaptchaSettings() {
+        return captchaSettings;
     }
 
     public boolean isEnableRPS() {
-        return Strings.equalsIgnoreCase(properties.getProperty("enableRPS"), "true");
+        return Maps.getBoolean(properties, "enableRPS");
     }
 }
