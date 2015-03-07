@@ -26,11 +26,10 @@ public class MysqlObjectMapper {
 
     private Connection connection;
 
-    public MysqlObjectMapper() {
+    public MysqlObjectMapper(Connection connection) {
+        this.connection = connection;
+
         try {
-            connection = DriverManager.getConnection(
-                    "jdbc:mysql://localhost/photoquest?" +
-                    "user=root&password=fightforme");
             connection.setAutoCommit(true);
         } catch (SQLException e) {
             throw new RuntimeException(e);

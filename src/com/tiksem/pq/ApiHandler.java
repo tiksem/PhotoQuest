@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.*;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -59,7 +60,7 @@ public class ApiHandler {
             e.printStackTrace();
         }
 
-        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        MysqlObjectMapper mapper = getMapper();
         String requestURI = request.getRequestURI();
         if(settings.isEnableRPS() && !uncheckedRequests.contains(requestURI)){
             settings.getRpsGuard().commitUserRequest(mapper, request.getRemoteAddr(),
@@ -974,14 +975,15 @@ public class ApiHandler {
 
     @RequestMapping("/executeSQL")
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql) {
-        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        MysqlObjectMapper mapper = getMapper();
         return mapper.executeSelectSql(sql);
     }
 
     @RequestMapping("/test")
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql,
                                            @RequestParam("count") int count) {
-        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        MysqlObjectMapper mapper = null;
+        mapper = getMapper();
         final long time = System.currentTimeMillis();
         for (int i = 0; i < count; i++) {
             mapper.executeNonSelectSQL(sql);
@@ -994,6 +996,16 @@ public class ApiHandler {
         };
     }
 
+    private MysqlObjectMapper getMapper() {
+        MysqlObjectMapper mapper;
+        try {
+            mapper = new MysqlObjectMapper(PhotoquestDataSource.getInstance().getConnection());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return mapper;
+    }
+
     @RequestMapping("/refreshSettings")
     public @ResponseBody Object refreshSettings() {
         Settings instance = Settings.getInstance();
@@ -1004,7 +1016,7 @@ public class ApiHandler {
 
     @RequestMapping("/initLocationsFromJSON")
     public @ResponseBody Object initLocationsFromJSON() throws IOException, JSONException {
-        MysqlObjectMapper mapper = new MysqlObjectMapper();
+        MysqlObjectMapper mapper = getMapper();
         LocationsCreatorFromJSON creatorFromJSON = new LocationsCreatorFromJSON(mapper, "locations.txt");
         creatorFromJSON.initLocations();
         return new Success();

@@ -3,6 +3,7 @@ package com.tiksem.pq;
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.mysqljava.security.RpsGuard;
 import com.tiksem.pq.db.DatabaseManager;
+import com.tiksem.pq.db.PhotoquestDataSource;
 import org.apache.commons.io.IOUtils;
 import org.springframework.context.annotation.Scope;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Component;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * Created by CM on 12/18/2014.
@@ -20,16 +23,24 @@ import java.io.IOException;
 @Component
 @Scope("singleton")
 public class SchedulingTasks {
-    private DatabaseManager databaseManager = new DatabaseManager(new MysqlObjectMapper(), "en");
+    private DatabaseManager getDatabaseManager() {
+        Connection connection = null;
+        try {
+            connection = PhotoquestDataSource.getInstance().getConnection();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return new DatabaseManager(new MysqlObjectMapper(connection), "en");
+    }
 
     @Scheduled(cron = "0 0/30 * * * ?")
     public void updateNewFlag() {
-        databaseManager.updateNewFlag();
+        getDatabaseManager().updateNewFlag();
     }
 
     @Scheduled(cron = "0 0/15 * * * *")
     public void clearRps() {
         RpsGuard rpsGuard = Settings.getInstance().getRpsGuard();
-        rpsGuard.clearUnbannedIPes(databaseManager.getMapper());
+        rpsGuard.clearUnbannedIPes(getDatabaseManager().getMapper());
     }
 }

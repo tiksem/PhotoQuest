@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -173,7 +174,13 @@ public class LocationsCreatorFromJSON {
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    MysqlObjectMapper mapper = new MysqlObjectMapper();
+                    MysqlObjectMapper mapper = null;
+                    try {
+                        mapper = new MysqlObjectMapper(
+                                PhotoquestDataSource.getInstance().getConnection());
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
 
                     while (true) {
                         try {

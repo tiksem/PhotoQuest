@@ -89,4 +89,16 @@ public class Settings {
     public boolean isEnableRPS() {
         return Maps.getBoolean(properties, "enableRPS");
     }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public int getInt(String key) {
+        return Maps.getIntOrThrow(properties, key);
+    }
+
+    public String get(String key) {
+        return Maps.getOrThrow(properties, key);
+    }
 }
