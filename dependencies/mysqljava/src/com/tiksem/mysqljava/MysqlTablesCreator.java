@@ -100,7 +100,13 @@ public class MysqlTablesCreator {
     public List<String> getTableNames() {
         String sql = "SHOW TABLES";
         ResultSet resultSet = mapper.executeSelectSqlGetResultSet(sql);
-        return ResultSetUtilities.getValuesOfColumn(resultSet, "TABLE_NAME");
+        return CollectionUtils.transformUnique(ResultSetUtilities.<String>getValuesOfColumn(resultSet, "TABLE_NAME"),
+                new CollectionUtils.Transformer<String, String>() {
+                    @Override
+                    public String get(String s) {
+                        return s.toLowerCase();
+                    }
+                });
     }
 
     public void dropTables() {

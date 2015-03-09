@@ -39,7 +39,7 @@ public class Settings {
             properties = new LinkedHashMap<String, String>((Map)loaded);
 
             imageManagerSettings = new ImageManagerSettings();
-            imageManagerSettings.imageMagickPath = Maps.get(properties, "imageMagickPath", "magic");
+            imageManagerSettings.imageMagickPath = Maps.get(properties, "imageMagickPath", "");
             imageManagerSettings.imageDirectory = Maps.get(properties, "imageDirectory", "images");
             imageManagerSettings.maxAspectRatioK = Maps.getDouble(properties, "imageMaxAspectRatioK", -1.0);
             imageManagerSettings.maxHeight = Maps.getInt(properties, "maxImageHeight", 0);
