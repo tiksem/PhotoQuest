@@ -1,6 +1,5 @@
 package com.tiksem.mysqljava;
 
-import javax.jdo.Query;
 import java.util.Map;
 
 /**
