@@ -162,6 +162,18 @@ module.exports = function (grunt) {
                     }
                 ]
             }
+            //copyJS: {
+            //    files: {
+            //        '../../PhotoQuestOut/grunt/resources/minified.js':
+            //            ['../../PhotoQuestOut/grunt/ngAnnotate/one.js']
+            //    }
+            //}
+            //copyCSS: {
+            //    files: {
+            //        '../../PhotoQuestOut/grunt/resources/minified.css':
+            //            ['../../PhotoQuestOut/grunt/one.css']
+            //    }
+            //}
         }
     });
 
