@@ -1,6 +1,9 @@
 module.exports = function (grunt) {
 
-    // 1. All configuration goes here 
+    require('load-grunt-tasks')(grunt);
+
+    // 1. All configuration goes here
+    var i = 0;
     grunt.initConfig({
         pkg: grunt.file.readJSON('package.json'),
 
@@ -69,20 +72,95 @@ module.exports = function (grunt) {
                     "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/first_quest.js",
                     "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/progress.js",
                     "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/about.js",
+                    '../../PhotoQuestOut/grunt/templates.js'
                 ],
                 dest: '../../PhotoQuestOut/grunt/ngAnnotate/one.js'
+            },
+            css: {
+                src: ['../web/WEB-INF/resources/css/*.css'],
+                dest: '../../PhotoQuestOut/grunt/one.css'
             }
         },
 
         'closure-compiler': {
             frontend: {
                 js: '../../PhotoQuestOut/grunt/ngAnnotate/one.js',
-                jsOutputFile: '../../PhotoQuestOut/grunt/minified.js',
+                jsOutputFile: '../../PhotoQuestOut/grunt/resources/minified.js',
                 maxBuffer: 500,
                 options: {
                     compilation_level: 'SIMPLE_OPTIMIZATIONS',
                     language_in: 'ECMASCRIPT5'
                 }
+            }
+        },
+
+        html2js: {
+            options: {
+                rename: function (moduleName) {
+                    var first = moduleName.lastIndexOf("html/");
+                    return moduleName.substring(first, moduleName.length);
+                }
+            },
+            main: {
+                src: ["../../PhotoQuestOut/grunt/html/web/WEB-INF/resources/html/*.html"],
+                //src: ["../web/WEB-INF/resources/html/*.html"],
+                dest: '../../PhotoQuestOut/grunt/templates.js'
+            }
+        },
+
+        cssmin: {
+            options: {
+                shorthandCompacting: false,
+                roundingPrecision: -1
+            },
+            target: {
+                files: {
+                    '../../PhotoQuestOut/grunt/resources/minified.css':
+                        ['../../PhotoQuestOut/grunt/one.css']
+                }
+            }
+        },
+
+        template: {
+            target: {
+
+            }
+        },
+
+        minifyHtml: {
+            options: {
+                empty: true
+            },
+            dev: {
+                files: [
+                    {
+                        src: ['../web/WEB-INF/resources/one.html'], // Actual pattern(s) to match.
+                        dest: "../../PhotoQuestOut/grunt/resources/index.html"
+                    }
+                ]
+            },
+            dev2: {
+                files: [
+                    {
+                        expand: true,
+                        src: ['../web/WEB-INF/resources/html/*.html'], // Actual pattern(s) to match.
+                        dest: "../../PhotoQuestOut/grunt/html/sdfdssdf"
+                    }
+                ]
+            }
+        },
+
+        copy: {
+            images: {
+                files: [
+                    // makes all src relative to cwd
+                    {
+                        expand: true,
+                        cwd: '../web/WEB-INF/resources/images/',
+                        src: ['**'],
+                        dest: '../../../../PhotoQuestOut/grunt/resources/images/'
+                    }
+                ]
             }
         }
     });
@@ -91,8 +169,22 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-concat');
     grunt.loadNpmTasks('grunt-ng-annotate');
     grunt.loadNpmTasks('grunt-closure-compiler');
+    grunt.loadNpmTasks('grunt-html2js');
+    grunt.loadNpmTasks('grunt-contrib-cssmin');
+    grunt.loadNpmTasks('grunt-minify-html');
+    grunt.loadNpmTasks('grunt-contrib-copy');
+
+    grunt.registerMultiTask('template', 'Templates module replacing...', function() {
+        var options = {
+            encoding: 'UTF-8'
+        };
+        var file = grunt.file.read('../../PhotoQuestOut/grunt/ngAnnotate/one.js', options);
+        file = file.replace('/*HTML_TEMPLATES_PLACEHOLDER*/', ", 'templates-main'");
+        grunt.file.write('../../PhotoQuestOut/grunt/ngAnnotate/one.js', file, options);
+    });
 
     // 4. Where we tell Grunt what to do when we type "grunt" into the terminal.
-    grunt.registerTask('default', ['ngAnnotate', 'concat', 'closure-compiler']);
+    grunt.registerTask('default', ['ngAnnotate', 'minifyHtml', 'html2js', 'concat',
+        'template', 'cssmin', 'closure-compiler', 'copy']);
 
 };
