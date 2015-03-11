@@ -9,6 +9,8 @@ public class ImageManagerSettings {
     public int maxHeight;
     public int minWidth;
     public int minHeight;
+    public int displayMaxWidth;
+    public int displayMaxHeight;
     public String imageDirectory;
     public String imageMagickPath;
 }

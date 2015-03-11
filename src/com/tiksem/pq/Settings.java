@@ -46,6 +46,8 @@ public class Settings {
             imageManagerSettings.minHeight = Maps.getInt(properties, "minImageHeight", 0);
             imageManagerSettings.maxWidth = Maps.getInt(properties, "maxImageWidth", 0);
             imageManagerSettings.minWidth = Maps.getInt(properties, "minImageWidth", 0);
+            imageManagerSettings.displayMaxHeight = Maps.getInt(properties, "displayMaxHeight", 1200);
+            imageManagerSettings.displayMaxWidth = Maps.getInt(properties, "displayMaxWidth", 1200);
 
             captchaSettings = new ImageManagerSettings();
             captchaSettings.imageMagickPath = imageManagerSettings.imageMagickPath;

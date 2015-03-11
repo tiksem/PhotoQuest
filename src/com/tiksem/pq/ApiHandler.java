@@ -417,27 +417,18 @@ public class ApiHandler {
     public void
     getImageById(@PathVariable Long id,
                  @RequestParam(value = "size", required = false) Integer size,
-                 @RequestParam(value = "maxWidth", required = false) Integer maxWidth,
-                 @RequestParam(value = "maxHeight", required = false) Integer maxHeight,
+                 @RequestParam(value = "display", defaultValue = "false") boolean display,
                  OutputStream outputStream)
             throws IOException {
         InputStream inputStream = null;
         try {
             DatabaseManager databaseManager = getDatabaseManager();
-            if (size == null) {
+            if (display) {
+                inputStream = databaseManager.getDisplayImageById(id);
+            } else if(size == null) {
                 inputStream = databaseManager.getBitmapDataByPhotoIdOrThrow(id);
             } else {
-                if(maxWidth != null){
-                    if(maxHeight == null){
-                        throw new IllegalArgumentException("Specify maxHeight");
-                    }
-
-                    inputStream = databaseManager.getBitmapDataByPhotoIdOrThrow(id, maxWidth, maxHeight);
-                } else if(maxHeight != null) {
-                    throw new IllegalArgumentException("Specify maxWidth");
-                } else {
-                    inputStream = databaseManager.getThumbnailByPhotoIdOrThrow(id, size);
-                }
+                inputStream = databaseManager.getThumbnailByPhotoIdOrThrow(id, size);
             }
 
             IOUtils.copyLarge(inputStream, outputStream, new byte[1024 * 64]);

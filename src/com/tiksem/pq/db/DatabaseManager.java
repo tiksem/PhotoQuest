@@ -830,6 +830,10 @@ public class DatabaseManager {
         return result;
     }
 
+    public InputStream getDisplayImageById(long id) {
+        return imageManager.getDisplayImage(id);
+    }
+
     public InputStream getBitmapDataByPhotoIdOrThrow(long id, int maxWidth, int maxHeight) {
         InputStream result = imageManager.getImageById(id, maxWidth, maxHeight);
         if(result == null){

@@ -29,6 +29,8 @@ public class FileSystemImageManager implements ImageManager {
     private int maxHeight;
     private int minWidth;
     private int minHeight;
+    private int displayMaxWidth;
+    private int displayMaxHeight;
 
     public FileSystemImageManager(ImageManagerSettings settings) {
         if(settings.imageDirectory == null){
@@ -47,6 +49,8 @@ public class FileSystemImageManager implements ImageManager {
         maxHeight = settings.maxHeight;
         minWidth = settings.minWidth;
         minHeight = settings.minHeight;
+        displayMaxHeight = settings.displayMaxHeight;
+        displayMaxWidth = settings.displayMaxWidth;
     }
 
     private String generateImagePath(long id) {
@@ -70,6 +74,11 @@ public class FileSystemImageManager implements ImageManager {
         } catch (FileNotFoundException e) {
             return null;
         }
+    }
+
+    @Override
+    public InputStream getDisplayImage(long id) {
+        return getImageById(id, displayMaxWidth, displayMaxHeight);
     }
 
     @Override
