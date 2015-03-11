@@ -2,6 +2,10 @@ module.exports = function (grunt) {
 
     require('load-grunt-tasks')(grunt);
 
+    function replaceRange(s, start, end, substitute) {
+        return s.substring(0, start) + substitute + s.substring(end);
+    }
+
     // 1. All configuration goes here
     var i = 0;
     grunt.initConfig({
@@ -134,7 +138,7 @@ module.exports = function (grunt) {
             dev: {
                 files: [
                     {
-                        src: ['../web/WEB-INF/resources/one.html'], // Actual pattern(s) to match.
+                        src: ['../../PhotoQuestOut/grunt/html/index.html'], // Actual pattern(s) to match.
                         dest: "../../PhotoQuestOut/grunt/resources/index.html"
                     }
                 ]
@@ -174,6 +178,11 @@ module.exports = function (grunt) {
             //            ['../../PhotoQuestOut/grunt/one.css']
             //    }
             //}
+        },
+        index: {
+            dev: {
+
+            }
         }
     });
 
@@ -195,8 +204,21 @@ module.exports = function (grunt) {
         grunt.file.write('../../PhotoQuestOut/grunt/ngAnnotate/one.js', file, options);
     });
 
+    grunt.registerMultiTask('index', 'Generating index.html...', function() {
+        var options = {
+            encoding: 'UTF-8'
+        };
+        var file = grunt.file.read('../web/WEB-INF/resources/index.html', options);
+        var index = file.indexOf('<!--INCLUDE-->');
+        var index2 = file.indexOf('<!--INCLUDE-->', index + 1);
+
+        file = replaceRange(file, index, index2, grunt.file.read('../web/WEB-INF/resources/one.html', options));
+
+        grunt.file.write('../../PhotoQuestOut/grunt/html/index.html', file, options);
+    });
+
     // 4. Where we tell Grunt what to do when we type "grunt" into the terminal.
-    grunt.registerTask('default', ['ngAnnotate', 'minifyHtml', 'html2js', 'concat',
+    grunt.registerTask('default', ['ngAnnotate',  'index', 'minifyHtml', 'html2js', 'concat',
         'template', 'cssmin', 'closure-compiler', 'copy']);
 
 };
