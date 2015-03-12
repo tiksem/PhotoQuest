@@ -2,5 +2,5 @@ SELECT count(*)
 FROM user
 WHERE
   nameData LIKE :query
-  :where
+  ::where
 LIMIT 0, :innerLimit
