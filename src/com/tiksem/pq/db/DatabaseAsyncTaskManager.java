@@ -16,23 +16,35 @@ import java.util.concurrent.*;
 public class DatabaseAsyncTaskManager {
     private static DatabaseAsyncTaskManager instance;
     private ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
-            Runtime.getRuntime().availableProcessors(), 1000,
-            100000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+            Runtime.getRuntime().availableProcessors(), 30,
+            50000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
-    private Map<Thread, DatabaseManager> databaseManagers =
-            Collections.synchronizedMap(new WeakHashMap<Thread, DatabaseManager>());
+    private ConcurrentMap<Thread, DatabaseManager> databaseManagers =
+            new ConcurrentHashMap<Thread, DatabaseManager>();
 
     private class ThreadFactoryImpl implements ThreadFactory {
         @Override
-        public Thread newThread(Runnable r) {
-            Thread thread = new Thread(r);
-            try {
-                databaseManagers.put(thread, new DatabaseManager(
-                        new MysqlObjectMapper(PhotoquestDataSource.getInstance().getConnection()), null));
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-            return thread;
+        public Thread newThread(final Runnable runnable) {
+            return new Thread(runnable){
+                {
+                    try {
+                        databaseManagers.put(this, new DatabaseManager(
+                                new MysqlObjectMapper(PhotoquestDataSource.getInstance().getConnection()), null));
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void run() {
+                    super.run();
+                    DatabaseManager databaseManager = databaseManagers.get(this);
+                    if (databaseManager != null) {
+                        databaseManager.destroy();
+                        databaseManagers.remove(this);
+                    }
+                }
+            };
         }
     }
 
