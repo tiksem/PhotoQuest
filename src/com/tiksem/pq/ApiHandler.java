@@ -471,7 +471,10 @@ public class ApiHandler {
                                                     defaultValue = "newest")
                                             RatingOrder order) {
         DatabaseManager databaseManager = getDatabaseManager();
-        Object result = getNextPrevPhoto(photoquestId, userId, photoId, next, category, order);
+        Object result = null;
+        if (userId != null || photoquestId != null) {
+            result = getNextPrevPhoto(photoquestId, userId, photoId, next, category, order);
+        }
         databaseManager.deletePhoto(request, photoId);
         return result;
     }
@@ -693,12 +696,16 @@ public class ApiHandler {
                                                  @RequestParam(value = "order", required = false,
                                                                      defaultValue = "newest")
                                                  RatingOrder order) {
-        if(category == PhotoCategory.avatar){
-            return getNextPrevAvatar(userId, photoId, next, order);
-        } else if(userId != null) {
-            return getNextPrevPhotoOfUser(userId, photoId, next, order);
-        } else {
+        if(userId != null) {
+            if (category == PhotoCategory.avatar) {
+                return getNextPrevAvatar(userId, photoId, next, order);
+            } else {
+                return getNextPrevPhotoOfUser(userId, photoId, next, order);
+            }
+        } else if(photoquestId != null) {
             return getNextPrevPhotoOfPhotoquest(photoquestId, photoId, next, category, order);
+        } else {
+            throw new IllegalArgumentException("Specify userId or photoquestId");
         }
     }
 
