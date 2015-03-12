@@ -14,4 +14,5 @@ public @interface ForeignKey {
     OnUpdate onUpdate() default OnUpdate.CASCADE;
     IndexType indexType() default IndexType.HASH;
     boolean unique() default false;
+    boolean useInDatabase() default true;
 }

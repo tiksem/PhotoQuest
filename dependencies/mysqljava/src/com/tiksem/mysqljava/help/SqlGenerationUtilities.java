@@ -393,6 +393,10 @@ public class SqlGenerationUtilities {
         return select(Arrays.<Class>asList(pattern.getClass()), foreigns, pattern, selectParams);
     }
 
+    public static String selectIdes(Object pattern) {
+        return select(Arrays.<Class>asList(pattern.getClass()), null, null, pattern, null, "id");
+    }
+
     public static String getPosition(Object pattern, Class aClass, String orderBy, List<Field> orderByFieldsOut) {
         String tableName = quotedClassName(aClass);
         String sql = "SELECT count(*) FROM " + tableName;
@@ -443,14 +447,15 @@ public class SqlGenerationUtilities {
                                 List<Foreign> foreigns,
                                 Object pattern,
                                 SelectParams selectParams) {
-        return select(fromClasses, null, foreigns, pattern, selectParams);
+        return select(fromClasses, null, foreigns, pattern, selectParams, null);
     }
 
     public static String select(List<Class> fromClasses,
                                 List<String> resultClasses,
                                 List<Foreign> foreigns,
                                 Object pattern,
-                                SelectParams selectParams
+                                SelectParams selectParams,
+                                String result
                                 ) {
         if(fromClasses.isEmpty()){
             throw new IllegalArgumentException("fromClasses are empty");
@@ -459,25 +464,29 @@ public class SqlGenerationUtilities {
         List<String> foreignJoinParts = new ArrayList<String>();
 
         Class orderByClass = null;
-        if (selectParams.ordering != null) {
-            orderByClass = pattern != null ? pattern.getClass() : fromClasses.get(0);
+        if (selectParams != null) {
+            if (selectParams.ordering != null) {
+                orderByClass = pattern != null ? pattern.getClass() : fromClasses.get(0);
+            }
         }
 
-        for(Foreign foreign : foreigns){
-            ForeignKey foreignKey = Reflection.getAnnotationOrThrow(foreign.foreignField, ForeignKey.class);
-            String parentFieldName = foreignKey.field();
-            Class parent = foreignKey.parent();
+        if (foreigns != null) {
+            for(Foreign foreign : foreigns){
+                ForeignKey foreignKey = Reflection.getAnnotationOrThrow(foreign.foreignField, ForeignKey.class);
+                String parentFieldName = foreignKey.field();
+                Class parent = foreignKey.parent();
 
-            String parentName = parent.getSimpleName();
+                String parentName = parent.getSimpleName();
 
-            String foreignFieldName = foreign.foreignField.getName();
-            String parentAlias = parentName + "_" +
-                    foreignFieldName;
+                String foreignFieldName = foreign.foreignField.getName();
+                String parentAlias = parentName + "_" +
+                        foreignFieldName;
 
-            String part = "LEFT JOIN " + quotedClassName(parent) + " AS " + parentAlias + " ON " +
-                    quotedClassName(foreign.childClass) + "." + foreignFieldName + "=" + parentAlias +
-                    "." + parentFieldName;
-            foreignJoinParts.add(part);
+                String part = "LEFT JOIN " + quotedClassName(parent) + " AS " + parentAlias + " ON " +
+                        quotedClassName(foreign.childClass) + "." + foreignFieldName + "=" + parentAlias +
+                        "." + parentFieldName;
+                foreignJoinParts.add(part);
+            }
         }
 
         String from = Strings.join(", ", CollectionUtils.transform(fromClasses,
@@ -493,29 +502,34 @@ public class SqlGenerationUtilities {
             where = generatePatternWhereClosure(pattern, getFields(pattern));
         }
 
-        if(selectParams.additionalWhereClosure != null){
-            if(!Strings.isEmpty(where)){
-                where = "(" + where + ") AND (" + selectParams.additionalWhereClosure + ")";
-            } else {
-                where = selectParams.additionalWhereClosure;
+        if (selectParams != null) {
+            if(selectParams.additionalWhereClosure != null){
+                if(!Strings.isEmpty(where)){
+                    where = "(" + where + ") AND (" + selectParams.additionalWhereClosure + ")";
+                } else {
+                    where = selectParams.additionalWhereClosure;
+                }
             }
         }
 
-        if(selectParams.whereTransformer != null){
-            where = selectParams.whereTransformer.get(where);
+        if (selectParams != null) {
+            if(selectParams.whereTransformer != null){
+                where = selectParams.whereTransformer.get(where);
+            }
         }
 
-        String result;
-        if(resultClasses == null || resultClasses.isEmpty()){
-            result = "*";
-        } else {
-            result = Strings.join(", ", CollectionUtils.transform(resultClasses,
-                    new CollectionUtils.Transformer<String, CharSequence>() {
-                @Override
-                public CharSequence get(String aClass) {
-                    return "`" + aClass + "`.*";
-                }
-            })).toString();
+        if (result == null) {
+            if(resultClasses == null || resultClasses.isEmpty()){
+                result = "*";
+            } else {
+                result = Strings.join(", ", CollectionUtils.transform(resultClasses,
+                        new CollectionUtils.Transformer<String, CharSequence>() {
+                    @Override
+                    public CharSequence get(String aClass) {
+                        return "`" + aClass + "`.*";
+                    }
+                })).toString();
+            }
         }
 
         String query = "SELECT " + result + " FROM " + from;
@@ -525,31 +539,35 @@ public class SqlGenerationUtilities {
             query += " WHERE " + where;
         }
 
-        if(selectParams.ordering != null){
-            String[] orderCriteria = selectParams.ordering.split(", *");
-            List<String> orderByParts = new ArrayList<String>();
+        if (selectParams != null) {
+            if(selectParams.ordering != null){
+                String[] orderCriteria = selectParams.ordering.split(", *");
+                List<String> orderByParts = new ArrayList<String>();
 
-            for(String order : orderCriteria){
-                if(order.contains(".")){
-                    orderByParts.add(order);
-                    continue;
+                for(String order : orderCriteria){
+                    if(order.contains(".")){
+                        orderByParts.add(order);
+                        continue;
+                    }
+
+                    String[] args = order.split(" +", 2);
+                    String param = args[0];
+                    String part = quotedClassName(orderByClass) + "." + param;
+                    if(args.length > 1){
+                        part += " " + args[1];
+                    }
+                    orderByParts.add(part);
                 }
 
-                String[] args = order.split(" +", 2);
-                String param = args[0];
-                String part = quotedClassName(orderByClass) + "." + param;
-                if(args.length > 1){
-                    part += " " + args[1];
-                }
-                orderByParts.add(part);
+                query += " ORDER BY " + Strings.join(", ", orderByParts);
             }
-
-            query += " ORDER BY " + Strings.join(", ", orderByParts);
         }
 
-        if (selectParams.offsetLimit != null) {
-            query += " LIMIT " + selectParams.offsetLimit.getOffset() + ", " +
-                    selectParams.offsetLimit.getLimit();
+        if (selectParams != null) {
+            if (selectParams.offsetLimit != null) {
+                query += " LIMIT " + selectParams.offsetLimit.getOffset() + ", " +
+                        selectParams.offsetLimit.getLimit();
+            }
         }
 
         return query;

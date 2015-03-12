@@ -16,6 +16,7 @@ import com.tiksem.pq.db.advanced.AdvancedRequestsManager;
 import com.tiksem.pq.db.advanced.SearchUsersParams;
 import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
+import com.utils.framework.CollectionUtils;
 import com.utils.framework.MathUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
@@ -781,6 +782,42 @@ public class DatabaseManager {
         return photo;
     }
 
+    private List<Like> getLikesOfPhoto(long photoId) {
+        Like like = new Like();
+        like.setPhotoId(photoId);
+        return mapper.queryByPattern(like);
+    }
+
+    private void deletePhotoComments(long photoId) {
+        Comment comment = new Comment();
+        comment.setPhotoId(photoId);
+        List<Long> ides = mapper.queryIdesByPattern(comment);
+        for(long id : ides){
+            deleteComment(id);
+        }
+    }
+
+    private void deletePhotoLikes(long photoId) {
+        List<Like> likes = getLikesOfPhoto(photoId);
+
+        Like pattern = new Like();
+        pattern.setPhotoId(photoId);
+        mapper.delete(pattern);
+
+        Set<Long> userIdes = new HashSet<Long>();
+        for(Like like : likes){
+            userIdes.add(like.getUserId());
+            Reply reply = new Reply();
+            reply.setId(like.getId());
+            reply.setType(Reply.LIKE);
+            delete(reply);
+        }
+
+        for(Long userId : userIdes){
+            advancedRequestsManager.updateUnreadRepliesCount(userId);
+        }
+    }
+
     public void deletePhoto(HttpServletRequest request, long id) {
         Photo photo = getPhotoByIdOrThrow(id);
 
@@ -806,6 +843,9 @@ public class DatabaseManager {
         Action action = new Action();
         action.setPhotoId(id);
         mapper.delete(action);
+
+        deletePhotoLikes(id);
+        deletePhotoComments(id);
     }
 
     public Message getMessageById(long id) {

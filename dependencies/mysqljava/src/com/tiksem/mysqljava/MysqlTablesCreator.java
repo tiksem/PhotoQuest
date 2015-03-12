@@ -63,15 +63,15 @@ public class MysqlTablesCreator {
             writeProgress(aClass.getSimpleName());
         }
 
-        writeProgress("Updating indexes...");
-        for(Class aClass : classesInPackage){
-            updateIndexes(aClass);
-            writeProgress(aClass.getSimpleName());
-        }
-
         writeProgress("Updating foreign keys...");
         for(Class aClass : classesInPackage){
             updateForeignKeys(aClass);
+            writeProgress(aClass.getSimpleName());
+        }
+
+        writeProgress("Updating indexes...");
+        for(Class aClass : classesInPackage){
+            updateIndexes(aClass);
             writeProgress(aClass.getSimpleName());
         }
         writeProgress("Success!");
@@ -514,7 +514,13 @@ public class MysqlTablesCreator {
     private void updateForeignKeys(Class aClass) {
         String tableName = aClass.getSimpleName();
         List<ForeignKeyInfo> foreignKeys = getForeignKeys(tableName);
-        List<Field> fields = Reflection.getFieldsWithAnnotations(aClass, ForeignKey.class);
+        List<Field> fields = Reflection.getFieldsWithAnnotation(aClass, ForeignKey.class,
+                new Predicate<ForeignKey>() {
+                    @Override
+                    public boolean check(ForeignKey item) {
+                        return item.useInDatabase();
+                    }
+                });
 
         Iterator<ForeignKeyInfo> foreignKeyIterator = foreignKeys.iterator();
         while (foreignKeyIterator.hasNext()) {

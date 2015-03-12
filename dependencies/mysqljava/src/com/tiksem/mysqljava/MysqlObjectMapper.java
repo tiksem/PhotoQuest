@@ -47,22 +47,29 @@ public class MysqlObjectMapper {
 
     public boolean executeNonSelectSQL(String sql, Map<String, Object> args) {
         try {
-            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
-            if (args != null) {
-                statement.setObjects(args);
-            }
+            NamedParameterStatement statement = getNamedParameterStatement(sql, args);
             return statement.execute();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public int executeModifySQL(String sql, Map<String, Object> args) {
+    private NamedParameterStatement getNamedParameterStatement(String sql, Map<String, Object> args) {
+        NamedParameterStatement statement = null;
         try {
-            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
+            statement = new NamedParameterStatement(connection, sql);
             if (args != null) {
                 statement.setObjects(args);
             }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return statement;
+    }
+
+    public int executeModifySQL(String sql, Map<String, Object> args) {
+        try {
+            NamedParameterStatement statement = getNamedParameterStatement(sql, args);
             return statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -92,6 +99,15 @@ public class MysqlObjectMapper {
         try {
             Statement statement = connection.createStatement();
             return statement.executeQuery(sql);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ResultSet executeSelectSqlGetResultSet(String sql, Map<String, Object> args) {
+        try {
+            NamedParameterStatement statement = getNamedParameterStatement(sql, args);
+            return statement.executeQuery();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -138,10 +154,7 @@ public class MysqlObjectMapper {
         final List<Field> resultFields = SqlGenerationUtilities.getFields(resultClass);
 
         try {
-            NamedParameterStatement statement = new NamedParameterStatement(connection, sql);
-            if (args != null) {
-                statement.setObjects(args);
-            }
+            NamedParameterStatement statement = getNamedParameterStatement(sql, args);
             ResultSet resultSet = statement.executeQuery();
             if (!foreigns.isEmpty() || foreigns == ALL_FOREIGN) {
                 List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
@@ -355,6 +368,10 @@ public class MysqlObjectMapper {
         return queryByPattern(pattern, offsetLimit, null);
     }
 
+    public <T> List<T> queryByPattern(final T pattern) {
+        return queryByPattern(pattern, null, null);
+    }
+
     public <T> T getObjectByPattern(final T pattern) {
         return getObjectByPattern(pattern, null);
     }
@@ -542,6 +559,14 @@ public class MysqlObjectMapper {
         String sql = SqlGenerationUtilities.select(pattern, foreigns, selectParams);
         return getListFromPattern(sql, pattern, pattern.getClass(), foreignFieldNames);
     }
+
+    public <Id, T> List<Id> queryIdesByPattern(final T pattern) {
+        String sql = SqlGenerationUtilities.selectIdes(pattern);
+        Map<String, Object> args = ResultSetUtilities.getArgs(pattern, SqlGenerationUtilities.getFields(pattern));
+        ResultSet resultSet = executeSelectSqlGetResultSet(sql, args);
+        return ResultSetUtilities.getValuesOfColumn(resultSet, "id");
+    }
+
 
     private boolean hasUniqueMultiIndexes(Class<?> aClass) {
         MultipleIndex multipleIndex = aClass.getAnnotation(MultipleIndex.class);

@@ -15,8 +15,9 @@ public class Comment implements Likable, WithPhoto {
     @NotNull
     private String message;
 
-    @ForeignKey(parent = Photo.class, field = "id")
+    @ForeignKey(parent = Photo.class, field = "id", useInDatabase = false)
     @NotNull
+    @Index
     private Long photoId;
 
     @ForeignKey(parent = User.class, field = "id")
