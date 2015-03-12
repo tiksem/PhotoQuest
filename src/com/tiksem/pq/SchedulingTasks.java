@@ -43,4 +43,9 @@ public class SchedulingTasks {
         RpsGuard rpsGuard = Settings.getInstance().getRpsGuard();
         rpsGuard.clearUnbannedIPes(getDatabaseManager().getMapper());
     }
+
+    @Scheduled(cron = "0 0/5 * * * *")
+    public void clearCaptcha() {
+        getDatabaseManager().clearOldCaptchas(5 * 60 * 1000);
+    }
 }

@@ -1,9 +1,6 @@
 package com.tiksem.pq.data;
 
-import com.tiksem.mysqljava.annotations.AddingDate;
-import com.tiksem.mysqljava.annotations.PrimaryKey;
-import com.tiksem.mysqljava.annotations.Stored;
-import com.tiksem.mysqljava.annotations.Table;
+import com.tiksem.mysqljava.annotations.*;
 
 /**
  * Created by CM on 1/18/2015.
@@ -15,6 +12,8 @@ public class CaptchaInfo {
     @Stored
     private String answer;
 
+    @Index
+    @NotNull
     @AddingDate
     private Long addingDate;
 

@@ -206,6 +206,20 @@ public class ResultSetUtilities {
         return result;
     }
 
+    public static <T> List<T> getValuesOfColumn(ResultSet resultSet, int columnIndex) {
+        List<T> result = new ArrayList<T>();
+
+        try {
+            while (resultSet.next()) {
+                result.add((T) resultSet.getObject(columnIndex + 1));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return result;
+    }
+
     public static List<Object> getListWithSeveralTables(ResultSet resultSet,
                                                         FieldsProvider fieldsProvider,
                                                         Class... resultClasses) {

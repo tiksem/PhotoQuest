@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * Created by CM on 1/18/2015.
@@ -76,5 +77,18 @@ public class DatabaseCaptchaManager implements CaptchaManager {
         boolean result = captchaInfo.getAnswer().equalsIgnoreCase(answer);
         mapper.delete(captchaInfo);
         return result;
+    }
+
+    @Override
+    public void clearOldCaptchas(long delay) {
+        long currentTime = System.currentTimeMillis();
+        long timeStamp = currentTime - delay;
+        String selectSql = "SELECT id FROM CaptchaInfo WHERE addingDate < " + timeStamp;
+        List<Long> captchasToDelete = mapper.executeOneColumnValuesSql(selectSql);
+        mapper.executeNonSelectSQL("DELETE FROM CaptchaInfo WHERE addingDate < " + timeStamp);
+
+        for(long id : captchasToDelete){
+            imageManager.deleteImage(id);
+        }
     }
 }

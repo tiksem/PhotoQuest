@@ -9,4 +9,5 @@ public interface CaptchaManager {
     public long saveCaptcha();
     public InputStream getCaptchaImage(long key);
     public boolean checkCaptcha(long key, String answer);
+    public void clearOldCaptchas(long delay);
 }

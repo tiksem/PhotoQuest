@@ -16,7 +16,6 @@ import com.tiksem.pq.db.advanced.AdvancedRequestsManager;
 import com.tiksem.pq.db.advanced.SearchUsersParams;
 import com.tiksem.pq.exceptions.*;
 import com.tiksem.pq.http.HttpUtilities;
-import com.utils.framework.CollectionUtils;
 import com.utils.framework.MathUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.google.places.*;
@@ -2053,8 +2052,8 @@ public class DatabaseManager {
     }
 
     private Integer getRandomCityId() {
-        int max = mapper.executeOnValueSelectSql("select max(id) from city", Integer.class);
-        int min = mapper.executeOnValueSelectSql("select min(id) from city", Integer.class);
+        int max = mapper.executeFirstRowValueSelectSql("select max(id) from city", Integer.class);
+        int min = mapper.executeFirstRowValueSelectSql("select min(id) from city", Integer.class);
         for (int i = 0; i < 100; i++) {
             int randomCityId = MathUtils.randInt(min, max);
             if (mapper.getObjectById(City.class, randomCityId) != null) {
@@ -2654,6 +2653,10 @@ public class DatabaseManager {
 
     public void updateNewFlag() {
         advancedRequestsManager.updateNewFlag();
+    }
+
+    public void clearOldCaptchas(long delay) {
+        captchaManager.clearOldCaptchas(delay);
     }
 
     @Override

@@ -65,12 +65,11 @@ public class InsertStatement extends BatchStatement {
 
         long currentTimeMillis = System.currentTimeMillis();
         Reflection.executeMethodsWithAnnotation(object, OnPrepareForStorage.class);
-        FieldsCheckingUtilities.fixAndCheckFields(object);
         Reflection.setValuesOfFieldsWithAnnotationIfNull(object, currentTimeMillis,
                 AddingDate.class);
-
         Reflection.setValuesOfFieldsWithAnnotation(object, currentTimeMillis,
                 ModificationDate.class);
+        FieldsCheckingUtilities.fixAndCheckFields(object);
 
         List<Field> fields = SqlGenerationUtilities.getFieldsExcludingPrimaryKey(aClass);
         Field primaryKey = Reflection.getFieldWithAnnotation(aClass, PrimaryKey.class);

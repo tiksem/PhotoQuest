@@ -113,7 +113,12 @@ public class MysqlObjectMapper {
         }
     }
 
-    public <T> T executeOnValueSelectSql(String sql, Class<T> resultClass) {
+    public <T> List<T> executeOneColumnValuesSql(String sql) {
+        ResultSet resultSet = executeSelectSqlGetResultSet(sql);
+        return ResultSetUtilities.getValuesOfColumn(resultSet, 0);
+    }
+
+    public <T> T executeFirstRowValueSelectSql(String sql, Class<T> resultClass) {
         ResultSet resultSet = executeSelectSqlGetResultSet(sql);
         try {
             if (resultSet.next()) {
