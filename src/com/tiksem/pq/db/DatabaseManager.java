@@ -789,11 +789,11 @@ public class DatabaseManager {
     }
 
     private void deletePhotoComments(long photoId) {
-        Comment comment = new Comment();
-        comment.setPhotoId(photoId);
-        List<Long> ides = mapper.queryIdesByPattern(comment);
-        for(long id : ides){
-            deleteComment(id);
+        Comment pattern = new Comment();
+        pattern.setPhotoId(photoId);
+        List<Comment> comments = mapper.queryByPattern(pattern);
+        for(Comment comment : comments){
+            deleteComment(comment.getId(), comment.getUserId());
         }
     }
 
@@ -1520,10 +1520,20 @@ public class DatabaseManager {
         return mapper.getObjectByPattern(reply);
     }
 
-    public void deleteComment(long commentId) {
+    public void deleteComment(HttpServletRequest request, long commentId) {
+        User signedInUser = getSignedInUserOrThrow(request);
         Comment comment = getCommentByIdOrThrow(commentId);
+        Long signedInUserId = signedInUser.getId();
+        if(!signedInUserId.equals(comment.getUserId())){
+            throw new PermissionDeniedException("Unable to delete comment, which is not owned by you");
+        }
+
+        deleteComment(commentId, signedInUserId);
+    }
+
+    private void deleteComment(long commentId, long userId) {
         advancedRequestsManager.deleteComment(commentId);
-        advancedRequestsManager.updateUnreadRepliesCount(comment.getUserId());
+        advancedRequestsManager.updateUnreadRepliesCount(userId);
     }
 
     public Comment addComment(HttpServletRequest request,

@@ -883,7 +883,7 @@ public class ApiHandler {
     @RequestMapping("/deleteComment")
     public @ResponseBody Object deleteComment(
             @RequestParam(value = "id", required = true) Long commentId) {
-        getDatabaseManager().deleteComment(commentId);
+        getDatabaseManager().deleteComment(request, commentId);
         return new Success();
     }
 
