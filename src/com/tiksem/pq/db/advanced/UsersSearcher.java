@@ -33,17 +33,17 @@ class UsersSearcher {
                                          boolean getCount, Object orderBy) {
         long innerLimit = SEARCH_USERS_BY_QUERY_LIMIT;
 
-        if(params.query == null){
-            params.query = "";
+        if(params.filter == null){
+            params.filter = "";
             innerLimit = Long.MAX_VALUE;
         }
 
-        String[] queryParts = params.query.split(" +");
+        String[] queryParts = params.filter.split(" +");
         String query;
         if(queryParts.length > 1){
             query = queryParts[0] + " " + queryParts[1];
         } else {
-            query = params.query;
+            query = params.filter;
         }
 
         query = getLikeQuery(query);

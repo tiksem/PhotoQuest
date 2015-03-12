@@ -4,17 +4,17 @@ package com.tiksem.pq.db.advanced;
 * Created by CM on 2/12/2015.
 */
 public class SearchUsersParams {
-    public String query;
+    public String filter;
     public Boolean gender;
     public Integer cityId;
     public Integer countryId;
 
-    public String getQuery() {
-        return query;
+    public String getFilter() {
+        return filter;
     }
 
-    public void setQuery(String query) {
-        this.query = query;
+    public void setFilter(String filter) {
+        this.filter = filter;
     }
 
     public Boolean getGender() {
