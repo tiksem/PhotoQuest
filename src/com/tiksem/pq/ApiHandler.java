@@ -460,9 +460,20 @@ public class ApiHandler {
     }
 
     @RequestMapping("/deletePhoto")
-    public @ResponseBody Object deletePhoto(@RequestParam(value = "id") Long id) {
-        getDatabaseManager().deletePhoto(request, id);
-        return new Success();
+    public @ResponseBody Object deletePhoto(@RequestParam(value = "photoquestId", required = false)
+                                                Long photoquestId,
+                                            @RequestParam(value = "userId", required = false) Long userId,
+                                            @RequestParam("photoId") Long photoId,
+                                            @RequestParam("next") boolean next,
+                                            @RequestParam(value = "category", defaultValue = "all")
+                                            PhotoCategory category,
+                                            @RequestParam(value = "order", required = false,
+                                                    defaultValue = "newest")
+                                            RatingOrder order) {
+        DatabaseManager databaseManager = getDatabaseManager();
+        Object result = getNextPrevPhoto(photoquestId, userId, photoId, next, category, order);
+        databaseManager.deletePhoto(request, photoId);
+        return result;
     }
 
     @RequestMapping("/setAvatar")
@@ -669,6 +680,26 @@ public class ApiHandler {
         long count = getDatabaseManager().
                 getPhotosOfSignedInUserByPhotoquestCount(request, photoquestId);
         return new CountResponse(count);
+    }
+
+    @RequestMapping("/getNextPrevPhoto")
+    public @ResponseBody Object getNextPrevPhoto(@RequestParam(value = "photoquestId", required = false)
+                                                     Long photoquestId,
+                                                 @RequestParam(value = "userId", required = false) Long userId,
+                                                 @RequestParam("photoId") Long photoId,
+                                                 @RequestParam("next") boolean next,
+                                                 @RequestParam(value = "category", defaultValue = "all")
+                                                 PhotoCategory category,
+                                                 @RequestParam(value = "order", required = false,
+                                                                     defaultValue = "newest")
+                                                 RatingOrder order) {
+        if(category == PhotoCategory.avatar){
+            return getNextPrevAvatar(userId, photoId, next, order);
+        } else if(userId != null) {
+            return getNextPrevPhotoOfUser(userId, photoId, next, order);
+        } else {
+            return getNextPrevPhotoOfPhotoquest(photoquestId, photoId, next, category, order);
+        }
     }
 
 
