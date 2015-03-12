@@ -37,7 +37,6 @@ import java.util.*;
  * Created by CM on 10/30/2014.
  */
 public class DatabaseManager {
-    private static final String DEFAULT_AVATAR_URL = "/images/empty_avatar.png";
     public static final String AVATAR_QUEST_NAME = "Avatar";
 
     private static final String GOOGLE_API_KEY = "AIzaSyAfhfIJpCrb29TbTafQ1UWSqqaSaOuVCIg";
@@ -57,6 +56,7 @@ public class DatabaseManager {
     private AdvancedRequestsManager advancedRequestsManager;
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
     private String lang;
+    private String defaultAvatarPath = Settings.getInstance().get("defaultAvatarPath");
 
     // do not use directly
     private User _signedInUser;
@@ -1142,7 +1142,7 @@ public class DatabaseManager {
     }
 
     public String getDefaultAvatar(HttpServletRequest request) {
-        return HttpUtilities.getBaseUrl(request) + "/" + DEFAULT_AVATAR_URL;
+        return HttpUtilities.getBaseUrl(request) + "/" + defaultAvatarPath;
     }
 
     public void setAvatar(HttpServletRequest request, WithAvatar withAvatar) {
