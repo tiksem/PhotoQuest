@@ -827,7 +827,8 @@ public class DatabaseManager {
         }
 
         if(photo.getId().equals(signedInUser.getAvatarId())){
-            throw new AvatarDeletionException();
+            Map<String, Object> args = Collections.singletonMap("userId", (Object)photo.getUserId());
+            mapper.executeModifySQL("update user set avatarId = null WHERE id = :userId", args);
         }
 
         Long photoquestId = photo.getPhotoquestId();
