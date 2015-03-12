@@ -802,6 +802,10 @@ public class DatabaseManager {
         long likesCount = photo.getLikesCount();
         mapper.changeValue(photoquest, "likesCount", -likesCount);
         updatePhotoquestAvatar(photoquest);
+
+        Action action = new Action();
+        action.setPhotoId(id);
+        mapper.delete(action);
     }
 
     public Message getMessageById(long id) {
