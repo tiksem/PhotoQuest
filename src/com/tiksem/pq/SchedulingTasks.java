@@ -30,7 +30,7 @@ public class SchedulingTasks {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        return new DatabaseManager(new MysqlObjectMapper(connection), "en");
+        return new DatabaseManager(null, new MysqlObjectMapper(connection), "en");
     }
 
     @Scheduled(cron = "0 0/30 * * * ?")

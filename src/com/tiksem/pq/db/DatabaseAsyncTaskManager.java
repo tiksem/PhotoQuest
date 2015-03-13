@@ -3,6 +3,7 @@ package com.tiksem.pq.db;
 import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.utils.framework.strings.Strings;
 
+import javax.servlet.http.HttpServletRequest;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
@@ -21,6 +22,7 @@ public class DatabaseAsyncTaskManager {
 
     private ConcurrentMap<Thread, DatabaseManager> databaseManagers =
             new ConcurrentHashMap<Thread, DatabaseManager>();
+    private Queue<RuntimeException> exceptions = new ConcurrentLinkedQueue<RuntimeException>();
 
     private class ThreadFactoryImpl implements ThreadFactory {
         @Override
@@ -28,7 +30,7 @@ public class DatabaseAsyncTaskManager {
             return new Thread(runnable){
                 {
                     try {
-                        databaseManagers.put(this, new DatabaseManager(
+                        databaseManagers.put(this, new DatabaseManager(null,
                                 new MysqlObjectMapper(PhotoquestDataSource.getInstance().getConnection()), null));
                     } catch (SQLException e) {
                         e.printStackTrace();
@@ -58,11 +60,13 @@ public class DatabaseAsyncTaskManager {
 
     public class Handler {
         private String lang;
+        private String requestUrl;
         private Queue<Task> queue = new ConcurrentLinkedQueue<Task>();
         private int threadHashCode = System.identityHashCode(Thread.currentThread());
 
-        public Handler(String lang) {
+        public Handler(String lang, HttpServletRequest request) {
             this.lang = lang;
+            requestUrl = request.getRequestURI();
         }
 
         public void execute(final Task task) {
@@ -77,7 +81,12 @@ public class DatabaseAsyncTaskManager {
                         queue.add(task);
                         while (!queue.isEmpty()) {
                             Task task = queue.remove();
-                            task.run(databaseManager);
+                            try {
+                                task.run(databaseManager);
+                            } catch (Throwable e) {
+                                exceptions.add(new AsyncTaskExecutionException(requestUrl, e));
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }, lang);
@@ -103,7 +112,11 @@ public class DatabaseAsyncTaskManager {
         });
     }
 
-    public Handler createHandler(String lang) {
-        return new Handler(lang);
+    public Handler createHandler(String lang, HttpServletRequest request) {
+        return new Handler(lang, request);
+    }
+
+    public Queue<RuntimeException> getExceptions() {
+        return exceptions;
     }
 }

@@ -75,7 +75,7 @@ public class ApiHandler {
         Cookie langCookie = HttpUtilities.getCookie("lang", request.getCookies());
         String lang = langCookie == null ? "en" : langCookie.getValue();
 
-        final DatabaseManager databaseManager = new DatabaseManager(mapper, lang);
+        final DatabaseManager databaseManager = new DatabaseManager(request, mapper, lang);
         RequestContextHolder.currentRequestAttributes().
                 registerDestructionCallback("DatabaseManager", new Runnable() {
                     @Override
@@ -88,7 +88,7 @@ public class ApiHandler {
 
     public void checkDebug(DatabaseManager databaseManager) {
         if(!Settings.getInstance().getBoolean("debug")){
-            databaseManager.checkAdminPermissions(request);
+            databaseManager.checkAdminPermissions();
         }
     }
 
@@ -118,11 +118,11 @@ public class ApiHandler {
     }
 
     private Object getMessagesResponse(DatabaseManager databaseManager, Collection<Message> messages) {
-        User user = databaseManager.getSignedInUserOrThrow(request);
+        User user = databaseManager.getSignedInUserOrThrow();
         if(isMobileClient()){
             return new MobileMessagesList(messages, user);
         } else {
-            databaseManager.setAvatar(request, user);
+            databaseManager.setAvatar(user);
             DialogMessages dialogMessages = new DialogMessages();
             dialogMessages.messages = messages;
             dialogMessages.user = user;
@@ -199,7 +199,7 @@ public class ApiHandler {
                                       @RequestParam(value="mobile", required=false, defaultValue = "false")
                                       boolean mobile,
                                       HttpServletResponse response){
-        User user = getDatabaseManager().loginOrThrow(request, login, password);
+        User user = getDatabaseManager().loginOrThrow(login, password);
 
         setLoginCookies(response, user);
 
@@ -237,7 +237,7 @@ public class ApiHandler {
         user.setCityId(cityId);
         user.setGender(gender);
 
-        return databaseManager.registerUser(request, user, (InputStream) null);
+        return databaseManager.registerUser(user, (InputStream) null);
     }
 
     @RequestMapping(value = "/editProfile", method = RequestMethod.GET)
@@ -247,7 +247,7 @@ public class ApiHandler {
                                          @RequestParam(value="cityId", required=false) Integer cityId)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.editProfile(request, name, lastName, cityId);
+        return databaseManager.editProfile(name, lastName, cityId);
     }
 
     @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
@@ -257,7 +257,7 @@ public class ApiHandler {
             HttpServletResponse response)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        User user = databaseManager.changePassword(request, newPassword, oldPassword);
+        User user = databaseManager.changePassword(newPassword, oldPassword);
 
         setLoginCookies(response, user);
 
@@ -276,7 +276,7 @@ public class ApiHandler {
                                          String password) throws IOException {
 
         DatabaseManager databaseManager = getDatabaseManager();
-        List<User> users = databaseManager.registerRandomUsers(request, startId, count, password);
+        List<User> users = databaseManager.registerRandomUsers(startId, count, password);
         return getUsersResponse(users);
     }
 
@@ -288,7 +288,7 @@ public class ApiHandler {
             RatingOrder order) {
         DatabaseManager databaseManager = getDatabaseManager();
         Collection<User> users
-                = databaseManager.searchUsers(request, searchParams, offsetLimit, order);
+                = databaseManager.searchUsers(searchParams, offsetLimit, order);
 
         return getUsersResponse(users, databaseManager, searchParams.countryId, searchParams.cityId);
     }
@@ -304,19 +304,19 @@ public class ApiHandler {
     public @ResponseBody Object getFriendsCount(SearchUsersParams searchParams,
                                                 @RequestParam(value = "id", required = false)
                                                 Long id) {
-        return new CountResponse(getDatabaseManager().getFriendsCount(request, searchParams, id));
+        return new CountResponse(getDatabaseManager().getFriendsCount(searchParams, id));
     }
 
     @RequestMapping("/getReceivedRequestsCount")
     public @ResponseBody Object getReceivedRequestsCount(SearchUsersParams searchParams) {
         return new CountResponse(getDatabaseManager().
-                getReceivedRequestsCount(request, searchParams, null));
+                getReceivedRequestsCount(searchParams, null));
     }
 
     @RequestMapping("/getSentRequestsCount")
     public @ResponseBody Object getSentRequestsCount(SearchUsersParams searchParams) {
         return new CountResponse(getDatabaseManager().
-                getSentRequestsCount(request, searchParams, null));
+                getSentRequestsCount(searchParams, null));
     }
 
     @RequestMapping("/friends")
@@ -328,21 +328,21 @@ public class ApiHandler {
                                            Long id) {
         DatabaseManager databaseManager = getDatabaseManager();
         Collection<User> users
-                = databaseManager.getFriends(request, searchParams, offsetLimit, order, id);
+                = databaseManager.getFriends(searchParams, offsetLimit, order, id);
 
         return getUsersResponse(users, databaseManager, searchParams.countryId, searchParams.cityId);
     }
 
     @RequestMapping("/followers")
     public @ResponseBody Object getFollowers(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getFollowers(request, offsetLimit,
+        Collection<User> users = getDatabaseManager().getFollowers(offsetLimit,
                 RatingOrder.newest);
         return getUsersResponse(users);
     }
 
     @RequestMapping("/getFollowingUsers")
     public @ResponseBody Object getFollowingUsers(OffsetLimit offsetLimit) {
-        Collection<User> users = getDatabaseManager().getFollowingUsers(request, offsetLimit,
+        Collection<User> users = getDatabaseManager().getFollowingUsers(offsetLimit,
                 RatingOrder.newest);
         return getUsersResponse(users);
     }
@@ -353,8 +353,7 @@ public class ApiHandler {
                                                           @RequestParam(value = "order", required = false,
                                                                   defaultValue = "newest")
                                                           RatingOrder order) {
-        Collection<User> users = getDatabaseManager().getReceivedFriendRequests(
-                request, searchParams, offsetLimit, order);
+        Collection<User> users = getDatabaseManager().getReceivedFriendRequests(searchParams, offsetLimit, order);
         return getUsersResponse(users);
     }
 
@@ -364,8 +363,7 @@ public class ApiHandler {
                                                       @RequestParam(value = "order", required = false,
                                                               defaultValue = "newest")
                                                       RatingOrder order) {
-        Collection<User> users = getDatabaseManager().getSentFriendRequests(
-                request, searchParams, offsetLimit, order);
+        Collection<User> users = getDatabaseManager().getSentFriendRequests(searchParams, offsetLimit, order);
         return getUsersResponse(users);
     }
 
@@ -392,7 +390,7 @@ public class ApiHandler {
             throw new IllegalArgumentException("Photoquest name is empty");
         }
 
-        return getDatabaseManager().createPhotoQuest(request, name, tags, follow);
+        return getDatabaseManager().createPhotoQuest(name, tags, follow);
     }
 
     @RequestMapping(value="/addPhotoToPhotoQuest", method= RequestMethod.POST)
@@ -407,14 +405,14 @@ public class ApiHandler {
             message = HttpUtilities.reencodePostParamString(message);
         }
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.addPhotoToPhotoquest(request, id, file, message, follow);
+        return databaseManager.addPhotoToPhotoquest(id, file, message, follow);
     }
 
     @RequestMapping(value="/changeAvatar", method= RequestMethod.POST)
     public @ResponseBody Object changeAvatar(@RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.changeAvatar(request, file);
+        return databaseManager.changeAvatar(file);
     }
 
     @RequestMapping(value = Photo.IMAGE_URL_PATH + "{id}.jpg", method = RequestMethod.GET,
@@ -480,13 +478,13 @@ public class ApiHandler {
         if (userId != null || photoquestId != null) {
             result = getNextPrevPhoto(photoquestId, userId, photoId, next, category, order);
         }
-        databaseManager.deletePhoto(request, photoId);
+        databaseManager.deletePhoto(photoId);
         return result;
     }
 
     @RequestMapping("/setAvatar")
     public @ResponseBody Object setAvatar(@RequestParam(value = "photoId") Long id) {
-        return getDatabaseManager().setAvatar(request, id);
+        return getDatabaseManager().setAvatar(id);
     }
 
     @RequestMapping("/getCaptcha")
@@ -503,9 +501,9 @@ public class ApiHandler {
                                                @RequestParam(value = "filter", required = false) String filter){
         final Collection<Photoquest> photoquests;
         if(Strings.isEmpty(filter)){
-            photoquests = getDatabaseManager().getPhotoQuests(request, offsetLimit, order);
+            photoquests = getDatabaseManager().getPhotoQuests(offsetLimit, order);
         } else {
-            photoquests = getDatabaseManager().searchPhotoquests(request, filter, offsetLimit, order);
+            photoquests = getDatabaseManager().searchPhotoquests(filter, offsetLimit, order);
         }
         return getPhotoquestsResponse(photoquests);
     }
@@ -517,7 +515,7 @@ public class ApiHandler {
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests =
-                getDatabaseManager().getPhotoquestsCreatedByUser(request, filter, userId, offsetLimit, order);
+                getDatabaseManager().getPhotoquestsCreatedByUser(filter, userId, offsetLimit, order);
 
         return getPhotoquestsResponse(photoquests);
     }
@@ -537,7 +535,7 @@ public class ApiHandler {
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests =
-                getDatabaseManager().getPerformedPhotoquests(request, userId, offsetLimit, filter, order);
+                getDatabaseManager().getPerformedPhotoquests(userId, offsetLimit, filter, order);
 
         return getPhotoquestsResponse(photoquests);
     }
@@ -557,7 +555,7 @@ public class ApiHandler {
             @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
             OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests =
-                getDatabaseManager().getFollowingPhotoquests(request, userId, filter, offsetLimit, order);
+                getDatabaseManager().getFollowingPhotoquests(userId, filter, offsetLimit, order);
         return getPhotoquestsResponse(photoquests);
     }
 
@@ -571,13 +569,13 @@ public class ApiHandler {
 
     @RequestMapping("/followQuest")
     public @ResponseBody Object followQuest(@RequestParam("questId") Long questId){
-        getDatabaseManager().followPhotoquest(request, questId);
+        getDatabaseManager().followPhotoquest(questId);
         return new Success();
     }
 
     @RequestMapping("/unfollowQuest")
     public @ResponseBody Object unfollowQuest(@RequestParam("questId") Long questId){
-        getDatabaseManager().unfollowPhotoquest(request, questId);
+        getDatabaseManager().unfollowPhotoquest(questId);
         return new Success();
     }
 
@@ -589,7 +587,7 @@ public class ApiHandler {
 
     @RequestMapping("/getPhotoquestById")
     public @ResponseBody Object getPhotoquestById(@RequestParam("id") Long id){
-        return getDatabaseManager().getPhotoQuestAndFillInfo(request, id);
+        return getDatabaseManager().getPhotoQuestAndFillInfo(id);
     }
 
     @RequestMapping("/getPhotoById")
@@ -604,7 +602,7 @@ public class ApiHandler {
         params.category = category;
         params.photoquestId = photoquestId;
         params.userId = userId;
-        return databaseManager.getPhotoAndFillInfo(request, id, params);
+        return databaseManager.getPhotoAndFillInfo(id, params);
     }
 
     @RequestMapping("/getPhotoPosition")
@@ -618,13 +616,13 @@ public class ApiHandler {
     @RequestMapping("/getUserById")
     public @ResponseBody Object getUserById(@RequestParam("id") long id){
         DatabaseManager databaseManager = getDatabaseManager();
-        return getUserResponse(databaseManager.requestUserProfileData(request, id));
+        return getUserResponse(databaseManager.requestUserProfileData(id));
     }
 
     @RequestMapping("/getUnreadMessagesCount")
     public @ResponseBody Object getUnreadMessagesCount(){
         DatabaseManager databaseManager = getDatabaseManager();
-        final User user = databaseManager.getSignedInUserOrThrow(request);
+        final User user = databaseManager.getSignedInUserOrThrow();
         return new CountResponse(user.getUnreadMessagesCount());
     }
 
@@ -644,11 +642,11 @@ public class ApiHandler {
         Collection<Photo> photos = null;
         if (category == PhotoCategory.all) {
             photos = getDatabaseManager().
-                    getPhotosOfPhotoquest(request, photoquestId, offsetLimit, order);
+                    getPhotosOfPhotoquest(photoquestId, offsetLimit, order);
         } else if(category == PhotoCategory.friends) {
-            photos = getDatabaseManager().getPhotosOfFriendsByPhotoquest(request, photoquestId, order, offsetLimit);
+            photos = getDatabaseManager().getPhotosOfFriendsByPhotoquest(photoquestId, order, offsetLimit);
         } else if(category == PhotoCategory.mine) {
-            photos = getDatabaseManager().getPhotosOfSignedInUserByPhotoquest(request, photoquestId, order, offsetLimit);
+            photos = getDatabaseManager().getPhotosOfSignedInUserByPhotoquest(photoquestId, order, offsetLimit);
         }
 
         return getPhotosResponse(photos);
@@ -661,14 +659,14 @@ public class ApiHandler {
                                                       RatingOrder order,
                                                       OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
-                getPhotosOfFriendsByPhotoquest(request, photoquestId, order, offsetLimit);
+                getPhotosOfFriendsByPhotoquest(photoquestId, order, offsetLimit);
         return new PhotosList(photos);
     }
 
     @RequestMapping("/getFiendsPhotosOfPhotoquestCount")
     public @ResponseBody Object getFiendsPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
         long count = getDatabaseManager().
-                getPhotosOfFriendsByPhotoquestCount(request, photoquestId);
+                getPhotosOfFriendsByPhotoquestCount(photoquestId);
         return new CountResponse(count);
     }
 
@@ -679,14 +677,14 @@ public class ApiHandler {
                                                             RatingOrder order,
                                                             OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
-                getPhotosOfSignedInUserByPhotoquest(request, photoquestId, order, offsetLimit);
+                getPhotosOfSignedInUserByPhotoquest(photoquestId, order, offsetLimit);
         return new PhotosList(photos);
     }
 
     @RequestMapping("/getUserPhotosOfPhotoquestCount")
     public @ResponseBody Object getUserPhotosOfPhotoquestCount(@RequestParam("id") Long photoquestId){
         long count = getDatabaseManager().
-                getPhotosOfSignedInUserByPhotoquestCount(request, photoquestId);
+                getPhotosOfSignedInUserByPhotoquestCount(photoquestId);
         return new CountResponse(count);
     }
 
@@ -725,13 +723,13 @@ public class ApiHandler {
                                                                      defaultValue = "newest")
                                                              RatingOrder order){
         if (category == PhotoCategory.all) {
-            return getDatabaseManager().getNextPrevPhotoOfPhotoquest(request,
+            return getDatabaseManager().getNextPrevPhotoOfPhotoquest(
                     photoquestId, photoId, order, next);
         } else if(category == PhotoCategory.mine) {
             return getDatabaseManager().getNextPrevPhotoOfSignedInUserInPhotoquest
-                    (request, photoquestId, photoId, order, next);
+                    (photoquestId, photoId, order, next);
         } else if (category == PhotoCategory.friends) {
-            return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(request,
+            return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(
                     photoquestId, photoId, order, next);
         }
 
@@ -745,7 +743,7 @@ public class ApiHandler {
                                                              @RequestParam(value = "order", required = false,
                                                                      defaultValue = "newest")
                                                              RatingOrder order){
-        return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(request,
+        return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(
                 photoquestId, photoId, order, next);
     }
 
@@ -757,7 +755,7 @@ public class ApiHandler {
                                                                               defaultValue = "newest")
                                                                       RatingOrder order){
         return getDatabaseManager().getNextPrevPhotoOfSignedInUserInPhotoquest
-                (request, photoquestId, photoId, order, next);
+                (photoquestId, photoId, order, next);
     }
 
     @RequestMapping("/getNextPrevPhotoOfUser")
@@ -767,7 +765,7 @@ public class ApiHandler {
                                                              @RequestParam(value = "order", required = false,
                                                                      defaultValue = "newest")
                                                              RatingOrder order){
-        return getDatabaseManager().getNextPrevPhotoOfUser(request, userId, photoId, order, next);
+        return getDatabaseManager().getNextPrevPhotoOfUser(userId, photoId, order, next);
     }
 
     @RequestMapping("/getNextPrevAvatar")
@@ -777,7 +775,7 @@ public class ApiHandler {
                                                        @RequestParam(value = "order", required = false,
                                                                defaultValue = "newest")
                                                        RatingOrder order){
-        return getDatabaseManager().getNextPrevAvatar(request, userId, photoId, order, next);
+        return getDatabaseManager().getNextPrevAvatar(userId, photoId, order, next);
     }
 
     @RequestMapping("/getPhotosOfPhotoquestCount")
@@ -794,7 +792,7 @@ public class ApiHandler {
                                                       RatingOrder order,
                                                       OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
-                getPhotosOfUser(request, userId, offsetLimit, order);
+                getPhotosOfUser(userId, offsetLimit, order);
         return new PhotosList(photos);
     }
 
@@ -807,13 +805,13 @@ public class ApiHandler {
 
     @RequestMapping("/addFriend")
     public @ResponseBody Object addFriend(@RequestParam("id") Long id){
-        getDatabaseManager().addFriend(request, id);
+        getDatabaseManager().addFriend(id);
         return new Success();
     }
 
     @RequestMapping("/removeFriend")
     public @ResponseBody Object removeFriend(@RequestParam("id") Long id){
-        getDatabaseManager().removeFriend(request, id);
+        getDatabaseManager().removeFriend(id);
         return new Success();
     }
 
@@ -823,7 +821,7 @@ public class ApiHandler {
             @RequestParam(value = "message", required = true) String message,
             @RequestParam(value = "commentId", required = false) Long toCommentId) {
         checkLikeCommentParams(photoId, toCommentId);
-        return getDatabaseManager().addComment(request, photoId, message, toCommentId);
+        return getDatabaseManager().addComment(photoId, message, toCommentId);
     }
 
     @RequestMapping("/sendMessage")
@@ -834,7 +832,7 @@ public class ApiHandler {
             throw new IllegalArgumentException("message.length > 255");
         }
 
-        return getSendMessageResponse(getDatabaseManager().addMessage(request, toUserId, message));
+        return getSendMessageResponse(getDatabaseManager().addMessage(toUserId, message));
     }
 
     @RequestMapping("/getLocationSuggestions")
@@ -869,26 +867,26 @@ public class ApiHandler {
                                                OffsetLimit offsetLimit) {
         DatabaseManager databaseManager = getDatabaseManager();
         Collection<Message> result =
-                databaseManager.getMessagesWithUser(request, userId, offsetLimit, afterId);
+                databaseManager.getMessagesWithUser(userId, offsetLimit, afterId);
         return getMessagesResponse(databaseManager, result);
     }
 
     @RequestMapping("/getDialogs")
     public @ResponseBody Object getDialogs(OffsetLimit offsetLimit) {
-        Collection<Dialog> dialogs = getDatabaseManager().getDialogs(request, offsetLimit);
+        Collection<Dialog> dialogs = getDatabaseManager().getDialogs(offsetLimit);
         return getDialogsResponse(dialogs);
     }
 
     @RequestMapping("/getDialogsCount")
     public @ResponseBody Object getDialogsCount() {
-        long count = getDatabaseManager().getDialogsCount(request);
+        long count = getDatabaseManager().getDialogsCount();
         return new CountResponse(count);
     }
 
     @RequestMapping("/deleteComment")
     public @ResponseBody Object deleteComment(
             @RequestParam(value = "id", required = true) Long commentId) {
-        getDatabaseManager().deleteComment(request, commentId);
+        getDatabaseManager().deleteComment(commentId);
         return new Success();
     }
 
@@ -898,7 +896,7 @@ public class ApiHandler {
                                                    Long afterId,
                                                    OffsetLimit offsetLimit){
         Collection<Comment> comments = getDatabaseManager().
-                getCommentsOnPhotoAndFillData(request, photoId, afterId, offsetLimit);
+                getCommentsOnPhotoAndFillData(photoId, afterId, offsetLimit);
         return new CommentsList(comments);
     }
 
@@ -919,9 +917,9 @@ public class ApiHandler {
             DatabaseManager databaseManager = getDatabaseManager();
             creationTime = System.currentTimeMillis() - currentTimeMillis;
             if (photoId != null) {
-                return databaseManager.likePhoto(request, photoId);
+                return databaseManager.likePhoto(photoId);
             } else {
-                return databaseManager.likeComment(request, commentId);
+                return databaseManager.likeComment(commentId);
             }
         } finally {
             long a = System.currentTimeMillis() - currentTimeMillis;
@@ -932,7 +930,7 @@ public class ApiHandler {
 
     @RequestMapping("/unlike")
     public @ResponseBody Object unlike(@RequestParam("id") Long likeId) {
-        getDatabaseManager().unlike(request, likeId);
+        getDatabaseManager().unlike(likeId);
         return new Success();
     }
 
@@ -974,17 +972,17 @@ public class ApiHandler {
 
     @RequestMapping("/getUserStats")
     public @ResponseBody Object getUserStats() {
-        return getDatabaseManager().getUserStats(request);
+        return getDatabaseManager().getUserStats();
     }
 
     @RequestMapping("/getReplies")
     public @ResponseBody Object getReplies(OffsetLimit offsetLimit) {
-        return getRepliesResponse(getDatabaseManager().getRepliesWithFullInfo(request, offsetLimit));
+        return getRepliesResponse(getDatabaseManager().getRepliesWithFullInfo(offsetLimit));
     }
 
     @RequestMapping("/getRepliesCount")
     public @ResponseBody Object getRepliesCount() {
-        return new CountResponse(getDatabaseManager().getRepliesCount(request));
+        return new CountResponse(getDatabaseManager().getRepliesCount());
     }
 
     @RequestMapping("/getNews")
@@ -993,9 +991,9 @@ public class ApiHandler {
             OffsetLimit offsetLimit) {
         Collection<Action> news;
         if(userId == null){
-            news = getDatabaseManager().getNews(request, offsetLimit);
+            news = getDatabaseManager().getNews(offsetLimit);
         } else {
-            news = getDatabaseManager().getUserNews(request, userId, offsetLimit);
+            news = getDatabaseManager().getUserNews(userId, offsetLimit);
         }
 
         return getFeedResponse(news);
@@ -1006,7 +1004,7 @@ public class ApiHandler {
             @RequestParam(value = "userId", required = false) Long userId) {
         long count;
         if(userId == null){
-            count = getDatabaseManager().getNewsCount(request);
+            count = getDatabaseManager().getNewsCount();
         } else {
             count = getDatabaseManager().getUserNewsCount(userId);
         }
@@ -1064,7 +1062,7 @@ public class ApiHandler {
         DatabaseManager databaseManager = getDatabaseManager();
         checkDebug(databaseManager);
         MysqlObjectMapper mapper = databaseManager.getMapper();
-        LocationsCreatorFromJSON creatorFromJSON = new LocationsCreatorFromJSON(mapper, "locations.txt");
+        LocationsCreatorFromJSON creatorFromJSON = new LocationsCreatorFromJSON(mapper, request, "locations.txt");
         creatorFromJSON.initLocations();
         return new Success();
     }

@@ -1,9 +1,6 @@
 package com.tiksem.pq.db;
 
-import com.tiksem.mysqljava.MysqlObjectMapper;
-import com.tiksem.mysqljava.MysqlTablesCreator;
-import com.tiksem.mysqljava.OffsetLimit;
-import com.tiksem.mysqljava.SelectParams;
+import com.tiksem.mysqljava.*;
 import com.tiksem.mysqljava.security.ApiRequest;
 import com.tiksem.pq.Settings;
 import com.tiksem.pq.data.*;
@@ -56,17 +53,41 @@ public class DatabaseManager {
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
     private String lang;
     private String defaultAvatarPath = Settings.getInstance().get("defaultAvatarPath");
+    private HttpServletRequest request;
 
     // do not use directly
     private User _signedInUser;
 
-    public DatabaseManager(MysqlObjectMapper mapper, String lang) {
+    public DatabaseManager(HttpServletRequest request, MysqlObjectMapper mapper, String lang) {
         this.mapper = mapper;
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
-        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler(lang);
+        DatabaseAsyncTaskManager asyncTaskManager = DatabaseAsyncTaskManager.getInstance();
+        asyncTaskHandler = asyncTaskManager.createHandler(lang, request);
         captchaManager = new DatabaseCaptchaManager(mapper);
         imageManager = new FileSystemImageManager(Settings.getInstance().getImageManagerSettings());
         this.lang = lang;
+        this.request = request;
+
+        Queue<RuntimeException> exceptions = asyncTaskManager.getExceptions();
+        if(!exceptions.isEmpty()){
+            throw exceptions.remove();
+        }
+
+        mapper.setOnRowSelectedListener(new OnRowSelectedListener() {
+            @Override
+            public void onRowSelected(Object row) {
+                if(row instanceof User){
+                    User user = (User)row;
+                    User signedInUser = getSignedInUser();
+                    if(signedInUser == null || !signedInUser.getId().equals(user.getId())){
+                        user.setUnreadMessagesCount(null);
+                        user.setReceivedRequestsCount(null);
+                        user.setUnreadRepliesCount(null);
+                        user.setSentRequestsCount(null);
+                    }
+                }
+            }
+        });
     }
 
     private <T> T replace(T object) {
@@ -119,10 +140,10 @@ public class DatabaseManager {
         return user;
     }
 
-    public User requestUserProfileData(HttpServletRequest request, long id) {
+    public User requestUserProfileData(long id) {
         User user = getUserByIdOrThrow(id);
 
-        User signedInUser = getSignedInUser(request);
+        User signedInUser = getSignedInUser();
         if(signedInUser != null && signedInUser.getId() != id){
             ProfileView pattern = new ProfileView();
             pattern.setVisitorId(signedInUser.getId());
@@ -146,7 +167,7 @@ public class DatabaseManager {
             }
         }
 
-        setUsersInfoAndRelationStatus(request, Collections.singletonList(user));
+        setUsersInfoAndRelationStatus(Collections.singletonList(user));
 
         return user;
     }
@@ -176,18 +197,18 @@ public class DatabaseManager {
         return null;
     }
 
-    public User login(HttpServletRequest request, String login, String password) {
+    public User login(String login, String password) {
         User user = getUserByLogin(login);
         if (user != null && user.getPassword().equals(password)) {
-            setUserInfo(request, user);
+            setUserInfo(user);
             return user;
         }
 
         return null;
     }
 
-    public User loginOrThrow(HttpServletRequest request, String login, String password) {
-        User user = login(request, login, password);
+    public User loginOrThrow(String login, String password) {
+        User user = login(login, password);
         if (user == null) {
             throw new LoginFailedException();
         }
@@ -195,7 +216,7 @@ public class DatabaseManager {
         return user;
     }
 
-    public User getSignedInUser(HttpServletRequest request) {
+    public User getSignedInUser() {
         if(_signedInUser != null){
             return _signedInUser;
         }
@@ -211,15 +232,18 @@ public class DatabaseManager {
             return null;
         }
 
+        OnRowSelectedListener onRowSelectedListener = mapper.getOnRowSelectedListener();
+        mapper.setOnRowSelectedListener(null);
         User user = getUserByLoginAndPassword(loginCookie.getValue(),
                 passwordCookie.getValue());
+        mapper.setOnRowSelectedListener(onRowSelectedListener);
 
         _signedInUser = user;
         return user;
     }
 
-    public User getSignedInUserOrThrow(HttpServletRequest request) {
-        User user = getSignedInUser(request);
+    public User getSignedInUserOrThrow() {
+        User user = getSignedInUser();
         if (user == null) {
             throw new UserIsNotSignInException();
         }
@@ -246,10 +270,10 @@ public class DatabaseManager {
         return photoquest;
     }
 
-    public Photoquest getPhotoQuestAndFillInfo(HttpServletRequest request, long id) {
+    public Photoquest getPhotoQuestAndFillInfo(long id) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(id);
-        setPhotoquestsFollowingParamIfSignedIn(request, Collections.singletonList(photoquest));
-        setAvatar(request, photoquest);
+        setPhotoquestsFollowingParamIfSignedIn(Collections.singletonList(photoquest));
+        setAvatar(photoquest);
         return photoquest;
     }
 
@@ -272,13 +296,13 @@ public class DatabaseManager {
         setPhotoquestKeywords(photoquest.getId(), keywordConcat);
     }
 
-    public Photoquest createPhotoQuest(HttpServletRequest request, String photoquestName, List<String> keywords,
+    public Photoquest createPhotoQuest(String photoquestName, List<String> keywords,
                                        boolean follow) {
         if(keywords.size() > MAX_KEYWORDS_COUNT){
             throw new IllegalArgumentException("Too much tags, only " + MAX_KEYWORDS_COUNT + " are allowed");
         }
 
-        User user = getSignedInUserOrThrow(request);
+        User user = getSignedInUserOrThrow();
         Photoquest photoquest = getPhotoQuestByName(photoquestName);
         if (photoquest != null) {
             throw new PhotoquestExistsException(photoquestName);
@@ -298,14 +322,13 @@ public class DatabaseManager {
         setPhotoquestKeywords(photoquest, keywords);
 
         if(follow){
-            followPhotoquest(request, photoquest);
+            followPhotoquest(photoquest);
         }
 
         return photoquest;
     }
 
     public Collection<Photoquest> getPhotoquestsCreatedByUser(
-            HttpServletRequest request,
             String filter,
             long userId, OffsetLimit offsetLimit, RatingOrder order) {
         String orderBy = getPhotoOrderBy(order);
@@ -322,7 +345,7 @@ public class DatabaseManager {
             result = advancedRequestsManager.getCreatedPhotoquestsByQuery(filter, offsetLimit, orderBy, userId);
         }
 
-        initPhotoquestsInfo(request, result);
+        initPhotoquestsInfo(result);
         return result;
     }
 
@@ -338,71 +361,71 @@ public class DatabaseManager {
         }
     }
 
-    private void initUserAvatars(HttpServletRequest request, Collection<Photoquest> photoquests) {
+    private void initUserAvatars(Collection<Photoquest> photoquests) {
         for (Photoquest photoquest : photoquests) {
             User user = photoquest.getUser();
             if(user != null){
-                setAvatar(request, user);
+                setAvatar(user);
             }
         }
     }
 
-    public void initPhotoquestsInfo(HttpServletRequest request, Collection<Photoquest> photoquests) {
-        setAvatar(request, photoquests);
-        initUserAvatars(request, photoquests);
-        setPhotoquestsFollowingParamIfSignedIn(request, photoquests);
+    public void initPhotoquestsInfo(Collection<Photoquest> photoquests) {
+        setAvatar(photoquests);
+        initUserAvatars(photoquests);
+        setPhotoquestsFollowingParamIfSignedIn(photoquests);
     }
 
-    public List<Photo> getPhotosOfFriendsByPhotoquest(HttpServletRequest request,
+    public List<Photo> getPhotosOfFriendsByPhotoquest(
                                                       long photoquestId,
                                                       RatingOrder order,
                                                       OffsetLimit offsetLimit) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
         String orderBy = getPhotoOrderBy(order);
         List<Photo> photos = advancedRequestsManager.getPhotosOfFriendsByPhotoquest(signedInUser.getId(),
                 photoquestId, orderBy, offsetLimit);
-        initPhotosOfPhotoquestInfo(photos, photoquest, request);
+        initPhotosOfPhotoquestInfo(photos, photoquest);
         return photos;
     }
 
-    public long getPhotosOfFriendsByPhotoquestCount(HttpServletRequest request, long photoquestId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public long getPhotosOfFriendsByPhotoquestCount(long photoquestId) {
+        User signedInUser = getSignedInUserOrThrow();
         return advancedRequestsManager.getPhotosOfFriendsByPhotoquestCount(signedInUser.getId(),
                 photoquestId);
     }
 
-    public List<Photo> getPhotosOfSignedInUserByPhotoquest(HttpServletRequest request,
+    public List<Photo> getPhotosOfSignedInUserByPhotoquest(
                                                            long photoquestId,
                                                            RatingOrder order,
                                                            OffsetLimit offsetLimit) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
         String orderBy = getPhotoOrderBy(order);
         Photo pattern = new Photo();
         pattern.setUserId(signedInUser.getId());
         pattern.setPhotoquestId(photoquestId);
         List<Photo> photos = mapper.queryByPattern(pattern, offsetLimit, orderBy);
-        initPhotosOfPhotoquestInfo(photos, photoquest, request);
+        initPhotosOfPhotoquestInfo(photos, photoquest);
         return photos;
     }
 
-    public long getPhotosOfSignedInUserByPhotoquestCount(HttpServletRequest request,
+    public long getPhotosOfSignedInUserByPhotoquestCount(
                                                            long photoquestId) {
         getPhotoQuestByIdOrThrow(photoquestId);
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
         Photo pattern = new Photo();
         pattern.setUserId(signedInUser.getId());
         pattern.setPhotoquestId(photoquestId);
         return mapper.getCountByPattern(pattern);
     }
 
-    public Collection<Photoquest> searchPhotoquests(final HttpServletRequest request, String query,
+    public Collection<Photoquest> searchPhotoquests(final String query,
                                                     OffsetLimit offsetLimit, RatingOrder order) {
         String ordering = getPhotoOrderBy(order);
         List<Photoquest> photoquests = advancedRequestsManager.getPhotoquestsByQuery(query, offsetLimit,
                 ordering);
-        initPhotoquestsInfo(request, photoquests);
+        initPhotoquestsInfo(photoquests);
         return photoquests;
     }
 
@@ -473,10 +496,10 @@ public class DatabaseManager {
         return user;
     }
 
-    public User editProfile(HttpServletRequest request,
+    public User editProfile(
                             String name, String lastName,
                             Integer cityId) throws IOException {
-        User user = getSignedInUserOrThrow(request);
+        User user = getSignedInUserOrThrow();
 
         if (name != null) {
             user.setNameAndLastName(name, user.getLastName());
@@ -488,23 +511,23 @@ public class DatabaseManager {
             user.setCityId(cityId);
         }
         checkLocation(user);
-        setUserInfo(request, user);
+        setUserInfo(user);
 
         return replace(user);
     }
 
-    public User changePassword(HttpServletRequest request, String newPassword, String oldPassword) {
-        User user = getSignedInUserOrThrow(request);
+    public User changePassword(String newPassword, String oldPassword) {
+        User user = getSignedInUserOrThrow();
         if(!user.getPassword().equals(oldPassword)){
             throw new PermissionDeniedException("Invalid password!");
         }
         user.setPassword(newPassword);
 
         replace(user);
-        return loginOrThrow(request, user.getLogin(), user.getPassword());
+        return loginOrThrow(user.getLogin(), user.getPassword());
     }
 
-    public User registerUser(HttpServletRequest request, User user, MultipartFile avatar) throws IOException {
+    public User registerUser(User user, MultipartFile avatar) throws IOException {
         InputStream avatarInputStream = null;
         try {
             avatarInputStream = avatar.getInputStream();
@@ -512,10 +535,10 @@ public class DatabaseManager {
             throw new RuntimeException(e);
         }
 
-        return registerUser(request, user, avatarInputStream);
+        return registerUser(user, avatarInputStream);
     }
 
-    public User registerUser(HttpServletRequest request, User user, InputStream avatar) throws IOException {
+    public User registerUser(User user, InputStream avatar) throws IOException {
         user = registerUser(user);
 
         if (user.getLogin() == null) {
@@ -528,7 +551,7 @@ public class DatabaseManager {
                     getOrCreateSystemPhotoQuest(DatabaseManager.AVATAR_QUEST_NAME);
             photo.setPhotoquestId(avatarPhotoQuest.getId());
             photo.setUserId(user.getId());
-            photo = addPhoto(request, photo, avatar);
+            photo = addPhoto(photo, avatar);
             user.setAvatarId(photo.getId());
             updatePhotoquestAvatar(avatarPhotoQuest);
 
@@ -586,17 +609,17 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<User> getAllUsers(HttpServletRequest request,
+    public Collection<User> getAllUsers(
                                         boolean fillRelationshipData,
                                         OffsetLimit offsetLimit,
                                         RatingOrder order) {
         Collection<User> users = mapper.queryAllObjects(User.class, offsetLimit,
                 getPeopleOrderBy(order));
 
-        setUsersInfo(request, users);
+        setUsersInfo(users);
 
         if(fillRelationshipData){
-            User signedInUser = getSignedInUser(request);
+            User signedInUser = getSignedInUser();
             if (signedInUser != null) {
                 setRelationStatus(signedInUser, users);
             }
@@ -605,32 +628,32 @@ public class DatabaseManager {
         return users;
     }
 
-    public void setUsersInfoAndRelationStatus(HttpServletRequest request, Collection<User> users) {
-        User signedInUser = getSignedInUser(request);
-        setUsersInfo(request, users);
+    public void setUsersInfoAndRelationStatus(Collection<User> users) {
+        User signedInUser = getSignedInUser();
+        setUsersInfo(users);
         if (signedInUser != null) {
             setRelationStatus(signedInUser, users);
         }
     }
 
-    public long getReceivedRequestsCount(HttpServletRequest request, SearchUsersParams params, Long userId) {
+    public long getReceivedRequestsCount(SearchUsersParams params, Long userId) {
         if(userId == null){
-            userId = getSignedInUserOrThrow(request).getId();
+            userId = getSignedInUserOrThrow().getId();
         }
 
         return advancedRequestsManager.getSearchReceivedRequestsCount(params, userId);
     }
 
-    public long getSentRequestsCount(HttpServletRequest request, SearchUsersParams params, Long userId) {
+    public long getSentRequestsCount(SearchUsersParams params, Long userId) {
         if(userId == null){
-            userId = getSignedInUserOrThrow(request).getId();
+            userId = getSignedInUserOrThrow().getId();
         }
 
         return advancedRequestsManager.getSearchSentRequestsCount(params, userId);
     }
 
-    public void checkAdminPermissions(HttpServletRequest request) {
-        User user = getSignedInUserOrThrow(request);
+    public void checkAdminPermissions() {
+        User user = getSignedInUserOrThrow();
         if(!user.getLogin().equals(Settings.getInstance().get("admin"))){
             throw new PermissionDeniedException("Hey dude, you are not admin");
         }
@@ -646,21 +669,21 @@ public class DatabaseManager {
         public Collection<User> search(String orderBy);
     }
 
-    public Collection<User> searchUsers(HttpServletRequest request,
+    public Collection<User> searchUsers(
                                         RatingOrder order,
                                         UsersSearcher usersSearcher) {
         String orderBy = getPeopleOrderBy(order);
         Collection<User> users = usersSearcher.search(orderBy);
-        setUsersInfoAndRelationStatus(request, users);
+        setUsersInfoAndRelationStatus(users);
 
         return users;
     }
 
-    public Collection<User> searchUsers(HttpServletRequest request,
+    public Collection<User> searchUsers(
                                         final SearchUsersParams searchParams,
                                         final OffsetLimit offsetLimit,
                                         RatingOrder order) {
-        return searchUsers(request, order, new UsersSearcher() {
+        return searchUsers(order, new UsersSearcher() {
             @Override
             public Collection<User> search(String orderBy) {
                 return advancedRequestsManager.searchUsers(searchParams, orderBy, offsetLimit);
@@ -685,10 +708,10 @@ public class DatabaseManager {
         return performedPhotoquest;
     }
 
-    private Photo addPhoto(HttpServletRequest request, Photo photo, InputStream bitmapData) {
+    private Photo addPhoto(Photo photo, InputStream bitmapData) {
         Long userId = photo.getUserId();
         if(userId == null){
-            User user = getSignedInUserOrThrow(request);
+            User user = getSignedInUserOrThrow();
             userId = user.getId();
         }
 
@@ -724,8 +747,8 @@ public class DatabaseManager {
         insertAction(action);
     }
 
-    public Photo setAvatar(HttpServletRequest request, long photoId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public Photo setAvatar(long photoId) {
+        User signedInUser = getSignedInUserOrThrow();
         Photo photo = getPhotoByIdOrThrow(photoId);
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
         if(!photoquest.getName().equals(AVATAR_QUEST_NAME)){
@@ -738,17 +761,17 @@ public class DatabaseManager {
 
         signedInUser.setAvatarId(photo.getId());
         replace(signedInUser);
-        initPhotoUrl(photo, request);
+        initPhotoUrl(photo);
 
         return photo;
     }
 
-    public Photo changeAvatar(HttpServletRequest request, MultipartFile file) throws IOException {
+    public Photo changeAvatar(MultipartFile file) throws IOException {
         Photoquest photoquest = getOrCreateSystemPhotoQuest(AVATAR_QUEST_NAME);
-        return addPhotoToPhotoquest(request, photoquest.getId(), file, null, false);
+        return addPhotoToPhotoquest(photoquest.getId(), file, null, false);
     }
 
-    public Photo addPhotoToPhotoquest(HttpServletRequest request,
+    public Photo addPhotoToPhotoquest(
                                       long photoquestId, MultipartFile file,
                                       String message,
                                       boolean follow) throws IOException {
@@ -760,23 +783,23 @@ public class DatabaseManager {
             photo.setPhotoquestId(photoquestId);
             photo.setMessage(message);
             InputStream inputStream = file.getInputStream();
-            photo = addPhoto(request, photo, inputStream);
+            photo = addPhoto(photo, inputStream);
             updatePhotoquestAvatar(photoquest);
 
             if (follow) {
-                followPhotoquest(request, photoquestId);
+                followPhotoquest(photoquestId);
             }
         } else {
             throw new FileIsEmptyException();
         }
 
         if (photoquest.getName().equals(AVATAR_QUEST_NAME)) {
-            User signedInUser = getSignedInUserOrThrow(request);
+            User signedInUser = getSignedInUserOrThrow();
             signedInUser.setAvatarId(photo.getId());
             replace(signedInUser);
         }
 
-        initPhotoUrl(photo, request);
+        initPhotoUrl(photo);
 
         return photo;
     }
@@ -830,10 +853,10 @@ public class DatabaseManager {
         }
     }
 
-    public void deletePhoto(HttpServletRequest request, long id) {
+    public void deletePhoto(long id) {
         Photo photo = getPhotoByIdOrThrow(id);
 
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
         if(!photo.getUserId().equals(signedInUser.getId())){
             throw new PermissionDeniedException("Unable to delete photo, which is not owned by current user");
         }
@@ -927,7 +950,7 @@ public class DatabaseManager {
         }
     }
 
-    private void initPhotoUrl(Photo photo, HttpServletRequest request) {
+    private void initPhotoUrl(Photo photo) {
         Long photoId = photo.getId();
         if(photoId == null){
             return;
@@ -936,14 +959,14 @@ public class DatabaseManager {
         photo.setUrl(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + photoId + ".jpg");
     }
 
-    private void initPhotosUrl(Iterable<Photo> photos, HttpServletRequest request) {
+    private void initPhotosUrl(Iterable<Photo> photos) {
         for(Photo photo : photos){
-            initPhotoUrl(photo, request);
+            initPhotoUrl(photo);
         }
     }
 
-    public void initYourLikeParameter(HttpServletRequest request, Iterable<Photo> photos) {
-        User signedInUser = getSignedInUser(request);
+    public void initYourLikeParameter(Iterable<Photo> photos) {
+        User signedInUser = getSignedInUser();
         if(signedInUser != null){
             Long signedInUserId = signedInUser.getId();
             for(Photo photo : photos){
@@ -953,12 +976,12 @@ public class DatabaseManager {
         }
     }
 
-    public void initYourLikeParameter(HttpServletRequest request, Photo photo) {
-        initYourLikeParameter(request, Collections.singletonList(photo));
+    public void initYourLikeParameter(Photo photo) {
+        initYourLikeParameter(Collections.singletonList(photo));
     }
 
-    private void addPhotoquestViewIfNeed(HttpServletRequest request, Photoquest photoquest) {
-        User signedInUser = getSignedInUser(request);
+    private void addPhotoquestViewIfNeed(Photoquest photoquest) {
+        User signedInUser = getSignedInUser();
         if(signedInUser == null){
             return;
         }
@@ -993,18 +1016,18 @@ public class DatabaseManager {
         Photo getPattern();
     }
 
-    private void setPhotoInfo(HttpServletRequest request, Photo photo) {
+    private void setPhotoInfo(Photo photo) {
         photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
-        initPhotoUrl(photo, request);
-        initYourLikeParameter(request, photo);
+        initPhotoUrl(photo);
+        initYourLikeParameter(photo);
         User user = photo.getUser();
-        setAvatar(request, user);
+        setAvatar(user);
 
         Photoquest photoquest = photo.getPhotoquest();
-        setAvatar(request, photoquest);
+        setAvatar(photoquest);
     }
 
-    private Photo getNextPrevPhoto(HttpServletRequest request,
+    private Photo getNextPrevPhoto(
                                    RatingOrder order,
                                    long photoId,
                                    NextPhotoPatternProvider patternProvider,
@@ -1015,16 +1038,16 @@ public class DatabaseManager {
 
         Photo nextPhoto = mapper.getNextPrev(pattern, photo, orderString, MysqlObjectMapper.ALL_FOREIGN,
                 next, true);
-        setPhotoInfo(request, nextPhoto);
+        setPhotoInfo(nextPhoto);
 
         nextPhoto.setShowNextPrevButtons(true);
 
         return nextPhoto;
     }
 
-    public Photo getNextPrevPhotoOfPhotoquest(HttpServletRequest request, final long photoQuestId, long photoId,
+    public Photo getNextPrevPhotoOfPhotoquest(final long photoQuestId, long photoId,
                                           RatingOrder order, boolean next) {
-        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+        return getNextPrevPhoto(order, photoId, new NextPhotoPatternProvider() {
             @Override
             public Photo getPattern() {
                 Photo pattern = new Photo();
@@ -1034,9 +1057,9 @@ public class DatabaseManager {
         }, next);
     }
 
-    public Photo getNextPrevPhotoOfUser(HttpServletRequest request, final long userId, long photoId,
+    public Photo getNextPrevPhotoOfUser(final long userId, long photoId,
                                               RatingOrder order, boolean next) {
-        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+        return getNextPrevPhoto(order, photoId, new NextPhotoPatternProvider() {
             @Override
             public Photo getPattern() {
                 Photo pattern = new Photo();
@@ -1046,20 +1069,20 @@ public class DatabaseManager {
         }, next);
     }
 
-    public Photo getNextPrevAvatar(HttpServletRequest request,
+    public Photo getNextPrevAvatar(
                                    long userId, long photoId, RatingOrder order, boolean next) {
         Photoquest photoquest = getPhotoQuestByName(AVATAR_QUEST_NAME);
-        return getNextPrevPhotoOfUserInPhotoquest(request, userId, photoId, photoquest.getId(),
+        return getNextPrevPhotoOfUserInPhotoquest(userId, photoId, photoquest.getId(),
                 order, next);
     }
 
-    public Photo getNextPrevPhotoOfUserInPhotoquest(HttpServletRequest request,
+    public Photo getNextPrevPhotoOfUserInPhotoquest(
                                                     final long userId,
                                                     long photoId,
                                                     final long photoquestId,
                                                     RatingOrder order,
                                                     boolean next) {
-        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+        return getNextPrevPhoto(order, photoId, new NextPhotoPatternProvider() {
             @Override
             public Photo getPattern() {
                 Photo pattern = new Photo();
@@ -1070,13 +1093,12 @@ public class DatabaseManager {
         }, next);
     }
 
-    public Photo getNextPrevPhotoOfSignedInUserInPhotoquest(final HttpServletRequest request,
-                                                            final long photoquestId, long photoId,
+    public Photo getNextPrevPhotoOfSignedInUserInPhotoquest(final long photoquestId, long photoId,
                                         RatingOrder order, boolean next) {
-        return getNextPrevPhoto(request, order, photoId, new NextPhotoPatternProvider() {
+        return getNextPrevPhoto(order, photoId, new NextPhotoPatternProvider() {
             @Override
             public Photo getPattern() {
-                User signedInUser = getSignedInUserOrThrow(request);
+                User signedInUser = getSignedInUserOrThrow();
                 Photo pattern = new Photo();
                 pattern.setUserId(signedInUser.getId());
                 pattern.setPhotoquestId(photoquestId);
@@ -1085,8 +1107,7 @@ public class DatabaseManager {
         }, next);
     }
 
-    public Photo getNextPrevPhotoOfFriendsInPhotoquest(final HttpServletRequest request,
-                                                       final long photoquestId, long photoId,
+    public Photo getNextPrevPhotoOfFriendsInPhotoquest(final long photoquestId, long photoId,
                                                        RatingOrder order, boolean next) {
         String orderBy;
         if(order == RatingOrder.newest){
@@ -1100,44 +1121,43 @@ public class DatabaseManager {
         Photo photo = getPhotoByIdOrThrow(photoId);
         Object orderByValue = Reflection.getFieldValueUsingGetter(photo, orderBy);
 
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
         return advancedRequestsManager.getNextPrevPhotoOfFriends(signedInUser.getId(), photoquestId, orderByValue,
                 orderBy, next);
     }
 
-    private void initPhotosOfPhotoquestInfo(Collection<Photo> photos, Photoquest photoquest,
-                                            HttpServletRequest request) {
-        initPhotosUrl(photos, request);
+    private void initPhotosOfPhotoquestInfo(Collection<Photo> photos, Photoquest photoquest) {
+        initPhotosUrl(photos);
 
-        initYourLikeParameter(request, photos);
-        addPhotoquestViewIfNeed(request, photoquest);
+        initYourLikeParameter(photos);
+        addPhotoquestViewIfNeed(photoquest);
     }
 
-    public Collection<Photo> getPhotosOfPhotoquest(HttpServletRequest request, long photoQuestId,
+    public Collection<Photo> getPhotosOfPhotoquest(long photoQuestId,
                                                    OffsetLimit offsetLimit, RatingOrder order) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoQuestId);
-        addPhotoquestViewIfNeed(request, photoquest);
+        addPhotoquestViewIfNeed(photoquest);
 
         Photo photoPattern = new Photo();
         photoPattern.setPhotoquestId(photoQuestId);
         String orderString = getPhotoOrderBy(order);
 
         Collection<Photo> photos = mapper.queryByPattern(photoPattern, offsetLimit, orderString);
-        initPhotosOfPhotoquestInfo(photos, photoquest, request);
+        initPhotosOfPhotoquestInfo(photos, photoquest);
 
         return photos;
 
     }
 
-    public Collection<Photo> getPhotosOfUser(HttpServletRequest request, long userId,
+    public Collection<Photo> getPhotosOfUser(long userId,
                                              OffsetLimit offsetLimit, RatingOrder order) {
         Photo pattern = new Photo();
         pattern.setUserId(userId);
         String ordering = getPhotoOrderBy(order);
         Collection<Photo> photos =
                 mapper.queryByPattern(pattern, offsetLimit, ordering);
-        initPhotosUrl(photos, request);
-        initYourLikeParameter(request, photos);
+        initPhotosUrl(photos);
+        initYourLikeParameter(photos);
 
         return photos;
     }
@@ -1154,14 +1174,14 @@ public class DatabaseManager {
         return mapper.getCountByPattern(photoPattern);
     }
 
-    public String getDefaultAvatar(HttpServletRequest request) {
+    public String getDefaultAvatar() {
         return HttpUtilities.getBaseUrl(request) + "/" + defaultAvatarPath;
     }
 
-    public void setAvatar(HttpServletRequest request, WithAvatar withAvatar) {
+    public void setAvatar(WithAvatar withAvatar) {
         Long avatarId = withAvatar.getAvatarId();
         if(avatarId == null){
-            withAvatar.setAvatar(getDefaultAvatar(request));
+            withAvatar.setAvatar(getDefaultAvatar());
         } else {
             withAvatar.setAvatar(HttpUtilities.getBaseUrl(request) + Photo.IMAGE_URL_PATH + avatarId + ".jpg");
         }
@@ -1186,23 +1206,23 @@ public class DatabaseManager {
         return location;
     }
 
-    public void setUserInfo(HttpServletRequest request, User user) {
+    public void setUserInfo(User user) {
         Location location = getLocation(user.getCityId());
 
         user.setCountry(location.countryName);
         user.setCity(location.cityName);
-        setAvatar(request, user);
+        setAvatar(user);
     }
 
-    public void setUsersInfo(HttpServletRequest request, Iterable<User> users) {
+    public void setUsersInfo(Iterable<User> users) {
         for(User user : users){
-            setUserInfo(request, user);
+            setUserInfo(user);
         }
     }
 
-    public void setAvatar(HttpServletRequest request, Iterable<? extends WithAvatar> withAvatars) {
+    public void setAvatar(Iterable<? extends WithAvatar> withAvatars) {
         for(WithAvatar withAvatar : withAvatars){
-            setAvatar(request, withAvatar);
+            setAvatar(withAvatar);
         }
     }
 
@@ -1239,28 +1259,28 @@ public class DatabaseManager {
         return orderString;
     }
 
-    private void setPhotoquestFollowingParam(HttpServletRequest request, Photoquest photoquest, long signedInUserId) {
+    private void setPhotoquestFollowingParam(Photoquest photoquest, long signedInUserId) {
         boolean isFollowing = getFollowingPhotoquest(signedInUserId, photoquest.getId()) != null;
         photoquest.setIsFollowing(isFollowing);
     }
 
-    private void setPhotoquestsFollowingParam(HttpServletRequest request,
+    private void setPhotoquestsFollowingParam(
                                               Iterable<Photoquest> photoquests,
                                               long signedInUserId) {
         for(Photoquest photoquest : photoquests){
-            setPhotoquestFollowingParam(request, photoquest, signedInUserId);
+            setPhotoquestFollowingParam(photoquest, signedInUserId);
         }
     }
 
-    private void setPhotoquestsFollowingParamIfSignedIn(HttpServletRequest request,
+    private void setPhotoquestsFollowingParamIfSignedIn(
                                               Iterable<Photoquest> photoquests) {
-        User signedInUser = getSignedInUser(request);
+        User signedInUser = getSignedInUser();
         if(signedInUser != null){
-            setPhotoquestsFollowingParam(request, photoquests, signedInUser.getId());
+            setPhotoquestsFollowingParam(photoquests, signedInUser.getId());
         }
     }
 
-    public Collection<Photoquest> getPhotoQuests(HttpServletRequest request, OffsetLimit offsetLimit,
+    public Collection<Photoquest> getPhotoQuests(OffsetLimit offsetLimit,
                                                  RatingOrder order) {
         String orderString = getPhotoOrderBy(order);
 
@@ -1271,7 +1291,7 @@ public class DatabaseManager {
 
         Collection<Photoquest> result =
                 mapper.queryAllObjects(Photoquest.class, params);
-        initPhotoquestsInfo(request, result);
+        initPhotoquestsInfo(result);
 
         return result;
     }
@@ -1319,36 +1339,36 @@ public class DatabaseManager {
         insertAll(friendship1, friendship2);
     }
 
-    public void addFriend(HttpServletRequest request, long userId) {
-        if(userId == getSignedInUserOrThrow(request).getId()){
+    public void addFriend(long userId) {
+        if(userId == getSignedInUserOrThrow().getId()){
             throw new IllegalArgumentException("Unable to add yourself as friend");
         }
 
         try {
-            acceptFriendRequest(request, userId);
+            acceptFriendRequest(userId);
         } catch (RelationNotFoundException e) {
-            sendFriendRequest(request, userId);
+            sendFriendRequest(userId);
         }
     }
 
-    public void removeFriend(HttpServletRequest request, long userId) {
+    public void removeFriend(long userId) {
         try {
-            declineFriendRequest(request, userId);
+            declineFriendRequest(userId);
         } catch (RelationNotFoundException e) {
             try {
-                unfollowUser(request, userId);
+                unfollowUser(userId);
             } catch (UserIsNotFollowingException e2) {
                 try {
-                    cancelFriendRequest(request, userId);
+                    cancelFriendRequest(userId);
                 } catch (RelationNotFoundException e3) {
-                    removeFriendShip(request, userId);
+                    removeFriendShip(userId);
                 }
             }
         }
     }
 
-    private void removeFriendShip(HttpServletRequest request, long userId) {
-        User user = getSignedInUserOrThrow(request);
+    private void removeFriendShip(long userId) {
+        User user = getSignedInUserOrThrow();
         getUserByIdOrThrow(userId);
         long signedInUserId = user.getId();
 
@@ -1387,9 +1407,9 @@ public class DatabaseManager {
         return getUsersByFromUserIdInRelation(userId, Relationship.FRIENDSHIP, offsetLimit, order);
     }
 
-    public long getFriendsCount(HttpServletRequest request, SearchUsersParams searchParams, Long userId) {
+    public long getFriendsCount(SearchUsersParams searchParams, Long userId) {
         if(userId == null){
-            userId = getSignedInUserOrThrow(request).getId();
+            userId = getSignedInUserOrThrow().getId();
         }
 
         return advancedRequestsManager.getSearchFriendsCount(searchParams, userId);
@@ -1400,26 +1420,26 @@ public class DatabaseManager {
         RelationStatus getStatus();
     }
 
-    private List<User> searchRelations(HttpServletRequest request, Long userId, RatingOrder order,
+    private List<User> searchRelations(Long userId, RatingOrder order,
                                        RelationsSearcher searcher) {
         String orderBy = getPeopleOrderBy(order);
         if (userId == null) {
-            User signedInUser = getSignedInUserOrThrow(request);
+            User signedInUser = getSignedInUserOrThrow();
             userId = signedInUser.getId();
         }
         List<User> friends = searcher.search(orderBy, userId);
 
         for(User friend : friends){
             friend.setRelation(searcher.getStatus());
-            setUserInfo(request, friend);
+            setUserInfo(friend);
         }
 
         return friends;
     }
 
-    public List<User> getFriends(HttpServletRequest request, final SearchUsersParams params,
+    public List<User> getFriends(final SearchUsersParams params,
                                  final OffsetLimit offsetLimit, RatingOrder order, Long userId) {
-        return searchRelations(request, userId, order, new RelationsSearcher() {
+        return searchRelations(userId, order, new RelationsSearcher() {
             @Override
             public List<User> search(String orderBy, long userId) {
                 return advancedRequestsManager.searchFriends(params, offsetLimit, orderBy, userId);
@@ -1481,29 +1501,29 @@ public class DatabaseManager {
         return like;
     }
 
-    public void fillCommentsData(HttpServletRequest request, Collection<Comment> comments) {
+    public void fillCommentsData(Collection<Comment> comments) {
         for (Comment comment : comments) {
-            fillCommentData(request, comment);
+            fillCommentData(comment);
         }
     }
 
-    public void fillCommentData(HttpServletRequest request, Comment comment) {
+    public void fillCommentData(Comment comment) {
         Long toUserId = comment.getToUserId();
         if(toUserId != null){
             User toUser = getUserByIdOrThrow(toUserId);
-            setAvatar(request, toUser);
+            setAvatar(toUser);
             comment.setToUser(toUser);
         }
 
         Long userId = comment.getUserId();
         User user = getUserByIdOrThrow(userId);
-        setAvatar(request, user);
+        setAvatar(user);
         comment.setUser(user);
     }
 
-    public Comment addComment(HttpServletRequest request,
+    public Comment addComment(
                               long photoId, String message) {
-        return addComment(request, photoId, message, null);
+        return addComment(photoId, message, null);
     }
 
     public Collection<Like> getCommentLikes(long commentId, OffsetLimit offsetLimit) {
@@ -1532,8 +1552,8 @@ public class DatabaseManager {
         return mapper.getObjectByPattern(reply);
     }
 
-    public void deleteComment(HttpServletRequest request, long commentId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public void deleteComment(long commentId) {
+        User signedInUser = getSignedInUserOrThrow();
         Comment comment = getCommentByIdOrThrow(commentId);
         Long signedInUserId = signedInUser.getId();
         if(!signedInUserId.equals(comment.getUserId())){
@@ -1548,14 +1568,14 @@ public class DatabaseManager {
         advancedRequestsManager.updateUnreadRepliesCount(userId);
     }
 
-    public Comment addComment(HttpServletRequest request,
+    public Comment addComment(
                            Long photoId, String message, Long toCommentId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
 
         Comment comment = new Comment();
         comment.setMessage(message);
         comment.setUserId(signedInUser.getId());
-        setAvatar(request, signedInUser);
+        setAvatar(signedInUser);
         comment.setUser(signedInUser);
 
         long toUserId;
@@ -1566,7 +1586,7 @@ public class DatabaseManager {
             toUserId = toComment.getUserId();
             toUser = getUserByIdOrThrow(toUserId);
             comment.setToUserId(toUser.getId());
-            setAvatar(request, toUser);
+            setAvatar(toUser);
             comment.setToUser(toUser);
 
             photoId = toComment.getPhotoId();
@@ -1591,7 +1611,7 @@ public class DatabaseManager {
         return comment;
     }
 
-    public Collection<Comment> getCommentsOnPhoto(HttpServletRequest request,
+    public Collection<Comment> getCommentsOnPhoto(
                                                   long photoId,
                                                   final Long afterId,
                                                   OffsetLimit offsetLimit) {
@@ -1608,7 +1628,7 @@ public class DatabaseManager {
 
         Collection<Comment> comments = mapper.queryByPattern(commentPattern, selectParams);
 
-        User signedInUser = getSignedInUser(request);
+        User signedInUser = getSignedInUser();
         if(signedInUser != null){
             long userId = signedInUser.getId();
             for(Comment comment : comments){
@@ -1620,21 +1640,21 @@ public class DatabaseManager {
         return comments;
     }
 
-    public Collection<Comment> getCommentsOnPhotoAndFillData(HttpServletRequest request, long photoId,
+    public Collection<Comment> getCommentsOnPhotoAndFillData(long photoId,
                                                              Long afterId,
                                                              OffsetLimit offsetLimit) {
-        Collection<Comment> comments = getCommentsOnPhoto(request, photoId, afterId, offsetLimit);
-        fillCommentsData(request, comments);
+        Collection<Comment> comments = getCommentsOnPhoto(photoId, afterId, offsetLimit);
+        fillCommentsData(comments);
         return comments;
     }
 
-    public Like likePhoto(HttpServletRequest request, long photoId) {
+    public Like likePhoto(long photoId) {
         final Photo photo = getPhotoByIdOrThrow(photoId);
 
         Like like = new Like();
         like.setPhotoId(photoId);
 
-        like = like(request, like, photo.getUserId());
+        like = like(like, photo.getUserId());
 
         final Long photoquestId = photo.getPhotoquestId();
         asyncTaskHandler.execute(new Task() {
@@ -1649,14 +1669,14 @@ public class DatabaseManager {
         return like;
     }
 
-    public Like likeComment(HttpServletRequest request, long commentId) {
+    public Like likeComment(long commentId) {
         Comment comment = getCommentByIdOrThrow(commentId);
 
         Like like = new Like();
         like.setCommentId(commentId);
         like.setPhotoId(comment.getPhotoId());
 
-        like = like(request, like, comment.getUserId());
+        like = like(like, comment.getUserId());
 
         incrementLikesCount(comment);
 
@@ -1679,8 +1699,8 @@ public class DatabaseManager {
         mapper.increment(user, "unreadRepliesCount");
     }
 
-    private Like like(HttpServletRequest request, final Like like, final long toUserId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    private Like like(final Like like, final long toUserId) {
+        User signedInUser = getSignedInUserOrThrow();
         like.setUserId(signedInUser.getId());
 
         String additionalWhere = like.getCommentId() == null ? "commentId is NULL" : null;
@@ -1710,9 +1730,9 @@ public class DatabaseManager {
         return like;
     }
 
-    public void unlike(HttpServletRequest request, final long likeId) {
+    public void unlike(final long likeId) {
         final Like like = getLikeByIdOrThrow(likeId);
-        if(!like.getUserId().equals(getSignedInUserOrThrow(request).getId())){
+        if(!like.getUserId().equals(getSignedInUserOrThrow().getId())){
             throw new PermissionDeniedException("Unable to unlike like owned by another user");
         }
 
@@ -1819,8 +1839,8 @@ public class DatabaseManager {
         return message;
     }
 
-    public Message addMessage(HttpServletRequest request, long toUserId, String messageText) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public Message addMessage(long toUserId, String messageText) {
+        User signedInUser = getSignedInUserOrThrow();
         if(toUserId == signedInUser.getId()){
             throw new IllegalArgumentException("Unable to send message to yourself");
         }
@@ -1855,24 +1875,24 @@ public class DatabaseManager {
         return dialog;
     }
 
-    public Collection<Message> getMessagesWithUser(HttpServletRequest request, long userId,
+    public Collection<Message> getMessagesWithUser(long userId,
                                                      OffsetLimit offsetLimit, Long afterId) {
         Dialog dialog = new Dialog();
         dialog.setUser1Id(userId);
-        dialog.setUser2Id(getSignedInUserOrThrow(request).getId());
+        dialog.setUser2Id(getSignedInUserOrThrow().getId());
         dialog = mapper.getObjectByPattern(dialog);
         if(dialog == null){
             return new ArrayList<Message>();
         }
 
-        return getDialogMessages(request, dialog, offsetLimit, afterId);
+        return getDialogMessages(dialog, offsetLimit, afterId);
     }
 
-    public Collection<Message> getDialogMessages(HttpServletRequest request,
+    public Collection<Message> getDialogMessages(
                                                  Dialog dialog,
                                                  OffsetLimit offsetLimit,
                                                  Long afterId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+        User signedInUser = getSignedInUserOrThrow();
         Message pattern = new Message();
         pattern.setDialogId(dialog.getId());
 
@@ -1935,8 +1955,8 @@ public class DatabaseManager {
         return mapper.getObjectByPattern(relationship);
     }
 
-    public Relationship sendFriendRequest(HttpServletRequest request, long userId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public Relationship sendFriendRequest(long userId) {
+        User signedInUser = getSignedInUserOrThrow();
         User friend = getUserByIdOrThrow(userId);
 
         long signedInUserId = signedInUser.getId();
@@ -1962,7 +1982,7 @@ public class DatabaseManager {
         return friendRequest;
     }
 
-    private Relationship deleteFriendRequestOrUnfollow(HttpServletRequest request, User fromUser, User toUser) {
+    private Relationship deleteFriendRequestOrUnfollow(User fromUser, User toUser) {
         Relationship relationship = getRelationship(fromUser.getId(), toUser.getId());
         if(relationship == null){
             throw new RelationNotFoundException();
@@ -1978,7 +1998,7 @@ public class DatabaseManager {
         return relationship;
     }
 
-    private Relationship deleteFriendRequest(HttpServletRequest request, User fromUser, User toUser) {
+    private Relationship deleteFriendRequest(User fromUser, User toUser) {
         Relationship friendRequest = getFriendRequestOrThrow(fromUser.getId(),
                 toUser.getId());
         delete(friendRequest);
@@ -1988,16 +2008,16 @@ public class DatabaseManager {
         return friendRequest;
     }
 
-    private void cancelFriendRequest(HttpServletRequest request, long userId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    private void cancelFriendRequest(long userId) {
+        User signedInUser = getSignedInUserOrThrow();
         User friend = getUserByIdOrThrow(userId);
-        deleteFriendRequest(request, signedInUser, friend);
+        deleteFriendRequest(signedInUser, friend);
     }
 
-    private void acceptFriendRequest(HttpServletRequest request, long userId) {
+    private void acceptFriendRequest(long userId) {
         User friend = getUserByIdOrThrow(userId);
-        User signedInUser = getSignedInUserOrThrow(request);
-        deleteFriendRequestOrUnfollow(request, friend, signedInUser);
+        User signedInUser = getSignedInUserOrThrow();
+        deleteFriendRequestOrUnfollow(friend, signedInUser);
         addFriendShip(friend, signedInUser);
 
         Reply reply = new Reply();
@@ -2010,10 +2030,10 @@ public class DatabaseManager {
         insert(reply);
     }
 
-    private void declineFriendRequest(HttpServletRequest request, long userId) {
+    private void declineFriendRequest(long userId) {
         User friend = getUserByIdOrThrow(userId);
-        User signedInUser = getSignedInUserOrThrow(request);
-        deleteFriendRequest(request, friend, signedInUser);
+        User signedInUser = getSignedInUserOrThrow();
+        deleteFriendRequest(friend, signedInUser);
 
         Long signedInUserId = signedInUser.getId();
         Long friendId = friend.getId();
@@ -2030,8 +2050,8 @@ public class DatabaseManager {
         insert(reply);
     }
 
-    public Collection<Dialog> getDialogs(HttpServletRequest request, OffsetLimit offsetLimit) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public Collection<Dialog> getDialogs(OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow();
         Dialog dialogPattern = new Dialog();
         long signedInUserId = signedInUser.getId();
         dialogPattern.setUser1Id(signedInUserId);
@@ -2049,14 +2069,14 @@ public class DatabaseManager {
                 dialog.setUser(dialog.getUser2());
             }
 
-            setAvatar(request, dialog.getUser());
+            setAvatar(dialog.getUser());
         }
 
         return result;
     }
 
-    public long getDialogsCount(HttpServletRequest request) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public long getDialogsCount() {
+        User signedInUser = getSignedInUserOrThrow();
         Dialog dialogPattern = new Dialog();
         long signedInUserId = signedInUser.getId();
         dialogPattern.setUser1Id(signedInUserId);
@@ -2077,7 +2097,7 @@ public class DatabaseManager {
         throw new RuntimeException("Unexpected WTF, try again");
     }
 
-    public List<User> registerRandomUsers(HttpServletRequest request, int startId, int count, String password)
+    public List<User> registerRandomUsers(int startId, int count, String password)
             throws IOException {
         List<Response> data = new ArrayList<Response>();
         while (data.size() < count){
@@ -2096,7 +2116,7 @@ public class DatabaseManager {
             user.setCityId(getRandomCityId());
 
             InputStream avatar = IOUtilities.getBufferedInputStreamFromUrl(userData.largeAvatar);
-            user = registerUser(request, user, avatar);
+            user = registerUser(user, avatar);
             result.add(user);
         }
 
@@ -2150,13 +2170,13 @@ public class DatabaseManager {
         return mapper.getCountByPattern(photo);
     }
 
-    public Photo getPhotoAndFillInfo(HttpServletRequest request, long photoId, PhotoFillParams params) {
+    public Photo getPhotoAndFillInfo(long photoId, PhotoFillParams params) {
         Photo photo = mapper.getObjectById(Photo.class, photoId, MysqlObjectMapper.ALL_FOREIGN);
         if(photo == null){
             throw new PhotoNotFoundException(photoId);
         }
 
-        User signedInUser = getSignedInUser(request);
+        User signedInUser = getSignedInUser();
         if(signedInUser != null){
             PhotoView pattern = new PhotoView();
             pattern.setPhotoId(photoId);
@@ -2181,7 +2201,7 @@ public class DatabaseManager {
             }
         }
 
-        setPhotoInfo(request, photo);
+        setPhotoInfo(photo);
 
         if(params.userId != null){
             if (params.category != PhotoCategory.avatar) {
@@ -2197,9 +2217,9 @@ public class DatabaseManager {
                 if(category == PhotoCategory.all){
                     count = getPhotosOfPhotoquestCount(photoquestId);
                 } else if(category == PhotoCategory.friends) {
-                    count = getPhotosOfFriendsByPhotoquestCount(request, photoquestId);
+                    count = getPhotosOfFriendsByPhotoquestCount(photoquestId);
                 } else {
-                    count = getPhotosOfSignedInUserByPhotoquestCount(request, photoquestId);
+                    count = getPhotosOfSignedInUserByPhotoquestCount(photoquestId);
                 }
 
                 photo.setShowNextPrevButtons(count > 1);
@@ -2221,8 +2241,8 @@ public class DatabaseManager {
         return advancedRequestsManager.getCitySuggestions(countryId, query, 10, lang);
     }
 
-    public UserStats getUserStats(HttpServletRequest request) {
-        User user = getSignedInUserOrThrow(request);
+    public UserStats getUserStats() {
+        User user = getSignedInUserOrThrow();
         UserStats stats = new UserStats();
         stats.setFriendRequestsCount(user.getReceivedRequestsCount());
         stats.setUnreadMessagesCount(user.getUnreadMessagesCount());
@@ -2257,7 +2277,7 @@ public class DatabaseManager {
         return mapper.queryByPattern(pattern, params);
     }
 
-    private void setPhoto(HttpServletRequest request, WithPhoto withPhoto) {
+    private void setPhoto(WithPhoto withPhoto) {
         Long photoId = withPhoto.getPhotoId();
         if (photoId != null) {
             withPhoto.setPhoto(HttpUtilities.getBaseUrl(request) +
@@ -2265,8 +2285,8 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<ReplyResponse> getRepliesWithFullInfo(HttpServletRequest request, OffsetLimit offsetLimit) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public Collection<ReplyResponse> getRepliesWithFullInfo(OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow();
         signedInUser.setUnreadRepliesCount(0l);
         replace(signedInUser);
 
@@ -2281,15 +2301,15 @@ public class DatabaseManager {
             Long id = reply.getId();
             if(type == Reply.COMMENT){
                 Comment comment = getCommentByIdOrThrow(id);
-                setPhoto(request, comment);
+                setPhoto(comment);
                 replyResponse.setComment(comment);
                 user = getUserByIdOrThrow(comment.getUserId());
-                setPhoto(request, comment);
+                setPhoto(comment);
             } else if(type == Reply.FRIEND_REQUEST_ACCEPTED || type == Reply.FRIEND_REQUEST_DECLINED) {
                 user = getUserByIdOrThrow(id);
             } else if(type == Reply.LIKE) {
                 Like like = getLikeByIdOrThrow(id);
-                setPhoto(request, like);
+                setPhoto(like);
                 replyResponse.setLike(like);
                 user = getUserByIdOrThrow(like.getUserId());
             } else {
@@ -2298,7 +2318,7 @@ public class DatabaseManager {
 
             replyResponse.setType(type);
             replyResponse.setAddingDate(reply.getAddingDate());
-            setAvatar(request, user);
+            setAvatar(user);
             replyResponse.setUser(user);
             replyResponses.add(replyResponse);
         }
@@ -2306,15 +2326,15 @@ public class DatabaseManager {
         return replyResponses;
     }
 
-    public long getRepliesCount(HttpServletRequest request) {
-        User user = getSignedInUserOrThrow(request);
+    public long getRepliesCount() {
+        User user = getSignedInUserOrThrow();
         Reply reply = new Reply();
         reply.setUserId(user.getId());
         return mapper.getCountByPattern(reply);
     }
 
-    private List<User> getFriendRequests(HttpServletRequest request, OffsetLimit offsetLimit, boolean received) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    private List<User> getFriendRequests(OffsetLimit offsetLimit, boolean received) {
+        User signedInUser = getSignedInUserOrThrow();
         Long signedInUserId = signedInUser.getId();
 
         Relationship pattern = new Relationship();
@@ -2339,7 +2359,7 @@ public class DatabaseManager {
 
         for(Relationship friendRequest : friendRequests){
             User friend = received ? friendRequest.getFromUser() : friendRequest.getToUser();
-            setUserInfo(request, friend);
+            setUserInfo(friend);
             friend.setRelation(received ? RelationStatus.request_received : RelationStatus.request_sent);
             result.add(friend);
         }
@@ -2347,9 +2367,9 @@ public class DatabaseManager {
         return result;
     }
 
-    public List<User> getReceivedFriendRequests(HttpServletRequest request, final SearchUsersParams searchParams,
+    public List<User> getReceivedFriendRequests(final SearchUsersParams searchParams,
                                                 final OffsetLimit offsetLimit, RatingOrder order) {
-        return searchRelations(request, null, order, new RelationsSearcher() {
+        return searchRelations(null, order, new RelationsSearcher() {
             @Override
             public List<User> search(String orderBy, long userId) {
                 return advancedRequestsManager.searchReceivedRequests(searchParams, offsetLimit, orderBy, userId);
@@ -2362,9 +2382,9 @@ public class DatabaseManager {
         });
     }
 
-    public List<User> getSentFriendRequests(HttpServletRequest request, final SearchUsersParams searchParams,
+    public List<User> getSentFriendRequests(final SearchUsersParams searchParams,
                                             final OffsetLimit offsetLimit, RatingOrder order) {
-        return searchRelations(request, null, order, new RelationsSearcher() {
+        return searchRelations(null, order, new RelationsSearcher() {
             @Override
             public List<User> search(String orderBy, long userId) {
                 return advancedRequestsManager.searchSentRequests(searchParams, offsetLimit, orderBy, userId);
@@ -2393,8 +2413,8 @@ public class DatabaseManager {
         return result;
     }
 
-    public FollowingPhotoquest followPhotoquest(HttpServletRequest request, Photoquest photoquest) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public FollowingPhotoquest followPhotoquest(Photoquest photoquest) {
+        User signedInUser = getSignedInUserOrThrow();
         Long signedInUserId = signedInUser.getId();
 
         long photoquestId = photoquest.getId();
@@ -2411,27 +2431,27 @@ public class DatabaseManager {
         return followingPhotoquest;
     }
 
-    public FollowingPhotoquest followPhotoquest(HttpServletRequest request, long photoquestId) {
+    public FollowingPhotoquest followPhotoquest(long photoquestId) {
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
-        return followPhotoquest(request, photoquest);
+        return followPhotoquest(photoquest);
     }
 
-    public void unfollowPhotoquest(HttpServletRequest request, long photoquestId) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public void unfollowPhotoquest(long photoquestId) {
+        User signedInUser = getSignedInUserOrThrow();
         Long signedInUserId = signedInUser.getId();
 
         FollowingPhotoquest followingPhotoquest = getFollowingPhotoquestOrThrow(signedInUserId, photoquestId);
         delete(followingPhotoquest);
     }
 
-    public Collection<Photoquest> getFollowingPhotoquests(HttpServletRequest request, long userId,
+    public Collection<Photoquest> getFollowingPhotoquests(long userId,
                                                           String filter,
                                                           OffsetLimit offsetLimit,
                                                           RatingOrder order) {
         String orderBy = getPhotoOrderBy(order);
         Collection<Photoquest> result =
                 advancedRequestsManager.getFollowingPhotoquests(userId, orderBy, filter, offsetLimit);
-        User signedInUser = getSignedInUser(request);
+        User signedInUser = getSignedInUser();
         for(Photoquest photoquest : result){
             if (signedInUser == null) {
                 photoquest.setIsFollowing(null);
@@ -2444,10 +2464,10 @@ public class DatabaseManager {
                     photoquest.setIsFollowing(getFollowingPhotoquest(signedInUserId, photoquestId) != null);
                 }
             }
-            setAvatar(request, photoquest);
+            setAvatar(photoquest);
         }
 
-        initUserAvatars(request, result);
+        initUserAvatars(result);
 
         return result;
     }
@@ -2463,7 +2483,7 @@ public class DatabaseManager {
         }
     }
 
-    public Collection<Photoquest> getPerformedPhotoquests(HttpServletRequest request, long userId,
+    public Collection<Photoquest> getPerformedPhotoquests(long userId,
                                                           OffsetLimit offsetLimit,
                                                           String filter,
                                                           RatingOrder order) {
@@ -2471,7 +2491,7 @@ public class DatabaseManager {
         Collection<Photoquest> result =
                 advancedRequestsManager.getPerformedPhotoquests(userId, orderBy, filter, offsetLimit);
 
-        initPhotoquestsInfo(request, result);
+        initPhotoquestsInfo(result);
 
         return result;
     }
@@ -2509,91 +2529,91 @@ public class DatabaseManager {
         delete(relationship);
     }
 
-    private void setAvatarAndRelation(HttpServletRequest request, Collection<User> users, RelationStatus status) {
+    private void setAvatarAndRelation(Collection<User> users, RelationStatus status) {
         for(User user : users){
-            setAvatar(request, user);
+            setAvatar(user);
             user.setRelation(status);
         }
     }
 
     private Collection<User> getFollowers(
-            HttpServletRequest request,
+            
             long followingUserId,
             OffsetLimit offsetLimit,
             RatingOrder order) {
         Collection<User> users = getUsersByToUserIdInRelation(followingUserId, Relationship.FOLLOWS,
                 offsetLimit, order);
-        setAvatarAndRelation(request, users, RelationStatus.followed);
+        setAvatarAndRelation(users, RelationStatus.followed);
 
         return users;
     }
 
     private Collection<User> getFollowingUsers(
-            HttpServletRequest request,
+            
             long followerUserId,
             OffsetLimit offsetLimit,
             RatingOrder order) {
         Collection<User> users = getUsersByFromUserIdInRelation(followerUserId, Relationship.FOLLOWS,
                 offsetLimit, order);
-        setAvatarAndRelation(request, users, RelationStatus.follows);
+        setAvatarAndRelation(users, RelationStatus.follows);
 
         return users;
     }
 
-    public Collection<User> getFollowingUsers(HttpServletRequest request,
+    public Collection<User> getFollowingUsers(
                                               OffsetLimit offsetLimit,
                                               RatingOrder order) {
-        User signedInUser = getSignedInUserOrThrow(request);
-        return getFollowingUsers(request, signedInUser.getId(), offsetLimit, order);
+        User signedInUser = getSignedInUserOrThrow();
+        return getFollowingUsers(signedInUser.getId(), offsetLimit, order);
     }
 
-    public Collection<User> getFollowers(HttpServletRequest request,
+    public Collection<User> getFollowers(
                                          OffsetLimit offsetLimit,
                                          RatingOrder order) {
-        User signedInUser = getSignedInUserOrThrow(request);
-        return getFollowers(request, signedInUser.getId(), offsetLimit, order);
+        User signedInUser = getSignedInUserOrThrow();
+        return getFollowers(signedInUser.getId(), offsetLimit, order);
     }
 
-    public void unfollowUser(HttpServletRequest request, long toUserId) {
-        Long fromUserId = getSignedInUserOrThrow(request).getId();
+    public void unfollowUser(long toUserId) {
+        Long fromUserId = getSignedInUserOrThrow().getId();
         unfollowUser(fromUserId, toUserId);
     }
 
-    private void fillActions(HttpServletRequest request, Iterable<Action> actions) {
+    private void fillActions(Iterable<Action> actions) {
         for(Action action : actions){
-            fillAction(request, action);
+            fillAction(action);
         }
     }
 
-    private void fillAction(HttpServletRequest request, Action action) {
+    private void fillAction(Action action) {
 
         Photo photo = action.getPhoto();
         if (photo != null) {
-            initPhotoUrl(photo, request);
-            initYourLikeParameter(request, photo);
+            initPhotoUrl(photo);
+            initYourLikeParameter(photo);
         }
 
         User user = action.getUser();
         if (user != null) {
-            setAvatar(request, user);
+            setAvatar(user);
         }
     }
 
-    public Collection<Action> getNews(HttpServletRequest request, OffsetLimit offsetLimit) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public Collection<Action> getNews(OffsetLimit offsetLimit) {
+        User signedInUser = getSignedInUserOrThrow();
         Collection<Action> actions = advancedRequestsManager.getNews(signedInUser.getId(), offsetLimit);
-        fillActions(request, actions);
+        fillActions(actions);
         return actions;
     }
 
-    public long getNewsCount(HttpServletRequest request) {
-        User signedInUser = getSignedInUserOrThrow(request);
+    public long getNewsCount() {
+        User signedInUser = getSignedInUserOrThrow();
         Feed feed = new Feed();
         feed.setUserId(signedInUser.getId());
         return mapper.getCountByPattern(feed);
     }
 
-    public List<Action> getUserNews(HttpServletRequest request, long userId, OffsetLimit offsetLimit) {
+    public List<Action> getUserNews(long userId, OffsetLimit offsetLimit) {
         Action pattern = new Action();
         pattern.setUserId(userId);
         SelectParams params = new SelectParams();
@@ -2601,7 +2621,7 @@ public class DatabaseManager {
         params.offsetLimit = offsetLimit;
         params.ordering = "id desc";
         List<Action> actions = mapper.queryByPattern(pattern, params);
-        fillActions(request, actions);
+        fillActions(actions);
         return actions;
     }
 

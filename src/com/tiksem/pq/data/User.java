@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tiksem.mysqljava.FieldsCheckingUtilities;
 import com.tiksem.mysqljava.annotations.*;
 import com.tiksem.mysqljava.annotations.NotNull;
@@ -38,9 +39,11 @@ public class User implements WithAvatar {
     @Unique(type = "VARCHAR(25)")
     @NotNull
     @Login
+    @JsonIgnore
     private String login;
     @Stored(type = "VARCHAR(20)")
     @NotNull
+    @JsonIgnore
     @Password
     private String password;
 
@@ -49,6 +52,7 @@ public class User implements WithAvatar {
 
     @NotNull
     @Index(type = "VARCHAR(60)")
+    @JsonIgnore
     private String nameData;
 
     private String name;
@@ -56,6 +60,7 @@ public class User implements WithAvatar {
 
     @Stored
     @AddingDate
+    @JsonIgnore
     private Long addingDate;
 
     @Stored
@@ -84,6 +89,7 @@ public class User implements WithAvatar {
 
     @Stored
     @NotNull
+    @JsonIgnore
     private Long rating;
 
     @NotNull
@@ -201,10 +207,6 @@ public class User implements WithAvatar {
     }
 
     public void setUnreadMessagesCount(Long unreadMessagesCount) {
-        if(unreadMessagesCount < 0){
-            unreadMessagesCount = 0l;
-        }
-
         this.unreadMessagesCount = unreadMessagesCount;
     }
 

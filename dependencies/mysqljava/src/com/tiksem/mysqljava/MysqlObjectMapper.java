@@ -25,6 +25,7 @@ public class MysqlObjectMapper {
     public static final List<String> ALL_FOREIGN = new ArrayList<String>();
 
     private Connection connection;
+    private OnRowSelectedListener onRowSelectedListener;
 
     public MysqlObjectMapper(Connection connection) {
         this.connection = connection;
@@ -161,8 +162,9 @@ public class MysqlObjectMapper {
         try {
             NamedParameterStatement statement = getNamedParameterStatement(sql, args);
             ResultSet resultSet = statement.executeQuery();
+            List objects;
             if (!foreigns.isEmpty() || foreigns == ALL_FOREIGN) {
-                List<Object> objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
+                objects = ResultSetUtilities.getListWithSeveralTables(resultSet,
                         new ResultSetUtilities.FieldsProvider() {
                             @Override
                             public List<Field> getFieldsOfClass(Class aClass) {
@@ -172,13 +174,15 @@ public class MysqlObjectMapper {
                             @Override
                             public List<Field> getForeignValueFields(Class aClass) {
                                 return getForeignValueFieldsToFill(aClass, foreigns);
-                            };
-                        }, resultClass);
+                            }
 
-                return (List<T>) objects;
+                            ;
+                        }, resultClass);
             } else {
-                return ResultSetUtilities.getList(resultFields, resultClass, resultSet);
+                objects = ResultSetUtilities.getList(resultFields, resultClass, resultSet);
             }
+            initList(objects);
+            return objects;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -390,7 +394,9 @@ public class MysqlObjectMapper {
             return null;
         }
 
-        return list.get(0);
+        T object = list.get(0);
+        initRow(object);
+        return object;
     }
 
     public long getCountByPattern(final Object pattern) {
@@ -458,7 +464,9 @@ public class MysqlObjectMapper {
             return defaultValue;
         }
 
-        return objects.iterator().next();
+        T next = objects.iterator().next();
+        initRow(next);
+        return next;
     }
 
     public <T> T max(Class aClass, String fieldName, T defaultValue) {
@@ -485,6 +493,20 @@ public class MysqlObjectMapper {
         return executeSQLQuery(sql, new HashMap<String, Object>(), aClass, selectParams.foreignFieldsToFill);
     }
 
+    private <T> void initRow(T item) {
+        if(onRowSelectedListener != null){
+            onRowSelectedListener.onRowSelected(item);
+        }
+    }
+
+    private <T> void initList(List<T> list) {
+        if(onRowSelectedListener != null){
+            for(T item : list){
+                onRowSelectedListener.onRowSelected(item);
+            }
+        }
+    }
+
     public <T> List<T> queryAllObjects(Class<T> aClass, OffsetLimit offsetLimit, String ordering) {
         SelectParams selectParams = new SelectParams();
         selectParams.offsetLimit = offsetLimit;
@@ -500,6 +522,7 @@ public class MysqlObjectMapper {
 
         Map<String, Object> args = ResultSetUtilities.getArgs(object, orderByFields);
         List<T> list = getListFromPattern(sql, pattern, pattern.getClass(), foreigns, args);
+        T item = list.get(0);
         if(list.isEmpty()){
             if (!allowCircle) {
                 return null;
@@ -517,11 +540,13 @@ public class MysqlObjectMapper {
                     return null;
                 }
 
-                return list.get(0);
+                initRow(item);
+                return item;
             }
         }
 
-        return list.get(0);
+        initRow(item);
+        return item;
     }
 
     public long getAllObjectsCount(Class aClass) {
@@ -562,7 +587,9 @@ public class MysqlObjectMapper {
         List<SqlGenerationUtilities.Foreign> foreigns = getForeignsFromClass(foreignFieldNames, pattern.getClass());
 
         String sql = SqlGenerationUtilities.select(pattern, foreigns, selectParams);
-        return getListFromPattern(sql, pattern, pattern.getClass(), foreignFieldNames);
+        List<T> list = getListFromPattern(sql, pattern, pattern.getClass(), foreignFieldNames);
+        initList(list);
+        return list;
     }
 
     public <Id, T> List<Id> queryIdesByPattern(final T pattern) {
@@ -654,6 +681,14 @@ public class MysqlObjectMapper {
 
     public int delete(Object object) {
         return deleteAll(Arrays.asList(object));
+    }
+
+    public OnRowSelectedListener getOnRowSelectedListener() {
+        return onRowSelectedListener;
+    }
+
+    public void setOnRowSelectedListener(OnRowSelectedListener onRowSelectedListener) {
+        this.onRowSelectedListener = onRowSelectedListener;
     }
 
     @Override

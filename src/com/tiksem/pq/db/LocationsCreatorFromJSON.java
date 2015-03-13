@@ -19,6 +19,7 @@ import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,10 +36,10 @@ public class LocationsCreatorFromJSON {
     private DatabaseAsyncTaskManager.Handler asyncTaskHandler;
     private TwoKeysHashMap<String, String, String> cityTranslationMap = new TwoKeysHashMap<String, String, String>();
 
-    public LocationsCreatorFromJSON(MysqlObjectMapper mapper, String fileName) {
+    public LocationsCreatorFromJSON(MysqlObjectMapper mapper, HttpServletRequest request, String fileName) {
         this.mapper = mapper;
         this.fileName = fileName;
-        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler("en");
+        asyncTaskHandler = DatabaseAsyncTaskManager.getInstance().createHandler("en", request);
     }
 
     private void insertCountries() {
