@@ -629,6 +629,19 @@ public class DatabaseManager {
         return advancedRequestsManager.getSearchSentRequestsCount(params, userId);
     }
 
+    public void checkAdminPermissions(HttpServletRequest request) {
+        User user = getSignedInUserOrThrow(request);
+        if(!user.getLogin().equals(Settings.getInstance().get("admin"))){
+            throw new PermissionDeniedException("Hey dude, you are not admin");
+        }
+    }
+
+    public void checkDebug() {
+        if(!Settings.getInstance().getBoolean("debug")){
+            throw new PermissionDeniedException("unable to use this method on release build");
+        }
+    }
+
     private interface UsersSearcher {
         public Collection<User> search(String orderBy);
     }

@@ -1,6 +1,7 @@
 package com.tiksem.mysqljava;
 
 import com.utils.framework.CollectionUtils;
+import com.utils.framework.Predicate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,4 +15,5 @@ public class SelectParams {
     public String ordering;
     public OffsetLimit offsetLimit = new OffsetLimit();
     public List<String> foreignFieldsToFill = new ArrayList<String>();
+    public FieldIncludePredicate includePredicate;
 }

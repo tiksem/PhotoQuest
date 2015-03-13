@@ -100,6 +100,10 @@ public class Settings {
         return Maps.getIntOrThrow(properties, key);
     }
 
+    public boolean getBoolean(String key) {
+        return Maps.getBoolean(properties, key);
+    }
+
     public String get(String key) {
         return Maps.getOrThrow(properties, key);
     }

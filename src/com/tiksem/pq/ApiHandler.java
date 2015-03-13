@@ -7,6 +7,7 @@ import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.data.response.android.*;
 import com.tiksem.pq.db.*;
 import com.tiksem.pq.db.advanced.SearchUsersParams;
+import com.tiksem.pq.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
@@ -14,6 +15,7 @@ import com.utils.framework.strings.Strings;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -51,6 +53,9 @@ public class ApiHandler {
     @Autowired
     private HttpSession httpSession;
 
+    @Autowired
+    private ApplicationContext appContext;
+
     private DatabaseManager getDatabaseManager() {
         Settings settings = Settings.getInstance();
         long delay = settings.getRequestDelay();
@@ -79,6 +84,12 @@ public class ApiHandler {
                     }
                 }, 0);
         return databaseManager;
+    }
+
+    public void checkDebug(DatabaseManager databaseManager) {
+        if(!Settings.getInstance().getBoolean("debug")){
+            databaseManager.checkAdminPermissions(request);
+        }
     }
 
     private boolean isMobileClient() {
@@ -203,12 +214,6 @@ public class ApiHandler {
     @ResponseBody public Object logout(HttpServletResponse response) {
         HttpUtilities.removeCookie(response, "login");
         HttpUtilities.removeCookie(response, "password");
-        return new Success();
-    }
-
-    @RequestMapping("/updateSettings")
-    @ResponseBody public Object updateSettings() {
-        Settings.getInstance().update();
         return new Success();
     }
 
@@ -933,12 +938,15 @@ public class ApiHandler {
 
     @RequestMapping("/initDatabase")
     public @ResponseBody Object initDatabase() {
-        getDatabaseManager().initDatabase();
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
+        databaseManager.initDatabase();
         return new Success();
     }
 
     @RequestMapping("/getTables")
     public @ResponseBody Object getTables() {
+        checkDebug(getDatabaseManager());
         return CollectionUtils.transform(Reflection.findClassesInPackage("com.tiksem.pq.data"),
                 new CollectionUtils.Transformer<Class<?>, String>() {
                     @Override
@@ -950,13 +958,17 @@ public class ApiHandler {
 
     @RequestMapping("/clearDatabase")
     public @ResponseBody Object clearDatabase() throws IOException {
-        getDatabaseManager().clearDatabase();
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
+        databaseManager.clearDatabase();
         return new Success();
     }
 
     @RequestMapping("/dropTables")
     public @ResponseBody Object dropDatabase() {
-        getDatabaseManager().dropTables();
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
+        databaseManager.dropTables();
         return new Success();
     }
 
@@ -1004,15 +1016,18 @@ public class ApiHandler {
 
     @RequestMapping("/executeSQL")
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql) {
-        MysqlObjectMapper mapper = getMapper();
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
+        MysqlObjectMapper mapper = databaseManager.getMapper();
         return mapper.executeSelectSql(sql);
     }
 
     @RequestMapping("/test")
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql,
                                            @RequestParam("count") int count) {
-        MysqlObjectMapper mapper = null;
-        mapper = getMapper();
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
+        MysqlObjectMapper mapper = databaseManager.getMapper();
         final long time = System.currentTimeMillis();
         for (int i = 0; i < count; i++) {
             mapper.executeNonSelectSQL(sql);
@@ -1037,6 +1052,7 @@ public class ApiHandler {
 
     @RequestMapping("/refreshSettings")
     public @ResponseBody Object refreshSettings() {
+        checkDebug(getDatabaseManager());
         Settings instance = Settings.getInstance();
         instance.update();
         instance.updateRps();
@@ -1045,7 +1061,9 @@ public class ApiHandler {
 
     @RequestMapping("/initLocationsFromJSON")
     public @ResponseBody Object initLocationsFromJSON() throws IOException, JSONException {
-        MysqlObjectMapper mapper = getMapper();
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
+        MysqlObjectMapper mapper = databaseManager.getMapper();
         LocationsCreatorFromJSON creatorFromJSON = new LocationsCreatorFromJSON(mapper, "locations.txt");
         creatorFromJSON.initLocations();
         return new Success();
@@ -1053,8 +1071,10 @@ public class ApiHandler {
 
     @RequestMapping("/progress")
     public @ResponseBody Object progress() {
+        final DatabaseManager databaseManager = getDatabaseManager();
+        checkDebug(databaseManager);
         return new Object(){
-            public List<ProgressOperation> operations = getDatabaseManager().getProgressOperations();
+            public List<ProgressOperation> operations = databaseManager.getProgressOperations();
         };
     }
 }
