@@ -1,6 +1,7 @@
 package com.tiksem.pq.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tiksem.mysqljava.FieldsCheckingUtilities;
 import com.tiksem.mysqljava.annotations.*;
 import com.tiksem.mysqljava.annotations.NotNull;
@@ -65,18 +66,22 @@ public class User implements WithAvatar {
 
     @Stored
     @NotNull
+    @JsonIgnore
     private Long unreadMessagesCount;
     
     @Stored
     @NotNull
+    @JsonIgnore
     private Long unreadRepliesCount;
     
     @Stored
     @NotNull
+    @JsonIgnore
     private Long sentRequestsCount;
 
     @Stored
     @NotNull
+    @JsonIgnore
     private Long receivedRequestsCount;
 
     @Stored
@@ -102,6 +107,9 @@ public class User implements WithAvatar {
 
     private String country;
     private String city;
+
+    @JsonIgnore
+    private boolean isSignedInUser;
 
     public User(String login, String password) {
         this.login = login;
@@ -220,6 +228,42 @@ public class User implements WithAvatar {
 
     public Long getReceivedRequestsCount() {
         return receivedRequestsCount;
+    }
+
+    @JsonProperty(value = "unreadRepliesCount")
+    public Long unreadRepliesCountJsonProperty() {
+        if(isSignedInUser){
+            return unreadRepliesCount;
+        }
+
+        return null;
+    }
+
+    @JsonProperty(value = "unreadMessagesCount")
+    public Long unreadMessagesCountJsonProperty() {
+        if(isSignedInUser){
+            return unreadMessagesCount;
+        }
+
+        return null;
+    }
+
+    @JsonProperty(value = "sentRequestsCount")
+    public Long sentRequestsCountJsonProperty() {
+        if(isSignedInUser){
+            return sentRequestsCount;
+        }
+
+        return null;
+    }
+
+    @JsonProperty(value = "receivedRequestsCount")
+    public Long receivedRequestsCountJsonProperty() {
+        if(isSignedInUser){
+            return receivedRequestsCount;
+        }
+
+        return null;
     }
 
     public void setReceivedRequestsCount(Long receivedRequestsCount) {
@@ -404,5 +448,13 @@ public class User implements WithAvatar {
 
     public void setCountryId(Integer countryId) {
         this.countryId = countryId;
+    }
+
+    public boolean isSignedInUser() {
+        return isSignedInUser;
+    }
+
+    public void setSignedInUser(boolean isSignedInUser) {
+        this.isSignedInUser = isSignedInUser;
     }
 }

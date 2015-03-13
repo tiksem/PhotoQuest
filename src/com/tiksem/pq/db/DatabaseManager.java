@@ -74,24 +74,6 @@ public class DatabaseManager {
         if(!exceptions.isEmpty()){
             throw exceptions.remove();
         }
-
-        if (request != null) {
-//            mapper.setOnRowSelectedListener(new OnRowSelectedListener() {
-//                @Override
-//                public void onRowSelected(Object row) {
-//                    if(row instanceof User){
-//                        User user = (User)row;
-//                        User signedInUser = getSignedInUser();
-//                        if(signedInUser == null || !signedInUser.getId().equals(user.getId())){
-//                            user.setUnreadMessagesCount(null);
-//                            user.setReceivedRequestsCount(null);
-//                            user.setUnreadRepliesCount(null);
-//                            user.setSentRequestsCount(null);
-//                        }
-//                    }
-//                }
-//            });
-        }
     }
 
     private <T> T replace(T object) {
@@ -205,6 +187,7 @@ public class DatabaseManager {
         User user = getUserByLogin(login);
         if (user != null && user.getPassword().equals(password)) {
             setUserInfo(user);
+            user.setSignedInUser(true);
             return user;
         }
 
@@ -236,11 +219,8 @@ public class DatabaseManager {
             return null;
         }
 
-        OnRowSelectedListener onRowSelectedListener = mapper.getOnRowSelectedListener();
-        mapper.setOnRowSelectedListener(null);
         User user = getUserByLoginAndPassword(loginCookie.getValue(),
                 passwordCookie.getValue());
-        mapper.setOnRowSelectedListener(onRowSelectedListener);
 
         _signedInUser = user;
         return user;
