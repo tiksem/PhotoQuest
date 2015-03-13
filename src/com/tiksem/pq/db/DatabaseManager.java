@@ -76,21 +76,21 @@ public class DatabaseManager {
         }
 
         if (request != null) {
-            mapper.setOnRowSelectedListener(new OnRowSelectedListener() {
-                @Override
-                public void onRowSelected(Object row) {
-                    if(row instanceof User){
-                        User user = (User)row;
-                        User signedInUser = getSignedInUser();
-                        if(signedInUser == null || !signedInUser.getId().equals(user.getId())){
-                            user.setUnreadMessagesCount(null);
-                            user.setReceivedRequestsCount(null);
-                            user.setUnreadRepliesCount(null);
-                            user.setSentRequestsCount(null);
-                        }
-                    }
-                }
-            });
+//            mapper.setOnRowSelectedListener(new OnRowSelectedListener() {
+//                @Override
+//                public void onRowSelected(Object row) {
+//                    if(row instanceof User){
+//                        User user = (User)row;
+//                        User signedInUser = getSignedInUser();
+//                        if(signedInUser == null || !signedInUser.getId().equals(user.getId())){
+//                            user.setUnreadMessagesCount(null);
+//                            user.setReceivedRequestsCount(null);
+//                            user.setUnreadRepliesCount(null);
+//                            user.setSentRequestsCount(null);
+//                        }
+//                    }
+//                }
+//            });
         }
     }
 
