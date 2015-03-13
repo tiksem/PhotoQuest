@@ -353,8 +353,6 @@ public class DatabaseManager {
         return result;
     }
 
-
-
     public long getPhotoquestsCreatedByUserCount(String filter, long userId) {
         if (Strings.isEmpty(filter)) {
             Photoquest photoquest = new Photoquest();
@@ -1021,7 +1019,6 @@ public class DatabaseManager {
     }
 
     private void setPhotoInfo(Photo photo) {
-        photo.setPosition(getPhotoInPhotoquestPosition(photo, RatingOrder.rated));
         initPhotoUrl(photo);
         initYourLikeParameter(photo);
         User user = photo.getUser();

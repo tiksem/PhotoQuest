@@ -121,6 +121,10 @@ public class FieldsCheckingUtilities {
     }
 
     public static void fixAndCheckFields(Object object){
+        fixAndCheckFields(object, false);
+    }
+
+    public static void fixAndCheckFields(Object object, boolean ignoreNotNullCheck){
         Class clazz = object.getClass();
         List<Field> fields = Reflection.getAllFieldsOfClass(clazz);
 
@@ -131,21 +135,8 @@ public class FieldsCheckingUtilities {
                 checkLogin(field, object);
                 checkPassword(field, object);
                 checkEmail(field, object);
-                checkNotNullField(field, object);
-            }
-        }
-
-        List<Method> methods = Reflection.getAllMethods(object);
-        for (Method method : methods) {
-            OnPrepareForStorage onPrepareForStorage = method.getAnnotation(OnPrepareForStorage.class);
-            if(onPrepareForStorage != null){
-                try {
-                    method.setAccessible(true);
-                    method.invoke(object);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
+                if (!ignoreNotNullCheck) {
+                    checkNotNullField(field, object);
                 }
             }
         }

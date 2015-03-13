@@ -110,7 +110,7 @@ public class ReplaceStatement extends BatchStatement {
         long currentTimeMillis = System.currentTimeMillis();
         Reflection.setValuesOfFieldsWithAnnotation(object, currentTimeMillis,
                 ModificationDate.class);
-        FieldsCheckingUtilities.fixAndCheckFields(object);
+        FieldsCheckingUtilities.fixAndCheckFields(object, true);
 
         String sql = SqlGenerationUtilities.update(object, patternFields, object, valueFields);
 

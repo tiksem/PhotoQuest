@@ -496,14 +496,18 @@ public class MysqlObjectMapper {
     private <T> void initRow(T item) {
         if(onRowSelectedListener != null){
             onRowSelectedListener.onRowSelected(item);
+            List<Field> foreigns = Reflection.getFieldsWithAnnotations(item.getClass(), ForeignValue.class);
+            for(Field foreign : foreigns){
+                if(!Reflection.isNull(item, foreign)){
+                    onRowSelectedListener.onRowSelected(Reflection.getFieldValueUsingGetter(item, foreign));
+                }
+            }
         }
     }
 
     private <T> void initList(List<T> list) {
-        if(onRowSelectedListener != null){
-            for(T item : list){
-                onRowSelectedListener.onRowSelected(item);
-            }
+        for(T item : list){
+            initRow(item);
         }
     }
 
@@ -522,7 +526,6 @@ public class MysqlObjectMapper {
 
         Map<String, Object> args = ResultSetUtilities.getArgs(object, orderByFields);
         List<T> list = getListFromPattern(sql, pattern, pattern.getClass(), foreigns, args);
-        T item = list.get(0);
         if(list.isEmpty()){
             if (!allowCircle) {
                 return null;
@@ -540,11 +543,13 @@ public class MysqlObjectMapper {
                     return null;
                 }
 
+                T item = list.get(0);
                 initRow(item);
                 return item;
             }
         }
 
+        T item = list.get(0);
         initRow(item);
         return item;
     }

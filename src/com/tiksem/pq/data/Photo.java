@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tiksem.mysqljava.annotations.*;
 
 /**
@@ -29,6 +30,7 @@ public class Photo implements Likable {
     private Long likesCount;
 
     @NotNull
+    @JsonIgnore
     @ForeignKey(parent = Photoquest.class, field = "id")
     private Long photoquestId;
 
@@ -46,8 +48,6 @@ public class Photo implements Likable {
 
     private Like yourLike;
 
-    private Long position;
-
     private boolean showNextPrevButtons = false;
 
     @Stored
@@ -61,6 +61,7 @@ public class Photo implements Likable {
     private String message;
 
     @Stored
+    @JsonIgnore
     @NotNull
     private Boolean isNew;
 
@@ -136,14 +137,6 @@ public class Photo implements Likable {
 
     public void setAddingDate(Long addingDate) {
         this.addingDate = addingDate;
-    }
-
-    public Long getPosition() {
-        return position;
-    }
-
-    public void setPosition(Long position) {
-        this.position = position;
     }
 
     public Long getViewsCount() {

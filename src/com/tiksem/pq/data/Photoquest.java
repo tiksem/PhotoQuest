@@ -1,5 +1,6 @@
 package com.tiksem.pq.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tiksem.mysqljava.annotations.*;
 
 /**
@@ -40,10 +41,12 @@ public class Photoquest implements WithAvatar, Likable {
     private User user;
 
     @Stored
+    @JsonIgnore
     @AddingDate
     private Long addingDate;
 
     @Stored
+    @JsonIgnore
     @NotNull
     private Boolean isNew;
 
