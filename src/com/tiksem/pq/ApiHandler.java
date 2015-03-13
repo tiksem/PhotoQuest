@@ -7,7 +7,6 @@ import com.tiksem.pq.data.response.*;
 import com.tiksem.pq.data.response.android.*;
 import com.tiksem.pq.db.*;
 import com.tiksem.pq.db.advanced.SearchUsersParams;
-import com.tiksem.pq.exceptions.PermissionDeniedException;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
@@ -86,7 +85,7 @@ public class ApiHandler {
         return databaseManager;
     }
 
-    public void checkDebug(DatabaseManager databaseManager) {
+    public void checkAdminPermissions(DatabaseManager databaseManager) {
         if(!Settings.getInstance().getBoolean("debug")){
             databaseManager.checkAdminPermissions();
         }
@@ -276,6 +275,7 @@ public class ApiHandler {
                                          String password) throws IOException {
 
         DatabaseManager databaseManager = getDatabaseManager();
+        checkAdminPermissions(databaseManager);
         List<User> users = databaseManager.registerRandomUsers(startId, count, password);
         return getUsersResponse(users);
     }
@@ -937,14 +937,14 @@ public class ApiHandler {
     @RequestMapping("/initDatabase")
     public @ResponseBody Object initDatabase() {
         DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         databaseManager.initDatabase();
         return new Success();
     }
 
     @RequestMapping("/getTables")
     public @ResponseBody Object getTables() {
-        checkDebug(getDatabaseManager());
+        checkAdminPermissions(getDatabaseManager());
         return CollectionUtils.transform(Reflection.findClassesInPackage("com.tiksem.pq.data"),
                 new CollectionUtils.Transformer<Class<?>, String>() {
                     @Override
@@ -957,7 +957,7 @@ public class ApiHandler {
     @RequestMapping("/clearDatabase")
     public @ResponseBody Object clearDatabase() throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         databaseManager.clearDatabase();
         return new Success();
     }
@@ -965,7 +965,7 @@ public class ApiHandler {
     @RequestMapping("/dropTables")
     public @ResponseBody Object dropDatabase() {
         DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         databaseManager.dropTables();
         return new Success();
     }
@@ -1015,7 +1015,7 @@ public class ApiHandler {
     @RequestMapping("/executeSQL")
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql) {
         DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         MysqlObjectMapper mapper = databaseManager.getMapper();
         return mapper.executeSelectSql(sql);
     }
@@ -1024,7 +1024,7 @@ public class ApiHandler {
     public @ResponseBody Object executeSQL(@RequestParam("sql") String sql,
                                            @RequestParam("count") int count) {
         DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         MysqlObjectMapper mapper = databaseManager.getMapper();
         final long time = System.currentTimeMillis();
         for (int i = 0; i < count; i++) {
@@ -1050,7 +1050,7 @@ public class ApiHandler {
 
     @RequestMapping("/refreshSettings")
     public @ResponseBody Object refreshSettings() {
-        checkDebug(getDatabaseManager());
+        checkAdminPermissions(getDatabaseManager());
         Settings instance = Settings.getInstance();
         instance.update();
         instance.updateRps();
@@ -1060,7 +1060,7 @@ public class ApiHandler {
     @RequestMapping("/initLocationsFromJSON")
     public @ResponseBody Object initLocationsFromJSON() throws IOException, JSONException {
         DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         MysqlObjectMapper mapper = databaseManager.getMapper();
         LocationsCreatorFromJSON creatorFromJSON = new LocationsCreatorFromJSON(mapper, request, "locations.txt");
         creatorFromJSON.initLocations();
@@ -1070,7 +1070,7 @@ public class ApiHandler {
     @RequestMapping("/progress")
     public @ResponseBody Object progress() {
         final DatabaseManager databaseManager = getDatabaseManager();
-        checkDebug(databaseManager);
+        checkAdminPermissions(databaseManager);
         return new Object(){
             public List<ProgressOperation> operations = databaseManager.getProgressOperations();
         };

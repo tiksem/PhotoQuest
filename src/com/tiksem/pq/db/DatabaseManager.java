@@ -62,7 +62,9 @@ public class DatabaseManager {
         this.mapper = mapper;
         advancedRequestsManager = new AdvancedRequestsManager(mapper);
         DatabaseAsyncTaskManager asyncTaskManager = DatabaseAsyncTaskManager.getInstance();
-        asyncTaskHandler = asyncTaskManager.createHandler(lang, request);
+        if (request != null) {
+            asyncTaskHandler = asyncTaskManager.createHandler(lang, request);
+        }
         captchaManager = new DatabaseCaptchaManager(mapper);
         imageManager = new FileSystemImageManager(Settings.getInstance().getImageManagerSettings());
         this.lang = lang;
@@ -73,21 +75,23 @@ public class DatabaseManager {
             throw exceptions.remove();
         }
 
-        mapper.setOnRowSelectedListener(new OnRowSelectedListener() {
-            @Override
-            public void onRowSelected(Object row) {
-                if(row instanceof User){
-                    User user = (User)row;
-                    User signedInUser = getSignedInUser();
-                    if(signedInUser == null || !signedInUser.getId().equals(user.getId())){
-                        user.setUnreadMessagesCount(null);
-                        user.setReceivedRequestsCount(null);
-                        user.setUnreadRepliesCount(null);
-                        user.setSentRequestsCount(null);
+        if (request != null) {
+            mapper.setOnRowSelectedListener(new OnRowSelectedListener() {
+                @Override
+                public void onRowSelected(Object row) {
+                    if(row instanceof User){
+                        User user = (User)row;
+                        User signedInUser = getSignedInUser();
+                        if(signedInUser == null || !signedInUser.getId().equals(user.getId())){
+                            user.setUnreadMessagesCount(null);
+                            user.setReceivedRequestsCount(null);
+                            user.setUnreadRepliesCount(null);
+                            user.setSentRequestsCount(null);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     private <T> T replace(T object) {
