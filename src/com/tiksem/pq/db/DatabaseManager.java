@@ -43,6 +43,7 @@ public class DatabaseManager {
     private static final long PROFILE_VIEW_PERIOD = 30 * 1000;
     private static final long PHOTO_VIEW_PERIOD = 30 * 1000;
     public static final String PHOTOQUEST_SET_NULL_AVATAR = "UPDATE Photoquest SET avatarId = NULL WHERE id = :id";
+    public static final int MAX_PHOTO_QUEST_NAME_LENGTH = 30;
 
     private MysqlObjectMapper mapper;
 
@@ -284,6 +285,10 @@ public class DatabaseManager {
                                        boolean follow) {
         if(keywords.size() > MAX_KEYWORDS_COUNT){
             throw new IllegalArgumentException("Too much tags, only " + MAX_KEYWORDS_COUNT + " are allowed");
+        }
+
+        if(photoquestName.length() > MAX_PHOTO_QUEST_NAME_LENGTH){
+            throw new IllegalArgumentException("Photoquest name > " + MAX_PHOTO_QUEST_NAME_LENGTH);
         }
 
         User user = getSignedInUserOrThrow();

@@ -58,7 +58,7 @@ public class Photo implements Likable {
     @NotNull
     private Long viewsCount;
 
-    @Stored
+    @Stored(type = "VARCHAR(200)")
     private String message;
 
     @Stored

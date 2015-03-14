@@ -47,6 +47,10 @@ public class ApiHandler {
         }
     }
 
+    private static final int MAX_PHOTO_DESCRIPTION_LENGTH = 200;
+    public static final int MAX_NAME_LENGTH = 20;
+    public static final int MAX_LASTNAME_LENGTH = 40;
+
     @Autowired
     private HttpServletRequest request;
 
@@ -235,6 +239,14 @@ public class ApiHandler {
         DatabaseManager databaseManager = getDatabaseManager();
         databaseManager.checkCaptcha(captcha, answer);
 
+        if(name.length() > MAX_NAME_LENGTH){
+            throw new IllegalArgumentException("name.length() > " + MAX_NAME_LENGTH);
+        }
+
+        if(lastName.length() > MAX_LASTNAME_LENGTH){
+            throw new IllegalArgumentException("lastName.length() > " + MAX_LASTNAME_LENGTH);
+        }
+
         User user = new User();
         user.setLogin(login);
         user.setPassword(password);
@@ -409,7 +421,12 @@ public class ApiHandler {
             throws IOException {
         if (message != null) {
             message = HttpUtilities.reencodePostParamString(message);
+            if(message.length() > MAX_PHOTO_DESCRIPTION_LENGTH) {
+                throw new IllegalArgumentException("Photo description message is bigger than " +
+                        MAX_PHOTO_DESCRIPTION_LENGTH);
+            }
         }
+
         DatabaseManager databaseManager = getDatabaseManager();
         return databaseManager.addPhotoToPhotoquest(id, file, message, follow);
     }

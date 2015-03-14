@@ -37,7 +37,7 @@ public class User implements WithAvatar {
     @PrimaryKey
     private Long id;
 
-    @Unique(type = "VARCHAR(25)")
+    @Unique(type = "VARCHAR(20)")
     @NotNull
     @Login
     @JsonIgnore
@@ -52,7 +52,7 @@ public class User implements WithAvatar {
     private Long avatarId;
 
     @NotNull
-    @Index(type = "VARCHAR(60)")
+    @Index(type = "VARCHAR(61)")
     @JsonIgnore
     private String nameData;
 

@@ -11,7 +11,7 @@ public class Comment implements Likable, WithPhoto {
     @PrimaryKey
     private Long id;
 
-    @Stored
+    @Stored(type = "VARCHAR(300)")
     @NotNull
     private String message;
 
