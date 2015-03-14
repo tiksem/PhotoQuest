@@ -2231,7 +2231,7 @@ public class DatabaseManager {
     public UserStats getUserStats() {
         User user = getSignedInUserOrThrow();
         UserStats stats = new UserStats();
-        stats.setFriendRequestsCount(user.getReceivedRequestsCount());
+        stats.setReceivedRequestsCount(user.getReceivedRequestsCount());
         stats.setUnreadMessagesCount(user.getUnreadMessagesCount());
         Long unreadRepliesCount = user.getUnreadRepliesCount();
         stats.setUnreadRepliesCount(unreadRepliesCount == null ? 0 : unreadRepliesCount);

@@ -5,7 +5,7 @@ package com.tiksem.pq.data.response;
  */
 public class UserStats {
     private long unreadMessagesCount = 0;
-    private long friendRequestsCount = 0;
+    private long receivedRequestsCount = 0;
     private long unreadRepliesCount = 0;
 
     public long getUnreadMessagesCount() {
@@ -20,16 +20,16 @@ public class UserStats {
         this.unreadMessagesCount = unreadMessagesCount;
     }
 
-    public long getFriendRequestsCount() {
-        return friendRequestsCount;
+    public long getReceivedRequestsCount() {
+        return receivedRequestsCount;
     }
 
-    public void setFriendRequestsCount(long friendRequestsCount) {
-        if(friendRequestsCount < 0){
-            friendRequestsCount = 0;
+    public void setReceivedRequestsCount(long receivedRequestsCount) {
+        if(receivedRequestsCount < 0){
+            receivedRequestsCount = 0;
         }
 
-        this.friendRequestsCount = friendRequestsCount;
+        this.receivedRequestsCount = receivedRequestsCount;
     }
 
     public long getUnreadRepliesCount() {
