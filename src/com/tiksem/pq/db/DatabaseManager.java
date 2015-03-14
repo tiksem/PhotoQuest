@@ -1404,15 +1404,21 @@ public class DatabaseManager {
     private List<User> searchRelations(Long userId, RatingOrder order,
                                        RelationsSearcher searcher) {
         String orderBy = getPeopleOrderBy(order);
-        if (userId == null) {
-            User signedInUser = getSignedInUserOrThrow();
+        boolean ofSignedInUser = userId == null;
+        User signedInUser = getSignedInUserOrThrow();
+        if (ofSignedInUser) {
             userId = signedInUser.getId();
         }
         List<User> friends = searcher.search(orderBy, userId);
 
-        for(User friend : friends){
-            friend.setRelation(searcher.getStatus());
+        for (User friend : friends) {
+            if (ofSignedInUser) {
+                friend.setRelation(searcher.getStatus());
+            }
             setUserInfo(friend);
+        }
+        if (!ofSignedInUser) {
+            setRelationStatus(signedInUser, friends);
         }
 
         return friends;

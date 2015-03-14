@@ -450,6 +450,7 @@ public class User implements WithAvatar {
         this.countryId = countryId;
     }
 
+    @JsonIgnore
     public boolean isSignedInUser() {
         return isSignedInUser;
     }
