@@ -1183,9 +1183,23 @@ public class DatabaseManager {
         City city = getCityByIdOrThrow(cityId);
         Integer countryId = city.getCountryId();
         Country country = getCountryByIdOrThrow(countryId);
-        location.cityName = city.getEnName();
-        location.countryName = country.getEnName();
+
+        if(lang.equals("ru")){
+            location.cityName = city.getRuName();
+            if(Strings.isEmpty(location.cityName)){
+                location.cityName = city.getEnName();
+            }
+            location.countryName = country.getRuName();
+            if(Strings.isEmpty(location.countryName)){
+                location.countryName = country.getEnName();
+            }
+        } else {
+            location.cityName = city.getEnName();
+            location.countryName = country.getEnName();
+        }
+
         location.countryId = countryId;
+
         return location;
     }
 
