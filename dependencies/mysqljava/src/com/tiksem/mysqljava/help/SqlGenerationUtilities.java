@@ -672,23 +672,24 @@ public class SqlGenerationUtilities {
 
     public static String delete(Object object,
                                 List<Field> fields,
-                              CollectionUtils.Transformer<String, String>
-                              whereTransformer) {
+                                String additionalWhere
+                              ) {
         Field primaryKey = Reflection.getFieldWithAnnotation(fields, PrimaryKey.class);
         Object id = null;
         if (primaryKey != null) {
             id = Reflection.getFieldValueUsingGetter(object, primaryKey);
         }
-        String where = null;
+        String where;
 
         if(id != null){
             String primaryKeyName = primaryKey.getName();
             where = "`" + primaryKeyName + "` = :" + primaryKeyName;
         } else {
             where = generatePatternWhereClosure(object, fields);
-            if(whereTransformer != null){
-                where = whereTransformer.get(where);
-            }
+        }
+
+        if(additionalWhere != null){
+            where = "(" + where + ") AND (" + additionalWhere + ")";
         }
 
         String result = "DELETE FROM " + quotedClassName(object.getClass());

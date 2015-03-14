@@ -668,24 +668,28 @@ public class MysqlObjectMapper {
     }
 
     public int deleteAll(Iterable<Object> objects) {
+        return deleteAll(objects, null);
+    }
+
+    public int deleteAll(Iterable<Object> objects, String additionalWhere) {
         int sum = 0;
 
         for(Object object : objects){
             List<Field> fields = SqlGenerationUtilities.getFields(object);
             Map<String, Object> args = ResultSetUtilities.getArgs(object, fields);
-            String sql = SqlGenerationUtilities.delete(object, fields);
+            String sql = SqlGenerationUtilities.delete(object, fields, additionalWhere);
             sum += executeModifySQL(sql, args);
         }
 
         return sum;
     }
 
-    public int deleteAll(Object... objects) {
-        return deleteAll(Arrays.asList(objects));
+    public int delete(Object object, String additionalWhere) {
+        return deleteAll(Arrays.asList(object), additionalWhere);
     }
 
     public int delete(Object object) {
-        return deleteAll(Arrays.asList(object));
+        return delete(object, null);
     }
 
     public OnRowSelectedListener getOnRowSelectedListener() {

@@ -106,7 +106,7 @@ public class DatabaseManager {
     }
 
     private void deleteAll(Object... objects) {
-        mapper.deleteAll(objects);
+        mapper.deleteAll(Arrays.asList(objects));
     }
 
     private void deleteAll(Iterable<Object> objects) {
@@ -1469,7 +1469,8 @@ public class DatabaseManager {
         Like like = new Like();
         like.setUserId(userId);
         like.setPhotoId(photoId);
-        return mapper.getObjectByPattern(like);
+        String where = "commentId is NULL";
+        return mapper.getObjectByPattern(like, where);
     }
 
     public Like getLikeByUserAndCommentId(long userId, long commentId) {
@@ -1726,7 +1727,12 @@ public class DatabaseManager {
         final Long photoId = like.getPhotoId();
         final Long commentId = like.getCommentId();
 
-        if (delete(like) == 0) {
+        String where = null;
+        if(commentId == null){
+            where = "commentId is NULL";
+        }
+
+        if (mapper.delete(like, where) == 0) {
             throw new LikeNotFoundException(likeId);
         }
 
