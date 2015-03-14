@@ -1023,6 +1023,8 @@ public class DatabaseManager {
 
         nextPhoto.setShowNextPrevButtons(true);
 
+        updatePhotoViewAsync(nextPhoto.getId());
+
         return nextPhoto;
     }
 
@@ -2169,30 +2171,7 @@ public class DatabaseManager {
             throw new PhotoNotFoundException(photoId);
         }
 
-        User signedInUser = getSignedInUser();
-        if(signedInUser != null){
-            PhotoView pattern = new PhotoView();
-            pattern.setPhotoId(photoId);
-            pattern.setUserId(signedInUser.getId());
-            PhotoView photoView = mapper.getObjectByPattern(pattern);
-            if(photoView == null){
-                photoView = pattern;
-            }
-
-            long currentTimeMillis = System.currentTimeMillis();
-            if(photoView == pattern || currentTimeMillis -
-                    photoView.getAddingDate() >= PHOTO_VIEW_PERIOD){
-                photoView.setAddingDate(currentTimeMillis);
-                photo.incrementViewsCount();
-                replace(photo);
-
-                if(photoView == pattern){
-                    insert(photoView);
-                } else {
-                    replace(photoView);
-                }
-            }
-        }
+        updatePhotoView(photo);
 
         setPhotoInfo(photo);
 
@@ -2220,6 +2199,55 @@ public class DatabaseManager {
         }
 
         return photo;
+    }
+
+    private void updatePhotoView(long photoId, long signedInUserId) {
+        Photo photo = new Photo();
+        photo.setId(photoId);
+        updatePhotoView(photo, signedInUserId);
+    }
+
+    private void updatePhotoViewAsync(final long photoId) {
+        User signedInUser = getSignedInUser();
+        if(signedInUser != null){
+            final long signedInUserId = signedInUser.getId();
+            asyncTaskHandler.execute(new Task() {
+                @Override
+                public void run(DatabaseManager databaseManager) {
+                    databaseManager.updatePhotoView(photoId, signedInUserId);
+                }
+            });
+        }
+    }
+
+    private void updatePhotoView(Photo photo, long signedInUserId) {
+        PhotoView pattern = new PhotoView();
+        pattern.setPhotoId(photo.getId());
+        pattern.setUserId(signedInUserId);
+        PhotoView photoView = mapper.getObjectByPattern(pattern);
+        if(photoView == null){
+            photoView = pattern;
+        }
+
+        long currentTimeMillis = System.currentTimeMillis();
+        if(photoView == pattern || currentTimeMillis -
+                photoView.getAddingDate() >= PHOTO_VIEW_PERIOD){
+            photoView.setAddingDate(currentTimeMillis);
+            mapper.increment(photo, "viewsCount");
+
+            if(photoView == pattern){
+                insert(photoView);
+            } else {
+                replace(photoView);
+            }
+        }
+    }
+
+    private void updatePhotoView(Photo photo) {
+        User signedInUser = getSignedInUser();
+        if(signedInUser != null){
+            updatePhotoView(photo, signedInUser.getId());
+        }
     }
 
     public List<AutoCompleteResult> getGoogleLocationSuggestions(String query) throws IOException {

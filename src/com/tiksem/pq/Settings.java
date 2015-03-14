@@ -4,11 +4,13 @@ import com.tiksem.mysqljava.security.DatabaseRpsGuard;
 import com.tiksem.mysqljava.security.MemoryRpsGuard;
 import com.tiksem.mysqljava.security.RpsGuard;
 import com.tiksem.pq.db.ImageManagerSettings;
+import com.utils.framework.ArrayUtils;
 import com.utils.framework.Maps;
 import com.utils.framework.strings.Strings;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -22,6 +24,7 @@ public class Settings {
     private RpsGuard rpsGuard;
     private ImageManagerSettings imageManagerSettings;
     private ImageManagerSettings captchaSettings;
+    private String[] ruLangs;
 
     public synchronized static Settings getInstance() {
         if(settings == null){
@@ -37,6 +40,8 @@ public class Settings {
             Properties loaded = new Properties();
             loaded.load(new FileInputStream("settings.txt"));
             properties = new LinkedHashMap<String, String>((Map)loaded);
+
+            ruLangs = Maps.getStringArray(properties, "ruLangs");
 
             imageManagerSettings = new ImageManagerSettings();
             imageManagerSettings.imageMagickPath = Maps.get(properties, "imageMagickPath", "");
@@ -106,5 +111,17 @@ public class Settings {
 
     public String get(String key) {
         return Maps.getOrThrow(properties, key);
+    }
+
+    public String getLang(String lang) {
+        if(lang.equals("ru")){
+            return lang;
+        }
+
+        if(ArrayUtils.contains(ruLangs, lang)) {
+            return "ru";
+        }
+
+        return "en";
     }
 }

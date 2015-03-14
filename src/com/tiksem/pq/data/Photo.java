@@ -55,6 +55,7 @@ public class Photo implements Likable {
     private Long addingDate;
 
     @Stored
+    @NotNull
     private Long viewsCount;
 
     @Stored
@@ -193,5 +194,16 @@ public class Photo implements Likable {
 
     public void setIsNew(Boolean isNew) {
         this.isNew = isNew;
+    }
+
+    @OnPrepareForStorage
+    void onPrepareForStorage() {
+        if(viewsCount == null){
+            viewsCount = 0l;
+        }
+
+        if(likesCount == null){
+            likesCount = 0l;
+        }
     }
 }

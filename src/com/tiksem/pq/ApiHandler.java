@@ -15,6 +15,7 @@ import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -55,6 +56,11 @@ public class ApiHandler {
     @Autowired
     private ApplicationContext appContext;
 
+    private String getLang() {
+        String language = LocaleContextHolder.getLocale().getLanguage();
+        return Settings.getInstance().getLang(language);
+    }
+
     private DatabaseManager getDatabaseManager() {
         Settings settings = Settings.getInstance();
         long delay = settings.getRequestDelay();
@@ -72,7 +78,7 @@ public class ApiHandler {
         }
 
         Cookie langCookie = HttpUtilities.getCookie("lang", request.getCookies());
-        String lang = langCookie == null ? "en" : langCookie.getValue();
+        String lang = langCookie == null ? getLang() : langCookie.getValue();
 
         final DatabaseManager databaseManager = new DatabaseManager(request, mapper, lang);
         RequestContextHolder.currentRequestAttributes().
