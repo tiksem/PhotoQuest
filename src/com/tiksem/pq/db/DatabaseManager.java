@@ -1426,7 +1426,7 @@ public class DatabaseManager {
                                        RelationsSearcher searcher) {
         String orderBy = getPeopleOrderBy(order);
         boolean ofSignedInUser = userId == null;
-        User signedInUser = getSignedInUserOrThrow();
+        User signedInUser = ofSignedInUser ? getSignedInUserOrThrow() : getSignedInUser();
         if (ofSignedInUser) {
             userId = signedInUser.getId();
         }
@@ -1438,7 +1438,7 @@ public class DatabaseManager {
             }
             setUserInfo(friend);
         }
-        if (!ofSignedInUser) {
+        if (!ofSignedInUser && signedInUser != null) {
             setRelationStatus(signedInUser, friends);
         }
 
