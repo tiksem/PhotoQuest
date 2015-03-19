@@ -25,6 +25,13 @@
                     </list>
                 </property>
             </bean>
+            <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                <property name="supportedMediaTypes">
+                    <list>
+                        <value>text/html</value>
+                    </list>
+                </property>
+            </bean>
         </mvc:message-converters>
     </mvc:annotation-driven>
 

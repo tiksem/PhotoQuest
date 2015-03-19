@@ -10,22 +10,26 @@ import com.tiksem.pq.db.advanced.SearchUsersParams;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
+import com.utils.framework.io.IOUtilities;
 import com.utils.framework.strings.Strings;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.*;
+import java.net.URI;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -59,6 +63,9 @@ public class ApiHandler {
 
     @Autowired
     private ApplicationContext appContext;
+
+    @Autowired
+    private ServletContext servletContext;
 
     private String getLang() {
         String language = LocaleContextHolder.getLocale().getLanguage();
@@ -197,9 +204,21 @@ public class ApiHandler {
         }
     }
 
-    @RequestMapping("/")
+    static String indexHtml = null;
+
+    @RequestMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
+    @ResponseBody
     public String index() {
-        return "redirect:/index.html";
+        if(indexHtml == null){
+            String indexHtmlPath = servletContext.getRealPath("/WEB-INF/resources/index.html");
+            try {
+                indexHtml = IOUtilities.readStringFromUrl(indexHtmlPath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return indexHtml;
     }
 
     @RequestMapping("/login")
