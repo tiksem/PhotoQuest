@@ -101,6 +101,9 @@ public class User implements WithAvatar {
     @Stored
     private Boolean gender;
 
+    @Stored(type = "VARCHAR(255)")
+    private String about;
+
     private String avatar;
 
     private RelationStatus relation;
@@ -457,5 +460,13 @@ public class User implements WithAvatar {
 
     public void setSignedInUser(boolean isSignedInUser) {
         this.isSignedInUser = isSignedInUser;
+    }
+
+    public String getAbout() {
+        return about;
+    }
+
+    public void setAbout(String about) {
+        this.about = about;
     }
 }

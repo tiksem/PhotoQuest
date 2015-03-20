@@ -252,6 +252,7 @@ public class ApiHandler {
                                       @RequestParam(value="lastName", required=true) String lastName,
                                       @RequestParam(value="cityId", required=true) Integer cityId,
                                       @RequestParam(value="gender", required=true) boolean gender,
+                                      @RequestParam(value="about", required=false) String about,
                                       @RequestParam(value="captcha", required=true) long captcha,
                                       @RequestParam(value="answer", required=true) String answer)
             throws IOException {
@@ -272,6 +273,7 @@ public class ApiHandler {
         user.setNameAndLastName(name, lastName);
         user.setCityId(cityId);
         user.setGender(gender);
+        user.setAbout(about);
 
         return databaseManager.registerUser(user, (InputStream) null);
     }
