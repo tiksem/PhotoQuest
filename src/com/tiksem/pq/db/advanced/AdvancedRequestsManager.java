@@ -39,9 +39,15 @@ public class AdvancedRequestsManager {
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("userId", userId);
         offsetLimit.addToMap(params);
+        orderBy = Strings.splitReplaceAndJoin(", *", ", ", orderBy, new Strings.Replacer() {
+            @Override
+            public String getReplacement(String source) {
+                return "photoquest." + source;
+            }
+        });
         params.put("orderBy", orderBy);
 
-        return sqlFileExecutor.executeSQLQuery(sqlFile, params, Photoquest.class);
+        return sqlFileExecutor.executeSQLQuery(sqlFile, params, Photoquest.class, MysqlObjectMapper.ALL_FOREIGN);
     }
 
     public Collection<Photoquest> getFollowingPhotoquests(long userId, String orderBy,

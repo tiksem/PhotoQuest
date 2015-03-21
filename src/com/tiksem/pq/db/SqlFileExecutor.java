@@ -4,16 +4,17 @@ import com.tiksem.mysqljava.MysqlObjectMapper;
 import com.tiksem.pq.http.HttpUtilities;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.strings.Strings;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 
 import javax.jdo.PersistenceManager;
 import javax.jdo.Query;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +25,7 @@ import java.util.regex.Pattern;
 public class SqlFileExecutor {
     private static final String SQL_PATH = HttpUtilities.getWarClassesPath() + "/sql/";
     private static Pattern PRE_ARG_PATTERN = Pattern.compile("::[^\\s]+");
+    private static Pattern INCLUDE_PATTERN = Pattern.compile("#include\\('.+'\\)");
 
     private MysqlObjectMapper mapper;
     private static Map<String, String[]> queries = new ConcurrentHashMap<String, String[]>();
@@ -54,12 +56,34 @@ public class SqlFileExecutor {
     }
 
     private String[] getSqls(String fileName, Map<String, Object> args) {
+        return getSqls(fileName, args, false);
+    }
+
+    private String[] getSqls(String fileName, Map<String, Object> args, boolean included) {
         String[] sqls = queries.get(fileName);
         if(sqls == null){
             try {
-                String script = IOUtilities.readStringFromUrl(SQL_PATH + fileName);
-                script = script.replaceAll("[;\\s]*$", "");
-                sqls = script.split(";\\n*");
+                String filePath = fileName;
+                if (FilenameUtils.getPrefixLength(fileName) == 0) {
+                    filePath = SQL_PATH + fileName;
+                }
+                final File root = new File(filePath).getParentFile();
+                String script = IOUtilities.readStringFromUrl(filePath);
+                script = Strings.regexpReplace(script, INCLUDE_PATTERN, new Strings.Replacer() {
+                    @Override
+                    public String getReplacement(String source) {
+                        String includeFileRelativePath = Strings.getFirstStringBetweenQuotes(source, "'");
+                        String includeFileAbsolutePath = new File(root, includeFileRelativePath).getAbsolutePath();
+                        return getSqls(includeFileAbsolutePath, null, true)[0];
+                    }
+                });
+
+                if (!included) {
+                    script = script.replaceAll("[;\\s]*$", "");
+                    sqls = script.split(";\\n*");
+                } else {
+                    sqls = new String[]{script};
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
