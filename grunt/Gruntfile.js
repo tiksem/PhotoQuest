@@ -76,6 +76,7 @@ module.exports = function (grunt) {
                     "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/first_quest.js",
                     "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/progress.js",
                     "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/about.js",
+                    "../../PhotoQuestOut/grunt/ngAnnotate/web/WEB-INF/resources/js/angular-socialshare.min.js",
                     '../../PhotoQuestOut/grunt/templates.js'
                 ],
                 dest: '../../PhotoQuestOut/grunt/ngAnnotate/one.js'
