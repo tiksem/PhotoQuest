@@ -499,8 +499,8 @@ public class DatabaseManager {
         }
         if (about != null) {
             user.setAbout(about);
-        } else {
-            mapper.executeNonSelectSQL("UPDATE `user` set about = null where userId = " + user.getId());
+        } else if(user.getAbout() != null) {
+            mapper.executeNonSelectSQL("UPDATE `user` set about = null where id = " + user.getId());
         }
         checkLocation(user);
         setUserInfo(user);
