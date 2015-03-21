@@ -485,7 +485,7 @@ public class DatabaseManager {
 
     public User editProfile(
                             String name, String lastName,
-                            Integer cityId) throws IOException {
+                            Integer cityId, String about) throws IOException {
         User user = getSignedInUserOrThrow();
 
         if (name != null) {
@@ -496,6 +496,11 @@ public class DatabaseManager {
         }
         if (cityId != null) {
             user.setCityId(cityId);
+        }
+        if (about != null) {
+            user.setAbout(about);
+        } else {
+            mapper.executeNonSelectSQL("UPDATE `user` set about = null where userId = " + user.getId());
         }
         checkLocation(user);
         setUserInfo(user);

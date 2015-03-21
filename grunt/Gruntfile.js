@@ -2,9 +2,6 @@ module.exports = function (grunt) {
 
     require('load-grunt-tasks')(grunt);
 
-    //var output = "../../PhotoQuestOut/grunt/resources/";
-    var output = "D:/apache-tomcat-8.0.15/webapps/ROOT/WEB-INF/resources/";
-
     function replaceRange(s, start, end, substitute) {
         return s.substring(0, start) + substitute + s.substring(end);
     }
@@ -92,7 +89,7 @@ module.exports = function (grunt) {
         'closure-compiler': {
             frontend: {
                 js: '../../PhotoQuestOut/grunt/ngAnnotate/one.js',
-                jsOutputFile: output + 'minified.js',
+                jsOutputFile: '../../PhotoQuestOut/grunt/resources/minified.js',
                 maxBuffer: 500,
                 options: {
                     compilation_level: 'SIMPLE_OPTIMIZATIONS',
@@ -122,8 +119,8 @@ module.exports = function (grunt) {
             },
             target: {
                 files: {
-                    src: ['../../PhotoQuestOut/grunt/one.css'],
-                    dest: output + "minified.css"
+                    '../../PhotoQuestOut/grunt/resources/minified.css':
+                        ['../../PhotoQuestOut/grunt/one.css']
                 }
             }
         },
@@ -142,7 +139,7 @@ module.exports = function (grunt) {
                 files: [
                     {
                         src: ['../../PhotoQuestOut/grunt/html/index.html'], // Actual pattern(s) to match.
-                        dest: output + "index.html"
+                        dest: "../../PhotoQuestOut/grunt/resources/index.html"
                     }
                 ]
             },
@@ -165,7 +162,7 @@ module.exports = function (grunt) {
                         expand: true,
                         cwd: '../web/WEB-INF/resources/images/',
                         src: ['**'],
-                        dest: output.indexOf("D:/") == 0 ? '' : '../../' + output + 'images/'
+                        dest: '../../../../PhotoQuestOut/grunt/resources/images/'
                     }
                 ]
             }

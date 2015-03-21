@@ -282,10 +282,11 @@ public class ApiHandler {
     public @ResponseBody Object editProfile(
                                          @RequestParam(value="name", required=false) String name,
                                          @RequestParam(value="lastName", required=false) String lastName,
-                                         @RequestParam(value="cityId", required=false) Integer cityId)
+                                         @RequestParam(value="cityId", required=false) Integer cityId,
+                                         @RequestParam(value="about", required=false) String about)
             throws IOException {
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.editProfile(name, lastName, cityId);
+        return databaseManager.editProfile(name, lastName, cityId, about);
     }
 
     @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
