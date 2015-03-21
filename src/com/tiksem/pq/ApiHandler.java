@@ -442,7 +442,6 @@ public class ApiHandler {
                                                  @RequestParam(value = "file", required = true) MultipartFile file)
             throws IOException {
         if (message != null) {
-            message = HttpUtilities.reencodePostParamString(message);
             if(message.length() > MAX_PHOTO_DESCRIPTION_LENGTH) {
                 throw new IllegalArgumentException("Photo description message is bigger than " +
                         MAX_PHOTO_DESCRIPTION_LENGTH);
