@@ -26,6 +26,7 @@
                 </property>
             </bean>
             <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                <constructor-arg index="0" name="defaultCharset" value="UTF-8"/>
                 <property name="supportedMediaTypes">
                     <list>
                         <value>text/html</value>

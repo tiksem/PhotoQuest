@@ -212,7 +212,7 @@ public class ApiHandler {
         if(indexHtml == null){
             String indexHtmlPath = servletContext.getRealPath("/WEB-INF/resources/index.html");
             try {
-                indexHtml = IOUtilities.readStringFromUrl(indexHtmlPath);
+                indexHtml = IOUtilities.getUtf8StringFromStream(new FileInputStream(indexHtmlPath));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
