@@ -12,6 +12,8 @@ import com.utils.framework.CollectionUtils;
 import com.utils.framework.Reflection;
 import com.utils.framework.io.IOUtilities;
 import com.utils.framework.strings.Strings;
+import com.visural.common.web.client.UserAgent;
+import com.visural.common.web.client.WebClient;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -208,7 +210,16 @@ public class ApiHandler {
 
     @RequestMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
     @ResponseBody
-    public String index() {
+    public String index(HttpServletResponse response) throws IOException {
+        WebClient webClient = WebClient.detect(request);
+        UserAgent userAgent = webClient.getUserAgent();
+        if (userAgent.equals(UserAgent.IE)) {
+            if (webClient.getMajorVersion() <= 9) {
+                response.sendRedirect("/ie.html");
+                return "";
+            }
+        }
+
         if(indexHtml == null){
             String indexHtmlPath = servletContext.getRealPath("/WEB-INF/resources/index.html");
             try {
