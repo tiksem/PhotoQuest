@@ -68,6 +68,15 @@ public class MysqlObjectMapper {
         return statement;
     }
 
+    public int executeModifySQL(String sql) {
+        try {
+            Statement statement = connection.createStatement();
+            return statement.executeUpdate(sql);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public int executeModifySQL(String sql, Map<String, Object> args) {
         try {
             NamedParameterStatement statement = getNamedParameterStatement(sql, args);
@@ -698,6 +707,10 @@ public class MysqlObjectMapper {
 
     public void setOnRowSelectedListener(OnRowSelectedListener onRowSelectedListener) {
         this.onRowSelectedListener = onRowSelectedListener;
+    }
+
+    public int deleteById(long id, Class table) {
+        return executeModifySQL("delete from " + table.getSimpleName() + " where id = " + id);
     }
 
     @Override

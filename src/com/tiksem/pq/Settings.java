@@ -113,6 +113,10 @@ public class Settings {
         return Maps.getOrThrow(properties, key);
     }
 
+    public boolean isAdmin(String userName) {
+        return ArrayUtils.contains(Maps.getStringArray(properties, "admin"), userName);
+    }
+
     public String getLang(String lang) {
         if(lang.equals("ru")){
             return lang;

@@ -32,7 +32,7 @@ public class Photoquest implements WithAvatar, Likable {
     @NotNull
     private Long viewsCount;
 
-    @ForeignKey(parent = User.class, field = "id")
+    @ForeignKey(parent = User.class, field = "id", onDelete = OnDelete.SET_NULL)
     private Long userId;
     @Stored
     private Long avatarId;

@@ -646,7 +646,7 @@ public class DatabaseManager {
 
     public void checkAdminPermissions() {
         User user = getSignedInUserOrThrow();
-        if(!user.getLogin().equals(Settings.getInstance().get("admin"))){
+        if(Settings.getInstance().isAdmin(user.getLogin())){
             throw new PermissionDeniedException("Hey dude, you are not admin");
         }
     }
@@ -1743,7 +1743,7 @@ public class DatabaseManager {
 
         return like;
     }
-
+    
     public void unlike(final long likeId) {
         final Like like = getLikeByIdOrThrow(likeId);
         if(!like.getUserId().equals(getSignedInUserOrThrow().getId())){
@@ -1753,42 +1753,59 @@ public class DatabaseManager {
         final Long photoId = like.getPhotoId();
         final Long commentId = like.getCommentId();
 
-        String where = null;
-        if(commentId == null){
-            where = "commentId is NULL";
-        }
-
-        if (mapper.delete(like, where) == 0) {
+        if (deleteLike(like) == 0) {
             throw new LikeNotFoundException(likeId);
         }
 
         asyncTaskHandler.execute(new Task() {
             @Override
             public void run(DatabaseManager databaseManager) {
-                long replyUserId;
-                if (commentId != null) {
-                    Comment comment = databaseManager.getCommentByIdOrThrow(commentId);
-                    databaseManager.decrementLikesCount(comment);
-                    replyUserId = comment.getUserId();
-                } else {
-                    if (photoId == null) {
-                        throw new RuntimeException("WTF?");
-                    }
-
-                    Photo photo = databaseManager.getPhotoByIdOrThrow(photoId);
-                    Photoquest photoquest = databaseManager.getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
-                    databaseManager.decrementLikesCount(photo, photoquest);
-                    databaseManager.updatePhotoquestAvatar(photoquest);
-                    replyUserId = photo.getUserId();
-                }
-
-                Reply reply = new Reply();
-                reply.setType(Reply.LIKE);
-                reply.setUserId(replyUserId);
-                reply.setId(likeId);
-                databaseManager.deleteReply(reply);
+                databaseManager.applyUnlikeReplyAndDecrementChanges(commentId, photoId, likeId);
             }
         });
+    }
+
+    private int deleteLike(Like like) {
+        final Long commentId = like.getCommentId();
+
+        String where = null;
+        if(commentId == null){
+            where = "commentId is NULL";
+        }
+
+        return mapper.delete(like, where);
+    }
+
+    private void unlike(Like like) {
+        if (deleteLike(like) == 0) {
+            return;
+        }
+        applyUnlikeReplyAndDecrementChanges(like.getCommentId(), like.getPhotoId(), like.getId());
+    }
+
+    private void applyUnlikeReplyAndDecrementChanges(Long commentId, Long photoId, long likeId) {
+        long replyUserId;
+        if (commentId != null) {
+            Comment comment = getCommentByIdOrThrow(commentId);
+            decrementLikesCount(comment);
+            replyUserId = comment.getUserId();
+        } else {
+            if (photoId == null) {
+                throw new RuntimeException("WTF?");
+            }
+
+            Photo photo = getPhotoByIdOrThrow(photoId);
+            Photoquest photoquest = getPhotoQuestByIdOrThrow(photo.getPhotoquestId());
+            decrementLikesCount(photo, photoquest);
+            updatePhotoquestAvatar(photoquest);
+            replyUserId = photo.getUserId();
+        }
+
+        Reply reply = new Reply();
+        reply.setType(Reply.LIKE);
+        reply.setUserId(replyUserId);
+        reply.setId(likeId);
+        deleteReply(reply);
     }
 
     private void deleteReply(Reply reply) {
@@ -2735,6 +2752,57 @@ public class DatabaseManager {
 
     public void clearOldCaptchas(long delay) {
         captchaManager.clearOldCaptchas(delay);
+    }
+
+    public void deleteUsers(String idesProviderSql) {
+        List<Long> ides = mapper.executeOneColumnValuesSql(idesProviderSql);
+        for(Long id : ides){
+            deleteUser(id);
+        }
+    }
+
+    public void deleteUser(long userId) {
+        Collection<Long> photosIdes = mapper.executeOneColumnValuesSql("SELECT id FROM Photo WHERE userId = "
+                + userId);
+        for(Long photoId : photosIdes){
+            deletePhoto(photoId);
+        }
+
+        Reply reply = new Reply();
+        reply.setUserId(userId);
+        delete(reply);
+
+        PhotoView photoView = new PhotoView();
+        photoView.setUserId(userId);
+        delete(photoView);
+
+        ProfileView profileView = new ProfileView();
+        profileView.setUserId(userId);
+        delete(profileView);
+
+        PhotoquestView photoquestView = new PhotoquestView();
+        photoquestView.setUserId(userId);
+        delete(photoquestView);
+
+        for (Like like : getLikesOfUser(userId)) {
+            unlike(like);
+        }
+
+        List<Long> commentIdes = getUserCommentsIdes(userId);
+        for(Long commentId : commentIdes) {
+            deleteComment(commentId, userId);
+        }
+
+        mapper.deleteById(userId, User.class);
+    }
+
+    private List<Long> getUserCommentsIdes(long userId) {
+        return mapper.executeOneColumnValuesSql("SELECT id from comment where userId = "
+                + userId);
+    }
+
+    private List<Like> getLikesOfUser(long userId) {
+        return mapper.executeSQLQuery("SELECT * FROM like WHERE userId = " + userId, Like.class);
     }
 
     @Override

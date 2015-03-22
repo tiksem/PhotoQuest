@@ -945,6 +945,24 @@ public class ApiHandler {
         return new Success();
     }
 
+    @RequestMapping("/deleteUser")
+    public @ResponseBody Object deleteUser(
+            @RequestParam(value = "id", required = true) Long userId) {
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkAdminPermissions(databaseManager);
+        databaseManager.deleteUser(userId);
+        return new Success();
+    }
+
+    @RequestMapping("/deleteUsers")
+    public @ResponseBody Object deleteUser(
+            @RequestParam(value = "sql", required = true) String sql) {
+        DatabaseManager databaseManager = getDatabaseManager();
+        checkAdminPermissions(databaseManager);
+        databaseManager.deleteUsers(sql);
+        return new Success();
+    }
+
     @RequestMapping("/getCommentsOnPhoto")
     public @ResponseBody Object getCommentsOnPhoto(@RequestParam("photoId") Long photoId,
                                                    @RequestParam(value = "afterId", required = false)
