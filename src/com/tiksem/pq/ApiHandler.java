@@ -324,7 +324,7 @@ public class ApiHandler {
     public @ResponseBody Object getAllUsers(
             SearchUsersParams searchParams,
             OffsetLimit offsetLimit,
-            @RequestParam(value = "order", required = false, defaultValue = "newest")
+            @RequestParam(value = "order", required = false, defaultValue = "rated")
             RatingOrder order) {
         DatabaseManager databaseManager = getDatabaseManager();
         Collection<User> users
@@ -362,7 +362,7 @@ public class ApiHandler {
     @RequestMapping("/friends")
     public @ResponseBody Object getFriends(SearchUsersParams searchParams,
                                            OffsetLimit offsetLimit,
-                                           @RequestParam(value = "order", required = false, defaultValue = "newest")
+                                           @RequestParam(value = "order", required = false, defaultValue = "rated")
                                            RatingOrder order,
                                            @RequestParam(value = "id", required = false)
                                            Long id) {
@@ -391,7 +391,7 @@ public class ApiHandler {
     public @ResponseBody Object getReceivedFriendRequests(SearchUsersParams searchParams,
                                                           OffsetLimit offsetLimit,
                                                           @RequestParam(value = "order", required = false,
-                                                                  defaultValue = "newest")
+                                                                  defaultValue = "rated")
                                                           RatingOrder order) {
         Collection<User> users = getDatabaseManager().getReceivedFriendRequests(searchParams, offsetLimit, order);
         return getUsersResponse(users);
@@ -401,7 +401,7 @@ public class ApiHandler {
     public @ResponseBody Object getSentFriendRequests(SearchUsersParams searchParams,
                                                       OffsetLimit offsetLimit,
                                                       @RequestParam(value = "order", required = false,
-                                                              defaultValue = "newest")
+                                                              defaultValue = "rated")
                                                       RatingOrder order) {
         Collection<User> users = getDatabaseManager().getSentFriendRequests(searchParams, offsetLimit, order);
         return getUsersResponse(users);
@@ -515,7 +515,7 @@ public class ApiHandler {
                                             @RequestParam(value = "category", defaultValue = "all")
                                             PhotoCategory category,
                                             @RequestParam(value = "order", required = false,
-                                                    defaultValue = "newest")
+                                                    defaultValue = "rated")
                                             RatingOrder order) {
         DatabaseManager databaseManager = getDatabaseManager();
         Object result = null;
@@ -540,7 +540,7 @@ public class ApiHandler {
 
     @RequestMapping("/getPhotoquests")
     public @ResponseBody Object getPhotoquests(OffsetLimit offsetLimit,
-                                               @RequestParam(value = "order", required = false, defaultValue = "newest")
+                                               @RequestParam(value = "order", required = false, defaultValue = "rated")
                                                RatingOrder order,
                                                @RequestParam(value = "filter", required = false) String filter){
         final Collection<Photoquest> photoquests;
@@ -556,7 +556,7 @@ public class ApiHandler {
     public @ResponseBody Object getCreatedPhotoquests(
             @RequestParam(value = "userId", required = true) Long userId,
             @RequestParam(value = "filter", required = false) String filter,
-            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+            @RequestParam(value = "order", required = false, defaultValue = "rated") RatingOrder order,
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests =
                 getDatabaseManager().getPhotoquestsCreatedByUser(filter, userId, offsetLimit, order);
@@ -576,7 +576,7 @@ public class ApiHandler {
     public @ResponseBody Object getPerformedPhotoquests(
             @RequestParam(value = "userId", required = true) Long userId,
             @RequestParam(value = "filter", required = false) String filter,
-            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+            @RequestParam(value = "order", required = false, defaultValue = "rated") RatingOrder order,
             OffsetLimit offsetLimit){
         Collection<Photoquest> photoquests =
                 getDatabaseManager().getPerformedPhotoquests(userId, offsetLimit, filter, order);
@@ -596,7 +596,7 @@ public class ApiHandler {
     public @ResponseBody Object getFollowingPhotoquests(
             @RequestParam(value = "filter", required = false) String filter,
             @RequestParam(value = "userId", required = true) Long userId,
-            @RequestParam(value = "order", required = false, defaultValue = "newest") RatingOrder order,
+            @RequestParam(value = "order", required = false, defaultValue = "rated") RatingOrder order,
             OffsetLimit offsetLimit){
         final Collection<Photoquest> photoquests =
                 getDatabaseManager().getFollowingPhotoquests(userId, filter, offsetLimit, order);
@@ -652,7 +652,7 @@ public class ApiHandler {
     @RequestMapping("/getPhotoPosition")
     public @ResponseBody Object getPhotoPosition(@RequestParam("id") Long photoId,
                                                  @RequestParam(value = "order", required = false,
-                                                         defaultValue = "newest") RatingOrder order){
+                                                         defaultValue = "rated") RatingOrder order){
         DatabaseManager databaseManager = getDatabaseManager();
         return new LongResult(databaseManager.getPhotoInPhotoquestPosition(photoId, order));
     }
@@ -678,7 +678,7 @@ public class ApiHandler {
     @RequestMapping("/getPhotosOfPhotoquest")
     public @ResponseBody Object getPhotosOfPhotoquest(@RequestParam("id") Long photoquestId,
                                                       @RequestParam(value = "order", required = false,
-                                                              defaultValue = "newest")
+                                                              defaultValue = "rated")
                                                       RatingOrder order,
                                                       @RequestParam(value = "category", defaultValue = "all")
                                                       PhotoCategory category,
@@ -699,7 +699,7 @@ public class ApiHandler {
     @RequestMapping("/getFiendsPhotosOfPhotoquest")
     public @ResponseBody Object getFiendsPhotosOfPhotoquest(@RequestParam("id") Long photoquestId,
                                                       @RequestParam(value = "order", required = false,
-                                                              defaultValue = "newest")
+                                                              defaultValue = "rated")
                                                       RatingOrder order,
                                                       OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
@@ -717,7 +717,7 @@ public class ApiHandler {
     @RequestMapping("/getUserPhotosOfPhotoquest")
     public @ResponseBody Object getUserPhotosOfPhotoquest(@RequestParam("id") Long photoquestId,
                                                             @RequestParam(value = "order", required = false,
-                                                                    defaultValue = "newest")
+                                                                    defaultValue = "rated")
                                                             RatingOrder order,
                                                             OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
@@ -741,7 +741,7 @@ public class ApiHandler {
                                                  @RequestParam(value = "category", defaultValue = "all")
                                                  PhotoCategory category,
                                                  @RequestParam(value = "order", required = false,
-                                                                     defaultValue = "newest")
+                                                                     defaultValue = "rated")
                                                  RatingOrder order) {
         if(userId != null) {
             if (category == PhotoCategory.avatar) {
@@ -764,7 +764,7 @@ public class ApiHandler {
                                                              @RequestParam(value = "category", defaultValue = "all")
                                                              PhotoCategory category,
                                                              @RequestParam(value = "order", required = false,
-                                                                     defaultValue = "newest")
+                                                                     defaultValue = "rated")
                                                              RatingOrder order){
         if (category == PhotoCategory.all) {
             return getDatabaseManager().getNextPrevPhotoOfPhotoquest(
@@ -785,7 +785,7 @@ public class ApiHandler {
                                                              @RequestParam("photoId") Long photoId,
                                                              @RequestParam("next") boolean next,
                                                              @RequestParam(value = "order", required = false,
-                                                                     defaultValue = "newest")
+                                                                     defaultValue = "rated")
                                                              RatingOrder order){
         return getDatabaseManager().getNextPrevPhotoOfFriendsInPhotoquest(
                 photoquestId, photoId, order, next);
@@ -796,7 +796,7 @@ public class ApiHandler {
                                                                       @RequestParam("photoId") Long photoId,
                                                                       @RequestParam("next") boolean next,
                                                                       @RequestParam(value = "order", required = false,
-                                                                              defaultValue = "newest")
+                                                                              defaultValue = "rated")
                                                                       RatingOrder order){
         return getDatabaseManager().getNextPrevPhotoOfSignedInUserInPhotoquest
                 (photoquestId, photoId, order, next);
@@ -807,7 +807,7 @@ public class ApiHandler {
                                                              @RequestParam("photoId") Long photoId,
                                                              @RequestParam("next") boolean next,
                                                              @RequestParam(value = "order", required = false,
-                                                                     defaultValue = "newest")
+                                                                     defaultValue = "rated")
                                                              RatingOrder order){
         return getDatabaseManager().getNextPrevPhotoOfUser(userId, photoId, order, next);
     }
@@ -817,7 +817,7 @@ public class ApiHandler {
                                                        @RequestParam("photoId") Long photoId,
                                                        @RequestParam("next") boolean next,
                                                        @RequestParam(value = "order", required = false,
-                                                               defaultValue = "newest")
+                                                               defaultValue = "rated")
                                                        RatingOrder order){
         return getDatabaseManager().getNextPrevAvatar(userId, photoId, order, next);
     }
@@ -832,7 +832,7 @@ public class ApiHandler {
     @RequestMapping("/getPhotosOfUser")
     public @ResponseBody Object getPhotosOfUser(@RequestParam("userId") Long userId,
                                                       @RequestParam(value = "order", required = false,
-                                                              defaultValue = "newest")
+                                                              defaultValue = "rated")
                                                       RatingOrder order,
                                                       OffsetLimit offsetLimit){
         Collection<Photo> photos = getDatabaseManager().
