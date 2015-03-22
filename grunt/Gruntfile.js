@@ -166,6 +166,10 @@ module.exports = function (grunt) {
                         dest: '../../../../PhotoQuestOut/grunt/resources/images/'
                     }
                 ]
+            },
+            copyIE: {
+                src:'../web/WEB-INF/resources/ie.html',
+                dest: "../../PhotoQuestOut/grunt/resources/ie.html"
             }
             //copyJS: {
             //    files: {
