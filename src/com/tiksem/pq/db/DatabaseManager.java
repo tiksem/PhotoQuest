@@ -845,23 +845,29 @@ public class DatabaseManager {
         }
     }
 
-    public void deletePhoto(long id) {
-        Photo photo = getPhotoByIdOrThrow(id);
+    private void deletePhoto(long photoId, boolean checkPermissions) {
+        Photo photo = getPhotoByIdOrThrow(photoId);
 
-        User signedInUser = getSignedInUserOrThrow();
-        if(!photo.getUserId().equals(signedInUser.getId())){
-            throw new PermissionDeniedException("Unable to delete photo, which is not owned by current user");
+        User user;
+        Long userId = photo.getUserId();
+        if (checkPermissions) {
+            user = getSignedInUserOrThrow();
+            if(!userId.equals(user.getId())){
+                throw new PermissionDeniedException("Unable to delete photo, which is not owned by current user");
+            }
+        } else {
+            user = getUserByIdOrThrow(userId);
         }
 
-        if(photo.getId().equals(signedInUser.getAvatarId())){
-            Map<String, Object> args = Collections.singletonMap("userId", (Object)photo.getUserId());
+        if(photo.getId().equals(user.getAvatarId())){
+            Map<String, Object> args = Collections.singletonMap("userId", (Object) userId);
             mapper.executeModifySQL("update user set avatarId = null WHERE id = :userId", args);
         }
 
         Long photoquestId = photo.getPhotoquestId();
         Photoquest photoquest = getPhotoQuestByIdOrThrow(photoquestId);
 
-        imageManager.deleteImage(id);
+        imageManager.deleteImage(photoId);
         delete(photo);
 
         long likesCount = photo.getLikesCount();
@@ -869,11 +875,15 @@ public class DatabaseManager {
         updatePhotoquestAvatar(photoquest);
 
         Action action = new Action();
-        action.setPhotoId(id);
+        action.setPhotoId(photoId);
         mapper.delete(action);
 
-        deletePhotoLikes(id);
-        deletePhotoComments(id);
+        deletePhotoLikes(photoId);
+        deletePhotoComments(photoId);
+    }
+
+    public void deletePhotoCheckPermissions(long id) {
+        deletePhoto(id, true);
     }
 
     public Message getMessageById(long id) {
@@ -2765,7 +2775,7 @@ public class DatabaseManager {
         Collection<Long> photosIdes = mapper.executeOneColumnValuesSql("SELECT id FROM Photo WHERE userId = "
                 + userId);
         for(Long photoId : photosIdes){
-            deletePhoto(photoId);
+            deletePhoto(photoId, false);
         }
 
         Reply reply = new Reply();
@@ -2783,6 +2793,20 @@ public class DatabaseManager {
         PhotoquestView photoquestView = new PhotoquestView();
         photoquestView.setUserId(userId);
         delete(photoquestView);
+
+        Reply relationReply = new Reply();
+        relationReply.setId(userId);
+        relationReply.setType(Reply.FRIEND_REQUEST_ACCEPTED);
+        delete(relationReply);
+        relationReply.setType(Reply.FRIEND_REQUEST_DECLINED);
+        delete(relationReply);
+
+        Relationship relationship = new Relationship();
+        relationship.setFromUserId(userId);
+        delete(relationship);
+        relationship.setToUserId(userId);
+        relationship.setFromUserId(null);
+        delete(relationship);
 
         for (Like like : getLikesOfUser(userId)) {
             unlike(like);

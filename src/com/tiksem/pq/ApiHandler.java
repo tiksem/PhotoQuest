@@ -31,7 +31,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.*;
-import java.net.URI;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -533,7 +532,7 @@ public class ApiHandler {
         if (userId != null || photoquestId != null) {
             result = getNextPrevPhoto(photoquestId, userId, photoId, next, category, order);
         }
-        databaseManager.deletePhoto(photoId);
+        databaseManager.deletePhotoCheckPermissions(photoId);
         return result;
     }
 
