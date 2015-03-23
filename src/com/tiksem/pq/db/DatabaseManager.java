@@ -2802,7 +2802,7 @@ public class DatabaseManager {
     }
 
     private List<Like> getLikesOfUser(long userId) {
-        return mapper.executeSQLQuery("SELECT * FROM like WHERE userId = " + userId, Like.class);
+        return mapper.executeSQLQuery("SELECT * FROM `like` WHERE userId = " + userId, Like.class);
     }
 
     @Override
